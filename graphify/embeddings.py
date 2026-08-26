@@ -91,8 +91,24 @@ def _resolve_embed_backend_config(backend: str, model: str | None) -> tuple[str,
     backends or missing API keys (the caller surfaces this as a CLI error
     rather than silently degrading — silent degrade only happens at query
     time when no sidecar is present).
+
+    A ``sentence-transformers`` backend is supported for **test/CI fixtures
+    only**: it does not call any API, so no API key is required and no
+    network is touched. Production deployments should use ``openai`` /
+    ``gemini`` / ``ollama`` / etc. The build-time path
+    (``generate_embeddings_for_graph``) does NOT support
+    ``sentence-transformers`` because the OpenAI SDK dispatch below has no
+    codepath for it — test fixtures build their sidecars directly via
+    ``sentence_transformers.SentenceTransformer.encode``.
     """
     backend = (backend or "").lower()
+    if backend == "sentence-transformers":
+        # Test/CI-only backend: no API, no key. The query-time path
+        # (`embed_query` -> `_embed_batch`) is overridden for this backend
+        # below so it never hits the OpenAI SDK. The model name carries
+        # through to the sidecar so cosine similarity is computed across a
+        # consistent embedding space.
+        return "", "", model or "all-MiniLM-L6-v2"
     if backend == "openai":
         base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
         api_key = os.environ.get("OPENAI_API_KEY", "")
@@ -153,17 +169,65 @@ def _resolve_embed_backend_config(backend: str, model: str | None) -> tuple[str,
 _EMBED_BATCH_SIZE = 100  # OpenAI /v1/embeddings accepts up to 2048 inputs; 100 is a safe batch
 
 
+def _embed_batch_sentence_transformers(
+    texts: list[str], model: str | None
+) -> tuple[np.ndarray, str]:
+    """Embed texts with a local SentenceTransformer model. Test/CI only.
+
+    No API call, no network — the model is loaded once and cached on this
+    function object so repeated ``embed_query`` calls (e.g. in a benchmark
+    loop) don't reload it. Production deployments use the OpenAI-compatible
+    backends (openai/gemini/ollama/etc.) via ``_embed_batch``.
+
+    Raises ``ImportError`` if ``sentence_transformers`` isn't installed;
+    falls back to ``all-MiniLM-L6-v2`` (384-dim, ~80MB) when ``model`` is
+    unset, matching the default used by ``_resolve_embed_backend_config``.
+    """
+    try:
+        from sentence_transformers import SentenceTransformer
+    except ImportError as exc:
+        raise ImportError(
+            "sentence-transformers backend requires the 'sentence-transformers' package. "
+            "Install with: pip install sentence-transformers"
+        ) from exc
+
+    model_name = model or "all-MiniLM-L6-v2"
+    # Cache the loaded model on the function object — SentenceTransformer
+    # loading is ~1s and the benchmark loop calls embed_query per question.
+    cached = getattr(_embed_batch_sentence_transformers, "_model", None)
+    if cached is None or cached[0] != model_name:
+        st_model = SentenceTransformer(model_name)
+        _embed_batch_sentence_transformers._model = (model_name, st_model)  # type: ignore[attr-defined]
+    else:
+        st_model = cached[1]
+
+    sanitized = [(t or " ").strip() or " " for t in texts]
+    embeddings = st_model.encode(sanitized, convert_to_numpy=True, show_progress_bar=False)
+    return np.asarray(embeddings, dtype=np.float32), model_name
+
+
 def _embed_batch(
     texts: list[str], *, backend: str, model: str | None = None
 ) -> tuple[np.ndarray, str]:
     """Embed a batch of texts. Returns (embeddings (N, D) float32, actual_model).
 
     Uses the OpenAI SDK's ``embeddings.create`` against the configured
-    backend's base_url. Batches in chunks of ``_EMBED_BATCH_SIZE`` to stay
-    under provider input limits. Empty / whitespace-only texts are replaced
-    with a single space so the API does not reject them (the resulting
-    vector is meaningless but keeps the matrix rectangular).
+    backend's base_url for online backends (openai/gemini/kimi/deepseek/
+    ollama/azure). For the ``sentence-transformers`` backend (test/CI only),
+    uses the local SentenceTransformer model — no API call, no network.
+
+    Batches in chunks of ``_EMBED_BATCH_SIZE`` to stay under provider input
+    limits. Empty / whitespace-only texts are replaced with a single space
+    so the API does not reject them (the resulting vector is meaningless but
+    keeps the matrix rectangular).
     """
+    backend_lower = (backend or "").lower()
+    # Test/CI-only path: local SentenceTransformer, no API. The model is
+    # loaded once and cached on the function object so repeated query-time
+    # embed_query calls don't reload it.
+    if backend_lower == "sentence-transformers":
+        return _embed_batch_sentence_transformers(texts, model)
+
     try:
         from openai import OpenAI
     except ImportError as exc:
