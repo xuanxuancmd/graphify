@@ -7,7 +7,7 @@ import unicodedata
 
 from pathlib import Path
 from graphify.extractors.base import _file_stem, _make_id
-from graphify.security import sanitize_metadata
+from graphify.security import sanitize_label, sanitize_metadata
 
 
 _MD_INLINE_LINK_RE = re.compile(r'(?<!\!)\[[^\]]*\]\(\s*<?([^)\s>]+)>?(?:\s+[^)]*)?\)')
@@ -17,6 +17,54 @@ _MD_REF_DEF_RE = re.compile(r'^\s{0,3}\[[^\]]+\]:\s*<?([^\s>]+)>?')
 _MD_WIKILINK_RE = re.compile(r'(?<!\!)\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]')
 
 _MD_LINKABLE_EXTS = {".md", ".mdx", ".qmd", ".markdown", ".rst", ".txt"}
+
+# Cap on desc length — embedding models typically take ~512 tokens of context,
+# and a node-level summary should not be a full paragraph dump. Matches the
+# cap used by graphify/desc.py for code-node docstrings.
+_MD_DESC_MAX_CHARS = 512
+
+
+def _first_paragraph_after(lines: list[str], start_idx_0: int,
+                           stop_at_heading: bool = True) -> str:
+    """First non-empty, non-fence, non-heading paragraph in ``lines`` at or
+    after ``start_idx_0``.
+
+    Used as the ``desc`` source for markdown file and heading nodes — the
+    embedding text source for hybrid semantic search. Stops at the first
+    blank line that ends the paragraph. When ``stop_at_heading`` is True
+    (heading-node desc), also stops at the next heading so the desc stays
+    scoped to this section. When False (file-node desc), heading lines are
+    SKIPPED rather than breaking, so a file that opens with ``# Title`` and
+    then has a paragraph still yields that paragraph as the file's desc
+    (spec §5.3: "首个非标题、非 frontmatter 的段落").
+
+    Returns ``""`` when no paragraph is found. ``start_idx_0`` is 0-based.
+    """
+    paragraph: list[str] = []
+    in_fence = False
+    for i in range(start_idx_0, len(lines)):
+        stripped = lines[i].strip()
+        if stripped.startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        is_heading = bool(re.match(r'^#{1,6}\s+', stripped))
+        if is_heading:
+            if stop_at_heading:
+                break
+            # File-node desc: skip heading lines, keep scanning for the
+            # first real paragraph below them.
+            continue
+        if not stripped:
+            if paragraph:
+                break  # paragraph ended at this blank line
+            continue  # skip leading blanks before the paragraph
+        paragraph.append(stripped)
+    if not paragraph:
+        return ""
+    return " ".join(paragraph)[:_MD_DESC_MAX_CHARS]
+
 
 # A YAML frontmatter block is only frontmatter when the opening `---` is the
 # very first line of the file. A `---` further down is a horizontal rule and
@@ -284,17 +332,38 @@ def extract_markdown(path: Path) -> dict:
     nodes: list[dict] = []
     edges: list[dict] = []
     seen_ids: set[str] = set()
+    # nid -> node dict, populated by add_node. Used by the post-loop
+    # heading-desc backfill: a heading's first-paragraph desc is only visible
+    # after the line scan reaches the paragraph, so we stamp it onto the
+    # already-created node dict in place.
+    nid_to_node: dict[str, dict] = {}
+    # (heading_nid, line_num_1based) pairs in document order. The post-loop
+    # pass walks these and stamps desc on each heading node.
+    heading_positions: list[tuple[str, int]] = []
 
     def add_node(nid: str, label: str, line: int, file_type: str = "document",
-                 node_kind: str = "heading", extra: "dict | None" = None) -> None:
+                 node_kind: str = "heading", extra: "dict | None" = None,
+                 desc: str = "") -> None:
         if nid not in seen_ids:
             seen_ids.add(nid)
             node = {"id": nid, "label": label, "file_type": file_type,
                     "node_kind": node_kind,
                     "source_file": str_path, "source_location": f"L{line}"}
+            if desc:
+                # desc carries the first-paragraph prose used as the embedding
+                # text source for hybrid semantic search. Sanitised the same
+                # way as label/frontmatter so an inline HTML payload in the
+                # body cannot reach downstream LLM context.
+                node["desc"] = sanitize_label(desc)
             if extra:
                 node.update(extra)
             nodes.append(node)
+            # Keep a nid->node ref so the post-loop heading-desc backfill
+            # (collected AFTER the line scan, when the heading's following
+            # paragraph is finally visible) can stamp desc without re-scanning
+            # the whole nodes list. Same trick engine.py's add_node uses for
+            # metadata; duplicated here because markdown's add_node is local.
+            nid_to_node[nid] = node
 
     def add_edge(src: str, tgt: str, relation: str, line: int,
                  confidence: str = "EXTRACTED", weight: float = 1.0,
@@ -311,8 +380,19 @@ def extract_markdown(path: Path) -> dict:
     frontmatter = sanitize_metadata(_parse_frontmatter(fm_lines))
 
     file_nid = _make_id(str(path))
+    # File-node desc = first body paragraph (after frontmatter). Computed up
+    # front because the whole file is already parsed into `lines`; the heading
+    # nodes below get their desc back-filled after the line scan so their
+    # following paragraph is visible. stop_at_heading=False so a file that
+    # opens with `# Title` still yields the paragraph below it as the file's
+    # desc (spec §5.3: "首个非标题、非 frontmatter 的段落").
+    _file_desc = (
+        _first_paragraph_after(lines, body_start, stop_at_heading=False)
+        if body_start < len(lines) else ""
+    )
     add_node(file_nid, path.name, 1, node_kind="page",
-             extra={"frontmatter": frontmatter} if frontmatter else None)
+             extra={"frontmatter": frontmatter} if frontmatter else None,
+             desc=_file_desc)
 
     source_dir = path.parent
     # Dedup link edges by resolved target node so a hub doc that links to the
@@ -393,6 +473,10 @@ def extract_markdown(path: Path) -> dict:
             if h_nid in seen_ids:
                 h_nid = _make_id(stem, title, str(line_num))
             add_node(h_nid, title, line_num)
+            # Defer desc backfill: the heading's first paragraph lives on a
+            # later line, which the line scan has not reached yet. Stash
+            # (nid, line_num) and stamp desc after the loop completes.
+            heading_positions.append((h_nid, line_num))
 
             # Pop headings at same or deeper level
             while heading_stack and heading_stack[-1][0] >= level:
@@ -404,5 +488,20 @@ def extract_markdown(path: Path) -> dict:
 
             heading_stack.append((level, h_nid))
             continue
+
+    # Backfill heading desc: each heading's first-paragraph desc starts on the
+    # line *after* the heading line (0-based idx == line_num, since line_num
+    # is 1-based). _first_paragraph_after stops at the next heading or blank
+    # line, so a heading under another heading picks up only its own section's
+    # opening paragraph. Empty when the heading is immediately followed by
+    # another heading, a fence, or EOF — the node then falls back to label at
+    # embed time.
+    for h_nid, line_num in heading_positions:
+        desc = _first_paragraph_after(lines, line_num)
+        if not desc:
+            continue
+        node = nid_to_node.get(h_nid)
+        if node is not None and "desc" not in node:
+            node["desc"] = sanitize_label(desc)
 
     return {"nodes": nodes, "edges": edges, "input_tokens": 0, "output_tokens": 0}

@@ -1,0 +1,20 @@
+{
+  "nodes": [
+    {"id": "src_auth_service", "label": "AuthService", "file_type": "code", "source_file": "src/auth/service.py", "source_location": "L10", "norm_label": "authservice", "type": "class", "desc": "Manages user authentication, login sessions, and token refresh."},
+    {"id": "src_auth_service.verify_password", "label": ".verify_password()", "file_type": "code", "source_file": "src/auth/service.py", "source_location": "L15", "norm_label": ".verify_password()", "type": "method", "desc": "Validate user credentials against the stored hash and issue a session token."},
+    {"id": "src_throttle_service", "label": "ThrottleService", "file_type": "code", "source_file": "src/throttle.py", "source_location": "L5", "norm_label": "throttleservice", "type": "class", "desc": "Rate limiter that throttles incoming requests to prevent API abuse."},
+    {"id": "src_user_service", "label": "UserService", "file_type": "code", "source_file": "src/user/service.py", "source_location": "L8", "norm_label": "userservice", "type": "class", "desc": "Manages user accounts, profiles, and permission settings."},
+    {"id": "src_user_service.create_user", "label": ".create_user()", "file_type": "code", "source_file": "src/user/service.py", "source_location": "L12", "norm_label": ".create_user()", "type": "method", "desc": "Create a new user account with the given email and password."},
+    {"id": "docs_readme", "label": "README.md", "file_type": "document", "node_kind": "page", "source_file": "docs/README.md", "source_location": "L1", "desc": "This document describes the login flow and authentication API for the project."},
+    {"id": "docs_readme.authentication", "label": "Authentication", "file_type": "document", "node_kind": "heading", "source_file": "docs/README.md", "source_location": "L5", "desc": "Users authenticate via the AuthService, which validates credentials and issues JWT tokens for subsequent requests."},
+    {"id": "src_payment_gateway", "label": "PaymentGateway", "file_type": "code", "source_file": "src/payment.py", "source_location": "L3", "norm_label": "paymentgateway", "type": "class", "desc": "Processes credit card transactions and handles payment refunds."},
+    {"id": "src_cache_store", "label": "CacheStore", "file_type": "code", "source_file": "src/cache.py", "source_location": "L4", "norm_label": "cachestore", "type": "class", "desc": "In-memory key-value cache with TTL expiration for fast lookups."},
+    {"id": "src_logger", "label": "Logger", "file_type": "code", "source_file": "src/log.py", "source_location": "L1", "norm_label": "logger", "type": "class", "desc": "Writes structured log entries to stdout and rotating files."}
+  ],
+  "edges": [
+    {"source": "src_auth_service", "target": "src_auth_service.verify_password", "relation": "method", "confidence": "EXTRACTED", "source_file": "src/auth/service.py", "source_location": "L15", "weight": 1.0},
+    {"source": "src_user_service", "target": "src_user_service.create_user", "relation": "method", "confidence": "EXTRACTED", "source_file": "src/user/service.py", "source_location": "L12", "weight": 1.0},
+    {"source": "src_auth_service", "target": "src_user_service", "relation": "calls", "confidence": "INFERRED", "source_file": "src/auth/service.py", "source_location": "L20", "weight": 1.0},
+    {"source": "docs_readme", "target": "docs_readme.authentication", "relation": "contains", "confidence": "EXTRACTED", "source_file": "docs/README.md", "source_location": "L5", "weight": 1.0}
+  ]
+}

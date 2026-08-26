@@ -1067,7 +1067,8 @@ def dispatch_command(cmd: str) -> None:
             sys.exit(1)
     elif cmd == "query":
         if len(sys.argv) < 3:
-            print("Usage: graphify query \"<question>\" [--dfs] [--context C] [--budget N] [--graph path]", file=sys.stderr)
+            print("Usage: graphify query \"<question>\" [--dfs] [--context C] [--budget N] [--graph path]\n"
+                  "                              [--no-semantic] [--top-k N] [--top-n N]", file=sys.stderr)
             sys.exit(1)
         from graphify.serve import _query_graph_text
         from graphify.security import sanitize_label
@@ -1079,6 +1080,13 @@ def dispatch_command(cmd: str) -> None:
         budget = 2000
         graph_path = _default_graph_path()
         context_filters: list[str] = []
+        # NEW: hybrid semantic params. Defaults match the spec — semantic on
+        # (hybrid retrieval), single subgraph, top_k=3. `--no-semantic` flips
+        # to pure-lexical mode (AC2); `--top-n N>1` returns N independent
+        # BFS subgraphs (AC13); `--top-k` widens/narrows the seed window.
+        semantic = True
+        top_k = 3
+        top_n = 1
         args = sys.argv[3:]
         i = 0
         while i < len(args):
@@ -1105,6 +1113,40 @@ def dispatch_command(cmd: str) -> None:
             elif args[i] == "--graph" and i + 1 < len(args):
                 graph_path = args[i + 1]
                 i += 2
+            elif args[i].startswith("--graph="):
+                graph_path = args[i].split("=", 1)[1]
+                i += 1
+            elif args[i] == "--no-semantic":
+                semantic = False
+                i += 1
+            elif args[i] == "--top-k" and i + 1 < len(args):
+                try:
+                    top_k = int(args[i + 1])
+                except ValueError:
+                    print(f"error: --top-k must be an integer", file=sys.stderr)
+                    sys.exit(1)
+                i += 2
+            elif args[i].startswith("--top-k="):
+                try:
+                    top_k = int(args[i].split("=", 1)[1])
+                except ValueError:
+                    print(f"error: --top-k must be an integer", file=sys.stderr)
+                    sys.exit(1)
+                i += 1
+            elif args[i] == "--top-n" and i + 1 < len(args):
+                try:
+                    top_n = int(args[i + 1])
+                except ValueError:
+                    print(f"error: --top-n must be an integer", file=sys.stderr)
+                    sys.exit(1)
+                i += 2
+            elif args[i].startswith("--top-n="):
+                try:
+                    top_n = int(args[i].split("=", 1)[1])
+                except ValueError:
+                    print(f"error: --top-n must be an integer", file=sys.stderr)
+                    sys.exit(1)
+                i += 1
             else:
                 i += 1
         gp = Path(graph_path).resolve()
@@ -1173,6 +1215,9 @@ def dispatch_command(cmd: str) -> None:
             token_budget=budget,
             context_filters=context_filters,
             graph_path=str(gp),
+            semantic=semantic,
+            top_k=top_k,
+            top_n=top_n,
         )
         querylog.log_query(
             kind="query",
@@ -3014,7 +3059,8 @@ def dispatch_command(cmd: str) -> None:
                 "[--model M] [--mode deep] [--out DIR|--output DIR] [--google-workspace] [--no-cluster] "
                 "[--no-gitignore] [--code-only] [--no-dedup] "
                 "[--max-workers N] [--token-budget N] [--max-concurrency N] "
-                "[--api-timeout S] [--postgres DSN] [--cargo] [--allow-partial] [--timing]",
+                "[--api-timeout S] [--postgres DSN] [--cargo] [--allow-partial] [--timing] "
+                "[--embed-backend openai|gemini|kimi|deepseek|ollama|azure] [--embed-model M]",
                 file=sys.stderr,
             )
             sys.exit(1)
@@ -3031,6 +3077,15 @@ def dispatch_command(cmd: str) -> None:
 
         backend: str | None = None
         model: str | None = None
+        # NEW: hybrid semantic search embedding backend. Default to None —
+        # the extractor does not run embedding generation unless --embed-backend
+        # is passed (AC4). When set, generate_embeddings_for_graph runs as a
+        # post-build step over graphify-out/graph.json and writes sidecar files
+        # under graphify-out/embeddings/. Defaults to the same backend env vars
+        # as --backend so a user who already configured OPENAI_API_KEY for
+        # extraction only needs --embed-backend openai to also get embeddings.
+        embed_backend: str | None = None
+        embed_model: str | None = None
         extract_mode: str | None = None
         out_dir: Path | None = None
         cli_postgres_dsn: str | None = None
@@ -3098,6 +3153,14 @@ def dispatch_command(cmd: str) -> None:
                 model = args[i + 1]; i += 2
             elif a.startswith("--model="):
                 model = a.split("=", 1)[1]; i += 1
+            elif a == "--embed-backend" and i + 1 < len(args):
+                embed_backend = args[i + 1]; i += 2
+            elif a.startswith("--embed-backend="):
+                embed_backend = a.split("=", 1)[1]; i += 1
+            elif a == "--embed-model" and i + 1 < len(args):
+                embed_model = args[i + 1]; i += 2
+            elif a.startswith("--embed-model="):
+                embed_model = a.split("=", 1)[1]; i += 1
             elif a == "--mode" and i + 1 < len(args):
                 extract_mode = args[i + 1]; i += 2
             elif a.startswith("--mode="):
@@ -4313,6 +4376,29 @@ def dispatch_command(cmd: str) -> None:
             f"`graphify cluster-only {graphify_out.parent}` "
             "to generate GRAPH_REPORT.md and name communities"
         )
+        # NEW: post-build embedding generation for hybrid semantic search. Runs
+        # only when --embed-backend is passed (AC4: build-time generation when
+        # requested). Reads every node's `desc` field (fallback `label`) and
+        # writes graphify-out/embeddings/<model_slug>.{npy,index.json,meta.json}.
+        # A failure here is a warning, not fatal — the graph is still valid;
+        # queries simply run in pure-lexical mode until the sidecar exists (AC3).
+        if embed_backend:
+            try:
+                from graphify.embeddings import generate_embeddings_for_graph
+                _emb_path = generate_embeddings_for_graph(
+                    graph_json_path, backend=embed_backend, model=embed_model
+                )
+                print(
+                    f"[graphify extract] wrote embeddings: "
+                    f"{_emb_path.relative_to(graph_json_path.parent)}",
+                    file=sys.stderr,
+                )
+            except Exception as exc:
+                print(
+                    f"[graphify extract] warning: embedding generation failed "
+                    f"(queries will run in pure-lexical mode until fixed): {exc}",
+                    file=sys.stderr,
+                )
         stages.total()
 
     elif cmd == "cache-check":
