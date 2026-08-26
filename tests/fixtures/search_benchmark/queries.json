@@ -1,0 +1,12 @@
+[
+  {"query": "login", "expected": ["src_auth_service"]},
+  {"query": "authentication", "expected": ["src_auth_service"]},
+  {"query": "UserServise", "expected": ["src_user_service"]},
+  {"query": "rate limiter", "expected": ["src_throttle_service"]},
+  {"query": "credential validation", "expected": ["src_auth_service.verify_password"]},
+  {"query": "create account", "expected": ["src_user_service.create_user"]},
+  {"query": "throttle requests", "expected": ["src_throttle_service"]},
+  {"query": "user profile management", "expected": ["src_user_service"]},
+  {"query": "session token", "expected": ["src_auth_service"]},
+  {"query": "expire cache entries", "expected": ["src_cache_store"]}
+]

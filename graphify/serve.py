@@ -14,6 +14,7 @@ import networkx as nx
 from networkx.readwrite import json_graph
 from graphify.security import sanitize_label, check_graph_file_size_cap
 from graphify.build import edge_data, edge_datas
+from graphify.hybrid_scorer import HybridScorer, _VECTOR_SIMILARITY_BONUS
 from graphify.paths import default_graph_json as _default_graph_json
 
 try:
@@ -122,6 +123,11 @@ class _GraphContextCache:
         # Warm the index before exposing the graph so its first query does not
         # pay the expensive build cost.
         _get_trigram_index(graph)
+        # Warm the hybrid scorer (embedding sidecar) alongside the trigram
+        # index. When no sidecar is present — or no embedding backend is
+        # configured — HybridScorer.available stays False and every method
+        # returns None, so _score_query runs in pure-lexical mode (AC2/AC3).
+        graph.graph["_hybrid_scorer"] = HybridScorer(Path(resolved_path).parent)
         communities = _communities_from_graph(graph)
         entry = {
             "key": key,
@@ -460,7 +466,10 @@ def _score_nodes(G: nx.Graph, terms: list[str]) -> list[tuple[float, str]]:
 
 
 def _score_query(
-    G: nx.Graph, terms: list[str], *, collect_per_term_seeds: bool
+    G: nx.Graph, terms: list[str], *, collect_per_term_seeds: bool,
+    query_embedding_scores: dict[str, float] | None = None,
+    hybrid_scorer: "HybridScorer | None" = None,
+    semantic: bool = True,
 ) -> _QueryScores:
     """Single-pass combined scorer that optionally also records the best seed
     for each normalized query token.
@@ -575,6 +584,15 @@ def _score_query(
             tier_value = 0.0
             substr_value = 0.0
             source_value = 0.0
+            # Fuzzy tier (NEW): per-token bonus added when this token missed
+            # all 3 lexical tiers on this node. Initialized here so the
+            # singleton tracking below can fold it in without re-evaluating
+            # the predicate. JaroWinkler catches typos (UserServise) and
+            # word-form variants that share enough characters but not enough
+            # to clear SUBSTRING. Per spec §4.3: only fires when EXACT,
+            # PREFIX, and SUBSTRING all missed this token-node pair, so a
+            # precise match is never disturbed.
+            fuzzy_bonus = 0.0
             if t == norm_label or t == bare_label:
                 tier_value = _EXACT_MATCH_BONUS * w
                 matched += 1
@@ -589,6 +607,21 @@ def _score_query(
                 source_value = _SOURCE_MATCH_BONUS * w
                 score += source_value
             tiered += tier_value
+            # NEW: fuzzy tier (additive, gated on token missing all 3 lexical
+            # tiers for this node — `tier_value == 0 and substr_value == 0`).
+            # The bonus already folds in _FUZZY_MATCH_BONUS; multiplied by IDF
+            # weight so a rare-token fuzzy hit outweighs a common-token one.
+            if (
+                semantic
+                and hybrid_scorer is not None
+                and tier_value == 0
+                and substr_value == 0
+            ):
+                fuzzy_bonus = hybrid_scorer.fuzzy_score_for_node(
+                    t, data.get("label") or ""
+                )
+                if fuzzy_bonus > 0:
+                    score += fuzzy_bonus * w
             if collect_per_term_seeds and best_by_term is not None:
                 # Singleton score for [t] on this node, mirroring
                 # `_score_nodes(G, [t])` exactly (n_terms == 1, no coverage
@@ -606,7 +639,11 @@ def _score_query(
                     singleton = _PREFIX_MATCH_BONUS * 10 * w
                 else:
                     singleton = 0.0
-                singleton += tier_value + substr_value + source_value
+                # Fold fuzzy bonus into the singleton so a fuzzy hit can
+                # become this token's best seed (AC7: "UserServise" typo
+                # should seed BFS on UserService, not be discarded by the
+                # gap-ratio cutoff because nothing else scored).
+                singleton += tier_value + substr_value + source_value + fuzzy_bonus
                 if singleton > 0:
                     # Tie-break key mirrors the legacy sort+max(degree):
                     # (-singleton, -degree, label_len, nid) — the minimum
@@ -620,6 +657,62 @@ def _score_query(
             score += tiered * (matched / n_terms) ** 2
         if score > 0:
             scored.append((score, nid))
+    # NEW: post-loop merge pass for the fuzzy + vector tiers.
+    #
+    # Both tiers need to reach nodes the trigram prefilter EXCLUDED from the
+    # main loop — that's the whole point of hybrid search:
+    #   - fuzzy:  "UserServise" (typo) vs "UserService" — the 'vis' trigram
+    #     in the typo is absent from the correct spelling, so trigram pre-
+    #     filter drops UserService and the in-loop fuzzy branch never sees
+    #     it. AC7 (typo tolerance) depends on this pass.
+    #   - vector: "login" vs "AuthService" — zero shared characters, zero
+    #     shared trigrams. AC1 (semantic rescue) depends on this pass.
+    #
+    # The in-loop fuzzy branch (above) still handles the case where the
+    # trigram prefilter DID let the node through but all 3 lexical tiers
+    # missed on a specific token — that's the common case (word-form
+    # variants like colour/color share enough trigrams). This pass only
+    # adds bonuses for nodes the prefilter excluded entirely, so there is
+    # no double-counting: a node either was in the main loop (in-loop fuzzy
+    # handled it) or was excluded (this pass handles it).
+    if semantic and (hybrid_scorer is not None or query_embedding_scores):
+        score_by_nid = {nid: score for score, nid in scored}
+        # Pass 1: walk nodes the trigram prefilter EXCLUDED and add fuzzy
+        # bonus. When candidate_ids is None the prefilter fell back to
+        # whole-graph (the main loop already visited every node), so the
+        # in-loop fuzzy branch already handled those and there's nothing
+        # to add here. Vector bonus for excluded nodes is handled in Pass 2
+        # below (uniformly with candidate-internal nodes — no double-count
+        # because Pass 1 only adds fuzzy, not vector).
+        if candidate_ids is not None and hybrid_scorer is not None:
+            candidate_set = set(candidate_ids)
+            for nid in G.nodes():
+                if nid in candidate_set:
+                    continue
+                data = G.nodes[nid]
+                label = data.get("label") or nid
+                for t in norm_terms:
+                    bonus = hybrid_scorer.fuzzy_score_for_node(t, label)
+                    if bonus > 0:
+                        w = idf.get(t, 1.0)
+                        score_by_nid[nid] = (
+                            score_by_nid.get(nid, 0.0) + bonus * w
+                        )
+        # Pass 2: vector tier — additive bonus to EVERY node with a cosine
+        # similarity > 0, whether or not it was in the trigram candidate set.
+        # Nodes already in score_by_nid (lexical hit, or fuzzy from Pass 1)
+        # get the bonus added; excluded nodes with only a vector hit get a
+        # fresh entry. This is the AC1 rescue path: "login" -> AuthService
+        # when cosine sim says they're semantically related.
+        if query_embedding_scores:
+            for nid, vec_sim in query_embedding_scores.items():
+                if vec_sim <= 0:
+                    continue
+                bonus = _VECTOR_SIMILARITY_BONUS * vec_sim
+                score_by_nid[nid] = score_by_nid.get(nid, 0.0) + bonus
+        # Rebuild as (score, nid) tuples — the order the downstream sort
+        # lambda `(-s[0], ...)` and _pick_seeds expect.
+        scored = [(score, nid) for nid, score in score_by_nid.items()]
     # Sort by score desc; break ties toward the shorter label so a concise exact
     # match beats a longer superset that happens to share the same score.
     scored.sort(key=lambda s: (-s[0], len(G.nodes[s[1]].get("label") or s[1]), s[1]))
@@ -1193,15 +1286,47 @@ def _query_graph_text(
     token_budget: int = 2000,
     context_filters: list[str] | None = None,
     graph_path: str | None = None,
+    semantic: bool = True,
+    top_k: int = 3,
+    top_n: int = 1,
 ) -> str:
     terms = _query_terms(question)
+    # NEW: prepare hybrid scoring. When semantic=True and a HybridScorer is
+    # attached to the graph (set by _GraphContextCache._load_entry) AND its
+    # embedding sidecar loaded, compute the query's cosine similarity to
+    # every node once. _score_query merges these into the lexical score as
+    # an additive bonus + rescues nodes the trigram prefilter excluded
+    # (AC1: "login" -> AuthService even with zero lexical overlap). When
+    # the sidecar is absent or no backend is configured, vector_scores
+    # returns None and _score_query runs in pure-lexical mode (AC3).
+    query_embedding_scores: dict[str, float] | None = None
+    hybrid_scorer: HybridScorer | None = None
+    if semantic:
+        hybrid_scorer = G.graph.get("_hybrid_scorer")
+        if hybrid_scorer is None and graph_path:
+            # Lazy-load: the CLI `query` command loads the graph directly (not
+            # through _GraphContextCache._load_entry, which pre-warms the
+            # scorer), so on the first CLI query the scorer is not yet built.
+            # Construct it here from the graph's directory. Cheap when no
+            # sidecar exists — HybridScorer.available stays False and every
+            # method returns None (AC3: pure-lexical fallback).
+            hybrid_scorer = HybridScorer(Path(graph_path).parent)
+            G.graph["_hybrid_scorer"] = hybrid_scorer
+        if hybrid_scorer is not None and hybrid_scorer.available:
+            query_embedding_scores = hybrid_scorer.vector_scores(question)
     # One graph scoring pass produces both the combined ranking (used to drive
     # the gap-based seed selection below) and the per-token singleton winners
     # (used by _pick_seeds' per-term guarantee). Previously this was T+1 passes
     # — one combined + one per query token — re-walking the whole graph each
     # time; on a 100k-node, three-term benchmark ~71% of scoring time was
     # spent in those redundant per-term passes.
-    qs = _score_query(G, terms, collect_per_term_seeds=True)
+    qs = _score_query(
+        G, terms,
+        collect_per_term_seeds=True,
+        query_embedding_scores=query_embedding_scores,
+        hybrid_scorer=hybrid_scorer,
+        semantic=semantic,
+    )
     # Relational-intent verbs ("calls", "uses", ...) describe the relation the
     # question asks about, not a symbol to seed from; drop them from the
     # per-term seed GUARANTEE so an incidental verb match cannot seat a decoy
@@ -1215,35 +1340,79 @@ def _query_graph_text(
         best_seed_by_term = {
             t: nid for t, nid in best_seed_by_term.items() if t not in intent
         }
-    start_nodes = _pick_seeds(qs.ranked, G=G, best_seed_by_term=best_seed_by_term)
-    if not start_nodes:
+    # Early-exit when nothing matched at all (lexical + vector + fuzzy all 0).
+    if not qs.ranked:
         return "No matching nodes found."
     resolved_filters, filter_source = _resolve_context_filters(question, context_filters)
     traversal_graph = _filter_graph_by_context(G, resolved_filters)
-    nodes, edges = _dfs(traversal_graph, start_nodes, depth) if mode == "dfs" else _bfs(traversal_graph, start_nodes, depth)
+    # top_n=1 (default): existing behavior — _pick_seeds picks a gap-aware
+    # seed list (capped by top_k), single BFS, single subgraph. Output stays
+    # free of any `=== Result` separator (AC14). top_k flows into _pick_seeds
+    # as its max_k so callers can widen/narrow the seed window.
+    if top_n <= 1:
+        start_nodes = _pick_seeds(
+            qs.ranked, max_k=top_k, G=G, best_seed_by_term=best_seed_by_term
+        )
+        if not start_nodes:
+            return "No matching nodes found."
+        nodes, edges = _dfs(traversal_graph, start_nodes, depth) if mode == "dfs" else _bfs(traversal_graph, start_nodes, depth)
+        header_parts = [
+            f"Traversal: {mode.upper()} depth={depth}",
+            f"Start: {[G.nodes[n].get('label', n) for n in start_nodes]}",
+        ]
+        # Name the graph this answer came from. `graphify-out/` resolves against the
+        # CWD, so running a query from a parent project while thinking about a
+        # vendored subproject silently answers from the wrong corpus — the output is
+        # well-formed and confidently wrong, and nothing in it said which graph was
+        # opened (#2789). Shown relative when the graph is under the CWD (the normal
+        # case, and short), absolute when it is not — which is exactly the case worth
+        # noticing. The node count travels with it because "355 nodes" vs "3178
+        # nodes" is often the first thing that looks wrong.
+        if graph_path:
+            header_parts.insert(0, f"Graph: {_display_graph_path(graph_path)} "
+                                   f"({G.number_of_nodes()} nodes)")
+        if resolved_filters:
+            header_parts.append(f"Context: {', '.join(resolved_filters)} ({filter_source})")
+        header_parts.append(f"{len(nodes)} nodes found")
+        header = " | ".join(header_parts) + "\n\n"
+        # Pass the seeds so the queried symbol renders first and survives truncation
+        # (#BUG2): a branch merge had silently dropped this argument, leaving the
+        # seed-first ordering as dead code.
+        return header + _subgraph_to_text(traversal_graph, nodes, edges, token_budget, seeds=start_nodes)
+    # top_n>1: take the ranked top-N seeds, each gets its OWN independent BFS.
+    # Returns N subgraphs separated by `=== Result i/N ===` markers (AC13) so
+    # the AI can pick the most relevant candidate or follow up on the best
+    # one. Each subgraph shares a per-result budget (token_budget // top_n,
+    # floored at 500) so total output stays bounded — passing a single
+    # token_budget across N results would let the first result eat it all.
+    top_seeds = [nid for _score, nid in qs.ranked[:top_n]]
+    per_result_budget = max(token_budget // top_n, 500)
+    seed_score_map = dict(qs.ranked)
+    results: list[str] = []
+    for i, seed_nid in enumerate(top_seeds, 1):
+        seed_label = G.nodes[seed_nid].get("label", seed_nid)
+        seed_score = seed_score_map.get(seed_nid, 0.0)
+        nodes, edges = (
+            _dfs(traversal_graph, [seed_nid], depth) if mode == "dfs"
+            else _bfs(traversal_graph, [seed_nid], depth)
+        )
+        sub_text = _subgraph_to_text(
+            traversal_graph, nodes, edges, per_result_budget, seeds=[seed_nid]
+        )
+        results.append(
+            f"=== Result {i}/{top_n} (seed: {seed_label}, score: {seed_score:.2f}) ===\n{sub_text}"
+        )
     header_parts = [
         f"Traversal: {mode.upper()} depth={depth}",
-        f"Start: {[G.nodes[n].get('label', n) for n in start_nodes]}",
+        f"Top-{top_n} seeds: {[G.nodes[n].get('label', n) for n in top_seeds]}",
     ]
-    # Name the graph this answer came from. `graphify-out/` resolves against the
-    # CWD, so running a query from a parent project while thinking about a
-    # vendored subproject silently answers from the wrong corpus — the output is
-    # well-formed and confidently wrong, and nothing in it said which graph was
-    # opened (#2789). Shown relative when the graph is under the CWD (the normal
-    # case, and short), absolute when it is not — which is exactly the case worth
-    # noticing. The node count travels with it because "355 nodes" vs "3178
-    # nodes" is often the first thing that looks wrong.
     if graph_path:
         header_parts.insert(0, f"Graph: {_display_graph_path(graph_path)} "
                                f"({G.number_of_nodes()} nodes)")
     if resolved_filters:
         header_parts.append(f"Context: {', '.join(resolved_filters)} ({filter_source})")
-    header_parts.append(f"{len(nodes)} nodes found")
     header = " | ".join(header_parts) + "\n\n"
-    # Pass the seeds so the queried symbol renders first and survives truncation
-    # (#BUG2): a branch merge had silently dropped this argument, leaving the
-    # seed-first ordering as dead code.
-    return header + _subgraph_to_text(traversal_graph, nodes, edges, token_budget, seeds=start_nodes)
+    return header + "\n\n".join(results)
 
 
 def _find_node_tiers(
@@ -1585,6 +1754,12 @@ def _build_server(graph_path: str):
                     "type": "object",
                     "properties": {
                         "question": {"type": "string", "description": "Natural language question or keyword search"},
+                        "semantic": {"type": "boolean", "default": True,
+                                      "description": "Enable hybrid semantic+fuzzy retrieval (default true). Set false for pure lexical matching."},
+                        "top_k": {"type": "integer", "default": 3,
+                                  "description": "Number of seed nodes to return before BFS expansion"},
+                        "top_n": {"type": "integer", "default": 1,
+                                  "description": "Number of independent subgraph results to return (default 1). When >1, each top seed gets its own BFS subgraph; AI picks the most relevant."},
                         "mode": {"type": "string", "enum": ["bfs", "dfs"], "default": "bfs",
                                  "description": "bfs=broad context, dfs=trace a specific path"},
                         "depth": {"type": "integer", "default": 3, "description": "Traversal depth (1-6)"},
@@ -1735,6 +1910,12 @@ def _build_server(graph_path: str):
         depth = min(int(arguments.get("depth", 3)), 6)
         budget = int(arguments.get("token_budget", 2000))
         context_filter = arguments.get("context_filter")
+        # NEW: hybrid semantic params (default to spec'd behavior — semantic
+        # on, single subgraph, top_k=3). All transparent when omitted, so
+        # existing MCP clients see no output change (AC14).
+        semantic = arguments.get("semantic", True)
+        top_k = int(arguments.get("top_k", 3))
+        top_n = int(arguments.get("top_n", 1))
         _t0 = _time.perf_counter()
         result = _query_graph_text(
             G,
@@ -1744,6 +1925,9 @@ def _build_server(graph_path: str):
             token_budget=budget,
             context_filters=context_filter,
             graph_path=str(active_graph_path),
+            semantic=semantic,
+            top_k=top_k,
+            top_n=top_n,
         )
         querylog.log_query(
             kind="mcp_query",

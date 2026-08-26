@@ -3,11 +3,12 @@ from __future__ import annotations
 
 import hashlib
 import importlib
+from graphify.desc import _extract_node_desc, _language_from_ts_module
 from graphify.extractors.base import _LANGUAGE_BUILTIN_GLOBALS, _file_stem, _make_id, _read_text
 from graphify.ids import normalize_id
 from graphify.extractors.models import LanguageConfig
 from graphify.extractors.resolution import _resolve_js_import_target
-from graphify.security import sanitize_metadata
+from graphify.security import sanitize_label, sanitize_metadata
 from pathlib import Path
 
 
@@ -2993,7 +2994,7 @@ def _extract_generic(
         swift_protocol_names, swift_class_names = _swift_pre_scan(root, source)
 
     def add_node(nid: str, label: str, line: int, *, node_type: str | None = None,
-                 metadata: dict | None = None) -> None:
+                 metadata: dict | None = None, desc: str = "") -> None:
         if nid in seen_ids:
             return
         seen_ids.add(nid)
@@ -3011,6 +3012,13 @@ def _extract_generic(
         }
         if node_type:
             node["type"] = node_type
+        if desc:
+            # desc carries the docstring/preceding-comment prose used as the
+            # sole embedding text source for hybrid semantic search. Sanitised
+            # the same way as label/metadata to keep injection payloads out of
+            # downstream LLM context. Empty desc falls back to label at embed
+            # time, so leaving the field absent is fine for unsupported langs.
+            node["desc"] = sanitize_label(desc)
         if merged:
             node["metadata"] = sanitize_metadata(merged)
         nodes.append(node)
@@ -3059,7 +3067,11 @@ def _extract_generic(
         return nid
 
     file_nid = _make_id(str(path))
-    add_node(file_nid, path.name, 1)
+    # Map tree-sitter module name to a desc-extraction language tag once per
+    # file. Unsupported languages resolve to "" so _extract_node_desc short-
+    # circuits and the node carries no desc (label fallback at embed time).
+    _desc_language = _language_from_ts_module(config.ts_module)
+    add_node(file_nid, path.name, 1, desc=_extract_node_desc(root, source, _desc_language))
 
     def walk(node, parent_class_nid: str | None = None) -> None:
         t = node.type
@@ -3140,7 +3152,8 @@ def _extract_generic(
                 ):
                     metadata = dict(metadata or {})
                     metadata["is_partial"] = True
-            add_node(class_nid, class_name, line, metadata=metadata)
+            add_node(class_nid, class_name, line, metadata=metadata,
+                     desc=_extract_node_desc(node, source, _desc_language))
             callable_def_nids.add(class_nid)  # a class is callable (constructor)
             callable_class_nids.add(class_nid)  # ...but only via its constructor (#2137)
             # A nested class/object/trait is contained by its ENCLOSING type, not
@@ -4190,13 +4203,14 @@ def _extract_generic(
                 return
 
             line = node.start_point[0] + 1
+            _fn_desc = _extract_node_desc(node, source, _desc_language)
             if parent_class_nid:
                 func_nid = _make_id(parent_class_nid, sanitized_name)
-                add_node(func_nid, f".{func_name}()", line)
+                add_node(func_nid, f".{func_name}()", line, desc=_fn_desc)
                 add_edge(parent_class_nid, func_nid, "method", line)
             else:
                 func_nid = _make_id(stem, sanitized_name)
-                add_node(func_nid, f"{func_name}()", line)
+                add_node(func_nid, f"{func_name}()", line, desc=_fn_desc)
                 add_edge(file_nid, func_nid, "contains", line)
             callable_def_nids.add(func_nid)  # function / method def is callable
             if config.ts_module == "tree_sitter_python":
