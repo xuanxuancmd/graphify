@@ -3152,6 +3152,45 @@ def dispatch_command(cmd: str) -> None:
         # disables the incremental gate and skips semantic-cache reads (#1894).
         force = os.environ.get("GRAPHIFY_FORCE", "").lower() in ("1", "true", "yes")
 
+        def _generate_embedding_sidecar(
+            graph_json_path: Path,
+            embed_backend: str | None,
+            embed_model: str | None,
+        ) -> None:
+            """Generate embedding sidecar after a successful extract.
+
+            Default-on: runs after every extract (including `graphify .` and
+            `--no-cluster`). When no embedding backend is configured (neither
+            .default-graphifyrc nor .graph/graphifyrc nor env vars),
+            generate_embeddings_for_graph returns None silently — the graph is
+            still valid, queries degrade to pure lexical. The config-file chain
+            is the sole switch: configured = generate, unconfigured = skip.
+            --embed-backend / --embed-model are CLI overrides for that chain.
+
+            Reads every node's `desc` field (fallback `label`) and writes
+            graphify-out/embeddings/<model_slug>.{npy,index.json,meta.json}.
+            A failure here is a warning, not fatal.
+            """
+            try:
+                from graphify.embeddings import generate_embeddings_for_graph
+                _emb_path = generate_embeddings_for_graph(
+                    graph_json_path, backend=embed_backend, model=embed_model
+                )
+                if _emb_path is not None:
+                    print(
+                        f"[graphify extract] wrote embeddings: "
+                        f"{_emb_path.relative_to(graph_json_path.parent)}",
+                        file=sys.stderr,
+                    )
+                # else: no backend configured -> silently skipped, no message
+                # (the graph is the primary artifact; embedding is optional)
+            except Exception as exc:
+                print(
+                    f"[graphify extract] warning: embedding generation failed "
+                    f"(queries will run in pure-lexical mode until fixed): {exc}",
+                    file=sys.stderr,
+                )
+
         def _parse_int(name: str, raw: str) -> int:
             try:
                 v = int(raw)
@@ -4356,6 +4395,13 @@ def dispatch_command(cmd: str) -> None:
                               f"(+{result['nodes_added']} nodes, -{result['nodes_removed']} pruned).")
                 except Exception as exc:
                     print(f"[graphify global] warning: failed to merge into global graph: {exc}", file=sys.stderr)
+            # --no-cluster path: generate embedding sidecar before exit (same
+            # default-on + config-driven logic as the clustered path below).
+            # Both extract paths (--no-cluster and full) must produce a sidecar
+            # when a backend is configured, else `graphify . --no-cluster` or
+            # `graphify extract . --code-only` would silently skip embedding
+            # generation even with GRAPHIFY_EMBED_BACKEND set.
+            _generate_embedding_sidecar(graph_json_path, embed_backend, embed_model)
             stages.total()
             sys.exit(0)
 
@@ -4542,36 +4588,9 @@ def dispatch_command(cmd: str) -> None:
             f"`graphify cluster-only {graphify_out.parent}` "
             "to generate GRAPH_REPORT.md and name communities"
         )
-        # Embedding generation for hybrid semantic search. Default-on: runs
-        # after every extract (including `graphify .`). When no embedding
-        # backend is configured (neither .default-graphifyrc nor
-        # .graph/graphifyrc nor env vars), generate_embeddings_for_graph
-        # returns None silently — the graph is still valid, queries degrade to
-        # pure lexical. The config-file chain is the sole switch: configured =
-        # generate, unconfigured = skip. --embed-backend / --embed-model are
-        # CLI overrides for that chain, not a trigger.
-        # Reads every node's `desc` field (fallback `label`) and writes
-        # graphify-out/embeddings/<model_slug>.{npy,index.json,meta.json}.
-        # A failure here is a warning, not fatal.
-        try:
-            from graphify.embeddings import generate_embeddings_for_graph
-            _emb_path = generate_embeddings_for_graph(
-                graph_json_path, backend=embed_backend, model=embed_model
-            )
-            if _emb_path is not None:
-                print(
-                    f"[graphify extract] wrote embeddings: "
-                    f"{_emb_path.relative_to(graph_json_path.parent)}",
-                    file=sys.stderr,
-                )
-            # else: no backend configured -> silently skipped, no message
-            # (the graph is the primary artifact; embedding is optional)
-        except Exception as exc:
-            print(
-                f"[graphify extract] warning: embedding generation failed "
-                f"(queries will run in pure-lexical mode until fixed): {exc}",
-                file=sys.stderr,
-            )
+        # Embedding generation (clustered path). Same logic as the --no-cluster
+        # path above: config-driven default-on, silent skip when no backend.
+        _generate_embedding_sidecar(graph_json_path, embed_backend, embed_model)
         stages.total()
 
     elif cmd == "cache-check":

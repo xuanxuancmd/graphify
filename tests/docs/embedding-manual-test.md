@@ -76,7 +76,48 @@ python -c "import torch; print('PyTorch:', torch.__version__, 'CUDA:', torch.cud
 PyTorch: 2.13.0+cpu CUDA: False
 ```
 
-> `CUDA: False` 说明纯 CPU 推理。CPU 跑 `all-MiniLM-L6-v2` 完全够用。
+> `CUDA: False` 说明纯 CPU 推理。CPU 跑 `paraphrase-multilingual-MiniLM-L12-v2` 完全够用。
+
+---
+
+## 步骤 2：确认真实项目存在
+
+### 2.1 检查 fixture 项目
+
+```powershell
+Get-ChildItem "tests\e2e\resources\user-management\src" -Recurse -File -Filter "*.ts" | Measure-Object | Select-Object Count
+```
+
+**预期输出**：
+```
+Count
+-----
+  12
+```
+
+### 2.2 查看项目结构（可选）
+
+```powershell
+Get-ChildItem "tests\e2e\resources\user-management\src" -Recurse -File -Filter "*.ts" | ForEach-Object { $_.FullName.Replace((Get-Location).Path + "\", "") }
+```
+
+**预期输出**（12 个 TS 文件）：
+```
+tests/e2e/resources/user-management/src/auth/auth.controller.ts
+tests/e2e/resources/user-management/src/auth/auth.service.ts
+tests/e2e/resources/user-management/src/auth/jwt.ts
+tests/e2e/resources/user-management/src/auth/password.ts
+tests/e2e/resources/user-management/src/config.ts
+tests/e2e/resources/user-management/src/index.ts
+tests/e2e/resources/user-management/src/middleware/auth.middleware.ts
+tests/e2e/resources/user-management/src/middleware/request-logger.ts
+tests/e2e/resources/user-management/src/models/user.ts
+tests/e2e/resources/user-management/src/repositories/user.repository.ts
+tests/e2e/resources/user-management/src/services/user.service.ts
+tests/e2e/resources/user-management/src/utils/logger.ts
+```
+
+> 这些 TS 文件带 JSDoc 注释（如 `/** Register a new user — ... */`），用于验证 desc 字段提取。
 
 ---
 
@@ -94,23 +135,31 @@ $env:GRAPHIFY_EMBED_BACKEND = "sentence-transformers"
 
 ### 3.2 运行 extract（强制重建，自动生成 embedding sidecar）
 
+先删旧的 `.graph` 目录（避免增量扫描跳过——当文件未变化时 graphify 会直接复用已有 graph.json 而不重新 build，此时也不会触发 embedding 生成）：
+
 ```powershell
-python -m graphify extract tests/e2e/resources/user-management/src --no-cluster --no-viz --code-only --force
+Remove-Item -Recurse -Force "tests\e2e\resources\user-management\src\.graph" -ErrorAction SilentlyContinue
+```
+
+然后运行 extract（不需要 `--embed-backend` flag，配置了 env var 即自动生成）：
+
+```powershell
+python -m graphify extract tests/e2e/resources/user-management/src --no-cluster --no-viz --code-only
 ```
 
 **预期输出**（关键行）：
 ```
-[graphify extract] --force --code-only: full AST re-scan, existing semantic layer preserved
+[graphify extract] scanning ...\tests\e2e\resources\user-management\src
 [graphify extract] found 12 code, 0 docs, 0 papers, 0 images
 [graphify extract] AST extraction on 12 code files...
 [graphify extract] wrote ...\src\.graph\graph.json — 81 nodes, 204 edges (no clustering)
-[graphify extract] wrote embeddings: embeddings/paraphrase_multilingual_minilm_l12_v2.npy
+[graphify extract] wrote embeddings: embeddings\paraphrase_multilingual_minilm_l12_v2.npy
 ```
 
-> `--force` 强制全量重建（否则增量扫描会跳过未改动文件）。
 > `--code-only` 只跑 AST，不调 LLM（无需提取 API key）。
 > `--no-cluster` 跳过社区检测（验证 desc 不需要）。
 > embedding sidecar 自动生成（因为步骤 3.1 设了 `GRAPHIFY_EMBED_BACKEND` env）——无需传 `--embed-backend` flag。
+> 不需要 `--force`——前面已删 `.graph` 目录，是全新 build。
 
 > **如果未配置任何 embedding backend**（env var + `.graph/graphifyrc` + `.default-graphifyrc` 全空），extract 仍会正常完成，只是跳过 embedding 生成（不报错），查询时退回纯词法。
 
