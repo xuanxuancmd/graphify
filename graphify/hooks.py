@@ -416,27 +416,16 @@ echo "[graphify] Branch switched - launching background rebuild (log: $_GRAPHIFY
 """
 
 
-def _load_graphifyrc(root: Path) -> dict[str, str | int]:
-    """Load key/value options from <root>/.graphifyrc if present.
+def _parse_graphifyrc_file(rc_path: Path) -> dict[str, str | int]:
+    """Parse a single .graphifyrc-format file into a dict.
 
-    Supported options:
-      viz_node_limit: integer >= 0 (e.g. viz_node_limit=0)
-      embed_backend: str — embedding backend for hybrid search
-        (openai/openai-compatible/gemini/kimi/deepseek/ollama/azure/
-        sentence-transformers)
-      embed_base_url: str — OpenAI-compatible endpoint URL for the
-        ``openai-compatible`` backend, or override for any backend's base_url
-      embed_api_key: str — API key for the embedding backend (local servers
-        accept any non-empty value)
-      embed_model: str — model name override (e.g. text-embedding-3-small)
-
-    Embedding keys let the user configure hybrid search without environment
-    variables or code changes. See docs/hybrid-semantic-search/Embedding.md.
+    Shared by the shipped default (``.default-graphifyrc`` next to the
+    package) and the per-project ``.graphifyrc`` so both use identical
+    parsing rules. Raises ``ValueError`` on malformed lines so typos
+    surface immediately rather than silently being ignored.
     """
-    rc_path = root / ".graphifyrc"
     if not rc_path.is_file():
         return {}
-
     cfg: dict[str, str | int] = {}
     content = rc_path.read_text(encoding="utf-8")
     for line_num, raw in enumerate(content.splitlines(), 1):
@@ -465,6 +454,74 @@ def _load_graphifyrc(root: Path) -> dict[str, str | int]:
             # the raw value here for round-trip fidelity.
             cfg[key] = val
     return cfg
+
+
+def _shipped_default_graphifyrc_path() -> Path:
+    """Path to the ``.default-graphifyrc`` that ships with the graphify package.
+
+    Located next to ``__file__`` (the ``graphify/`` package dir) so it
+    survives ``pip install`` — the file is included via pyproject.toml
+    package-data. Used as the lowest-priority config layer: a project-level
+    ``graphifyrc`` overrides any key set here.
+    """
+    return Path(__file__).parent / ".default-graphifyrc"
+
+
+def _project_graphifyrc_path(root: Path) -> Path:
+    """Path to the per-project ``graphifyrc`` next to the graph output.
+
+    graphify writes graph.json under ``<root>/.graph/`` (or
+    ``graphify-out/`` when GRAPHIFY_OUT is overridden). The per-project
+    config lives IN that output dir — same place as graph.json — so the
+    config travels with the graph and isn't scattered at the repo root.
+    """
+    out_name = os.environ.get("GRAPHIFY_OUT", ".graph")
+    return root / out_name / "graphifyrc"
+
+
+def _merge_default_graphifyrc(cfg: dict[str, str | int]) -> dict[str, str | int]:
+    """Layer the shipped ``.default-graphifyrc`` under ``cfg`` (cfg wins per-key).
+
+    The default file is loaded first as the base, then ``cfg`` (the
+    project-level config already parsed by the caller) overrides any key
+    it sets. Returns a new merged dict; inputs are not mutated.
+    """
+    merged: dict[str, str | int] = {}
+    default_path = _shipped_default_graphifyrc_path()
+    if default_path.is_file():
+        merged.update(_parse_graphifyrc_file(default_path))
+    merged.update(cfg)
+    return merged
+
+
+def _load_graphifyrc(root: Path) -> dict[str, str | int]:
+    """Load merged config: shipped default + project ``graphifyrc``.
+
+    Layering (later wins, per-key):
+      1. ``.default-graphifyrc`` next to the graphify package — out-of-the-box
+         defaults, shipped with the package. Uncommented lines here become the
+         base config for every project.
+      2. ``<root>/<GRAPHIFY_OUT>/graphifyrc`` — per-project overrides, living
+         next to graph.json in the graph output dir (default ``.graph/``).
+         Only the keys it sets override the defaults; everything else falls
+         back to layer 1.
+
+    Supported options (both layers):
+      viz_node_limit: integer >= 0 (e.g. viz_node_limit=0)
+      embed_backend: str — embedding backend for hybrid search
+        (openai/openai-compatible/gemini/kimi/deepseek/ollama/azure/
+        sentence-transformers)
+      embed_base_url: str — OpenAI-compatible endpoint URL for the
+        ``openai-compatible`` backend, or override for any backend's base_url
+      embed_api_key: str — API key for the embedding backend (local servers
+        accept any non-empty value)
+      embed_model: str — model name override (e.g. text-embedding-3-small)
+
+    Embedding keys let the user configure hybrid search without environment
+    variables or code changes. See docs/hybrid-semantic-search/Embedding.md.
+    """
+    project_cfg = _parse_graphifyrc_file(_project_graphifyrc_path(root))
+    return _merge_default_graphifyrc(project_cfg)
 
 
 def _git_root(path: Path) -> Path | None:

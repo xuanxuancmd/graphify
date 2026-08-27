@@ -34,40 +34,43 @@ _VECTOR_SIMILARITY_BONUS = 5.0
 _FUZZY_MATCH_BONUS = 2.0
 
 
-def _load_embed_config_from_graphifyrc() -> dict[str, str]:
-    """Read embedding config keys from ``.graphifyrc`` in the graph dir.
+def _load_embed_config_from_graphifyrc(graph_dir: "str | Path | None" = None) -> dict[str, str]:
+    """Read embedding config keys from the project ``graphifyrc``.
 
-    graphify already uses ``.graphifyrc`` for viz options; this extends it
-    with four embedding keys so the user can configure the hybrid search
-    embedding backend without environment variables or code changes:
+    graphify writes graph.json under ``<project>/.graph/`` (default, or
+    ``graphify-out/`` when GRAPHIFY_OUT is overridden). The per-project
+    config file ``graphifyrc`` lives IN that output dir — same place as
+    graph.json — so embedding settings travel with the graph and aren't
+    scattered at the repo root. A shipped ``.default-graphifyrc`` next to
+    the graphify package provides out-of-the-box defaults (loaded first,
+    overridden per-key by the project file).
 
+    Four embedding keys are recognized:
         embed_backend=openai-compatible
         embed_base_url=http://localhost:8080/v1
         embed_api_key=sk-...
         embed_model=text-embedding-3-small
 
-    The file is searched starting from the graph directory (typically
-    ``graphify-out/`` parent = project root) and walking up. Returns an
-    empty dict when no ``.graphifyrc`` is found.
+    ``graph_dir`` is the directory containing graph.json (typically
+    ``.graph/``). When None, falls back to ``GRAPHIFY_OUT_DIR`` env or CWD.
+    Returns an empty dict when no config is found on either layer.
     """
-    # Lazy import to avoid circular dep (hooks imports a lot). This module
-    # is imported by serve.py which is imported at startup.
     try:
-        from graphify.hooks import _load_graphifyrc
+        from graphify.hooks import _load_graphifyrc, _project_graphifyrc_path
     except ImportError:
         return {}
     from pathlib import Path
-    # The graph dir is the parent of graph.json (i.e. graphify-out/).
-    # Walk up from there to find .graphifyrc at the project root.
-    graph_dir = Path(os.environ.get("GRAPHIFY_OUT_DIR", ".")).resolve()
-    for candidate in [graph_dir, *graph_dir.parents]:
-        rc_path = candidate / ".graphifyrc"
-        if rc_path.is_file():
-            cfg = _load_graphifyrc(candidate)
-            # Extract only the embed_* keys (others like viz_node_limit
-            # are not relevant here).
-            return {k: str(v) for k, v in cfg.items() if k.startswith("embed_")}
-    return {}
+    # Resolve the project root: graph_dir is the output dir (.graph/),
+    # so the project root is its parent. _load_graphifyrc(root) reads
+    # <root>/<GRAPHIFY_OUT>/graphifyrc, which is exactly graph_dir/graphifyrc.
+    if graph_dir is not None:
+        root = Path(graph_dir).resolve().parent
+    else:
+        root = Path(os.environ.get("GRAPHIFY_OUT_DIR", ".")).resolve()
+    cfg = _load_graphifyrc(root)
+    # Extract only the embed_* keys (others like viz_node_limit are not
+    # relevant here).
+    return {k: str(v) for k, v in cfg.items() if k.startswith("embed_")}
 
 
 def _embed_backend_from_env() -> str | None:
@@ -135,16 +138,32 @@ class HybridScorer:
         self._id_to_row: dict[str, int] | None = None
         self._model: str = ""
         self._query_cache: dict[str, np.ndarray] = {}
-        # Load .graphifyrc config so embed_base_url/embed_api_key land in env
-        # before _resolve_embed_backend_config reads them. This lets the user
-        # configure any OpenAI-compatible endpoint in a file without env vars.
-        rc_cfg = _load_embed_config_from_graphifyrc()
+        # Load .graph/graphifyrc config so embed_base_url/embed_api_key land
+        # in env before _resolve_embed_backend_config reads them. This lets
+        # the user configure any OpenAI-compatible endpoint in a file without
+        # env vars. Pass graph_dir so the config lookup targets the right
+        # project's .graph/ dir (not just CWD).
+        rc_cfg = _load_embed_config_from_graphifyrc(graph_dir)
         if rc_cfg.get("embed_base_url"):
             os.environ.setdefault("GRAPHIFY_EMBED_BASE_URL", rc_cfg["embed_base_url"])
         if rc_cfg.get("embed_api_key"):
             os.environ.setdefault("GRAPHIFY_EMBED_API_KEY", rc_cfg["embed_api_key"])
-        self._embed_backend = embed_backend or _embed_backend_from_env()
-        self._embed_model = embed_model or _embed_model_from_env()
+        # Backend: explicit arg > .graph/graphifyrc embed_backend > env auto-detect.
+        # The rc_cfg embed_backend comes from the project's .graph/graphifyrc
+        # merged over the shipped default, so it already reflects both layers.
+        self._embed_backend = (
+            embed_backend
+            or rc_cfg.get("embed_backend", "").strip().lower()
+            or None
+            or _embed_backend_from_env()
+        )
+        # Model: explicit arg > .graph/graphifyrc embed_model > env
+        self._embed_model = (
+            embed_model
+            or rc_cfg.get("embed_model", "").strip()
+            or None
+            or _embed_model_from_env()
+        )
         if graph_dir is not None:
             self._load(Path(graph_dir))
 
