@@ -3157,39 +3157,16 @@ def dispatch_command(cmd: str) -> None:
             embed_backend: str | None,
             embed_model: str | None,
         ) -> None:
-            """Generate embedding sidecar after a successful extract.
+            """Thin wrapper over the shared embeddings.generate_embedding_sidecar.
 
-            Default-on: runs after every extract (including `graphify .` and
-            `--no-cluster`). When no embedding backend is configured (neither
-            .default-graphifyrc nor .graph/graphifyrc nor env vars),
-            generate_embeddings_for_graph returns None silently — the graph is
-            still valid, queries degrade to pure lexical. The config-file chain
-            is the sole switch: configured = generate, unconfigured = skip.
-            --embed-backend / --embed-model are CLI overrides for that chain.
-
-            Reads every node's `desc` field (fallback `label`) and writes
-            graphify-out/embeddings/<model_slug>.{npy,index.json,meta.json}.
-            A failure here is a warning, not fatal.
+            Kept as a local alias so the two call sites below read naturally
+            with the extract command's variable names; the real logic lives
+            in embeddings.py so watch.py (the post-commit hook path) shares
+            the exact same embedding refresh behavior.
             """
-            try:
-                from graphify.embeddings import generate_embeddings_for_graph
-                _emb_path = generate_embeddings_for_graph(
-                    graph_json_path, backend=embed_backend, model=embed_model
-                )
-                if _emb_path is not None:
-                    print(
-                        f"[graphify extract] wrote embeddings: "
-                        f"{_emb_path.relative_to(graph_json_path.parent)}",
-                        file=sys.stderr,
-                    )
-                # else: no backend configured -> silently skipped, no message
-                # (the graph is the primary artifact; embedding is optional)
-            except Exception as exc:
-                print(
-                    f"[graphify extract] warning: embedding generation failed "
-                    f"(queries will run in pure-lexical mode until fixed): {exc}",
-                    file=sys.stderr,
-                )
+            from graphify.embeddings import generate_embedding_sidecar as _gen
+            _gen(graph_json_path, embed_backend=embed_backend,
+                 embed_model=embed_model, log_prefix="[graphify extract]")
 
         def _parse_int(name: str, raw: str) -> int:
             try:

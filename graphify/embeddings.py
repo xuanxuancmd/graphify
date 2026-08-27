@@ -384,6 +384,59 @@ def generate_embeddings_for_graph(
     return paths["npy"]
 
 
+def generate_embedding_sidecar(
+    graph_json_path: Path,
+    *,
+    embed_backend: str | None = None,
+    embed_model: str | None = None,
+    log_prefix: str = "[graphify]",
+) -> None:
+    """Generate (or skip) the embedding sidecar after a successful graph build.
+
+    This is the single shared entry point called by every code path that
+    finishes a graph.json — cli.py's extract command AND watch.py's
+    _rebuild_code (the git post-commit hook path). Keeping the call in one
+    place avoids the two paths drifting: a desc change picked up by either
+    the full `graphify .` extract or the incremental hook rebuild produces
+    a refreshed sidecar.
+
+    Default-on via config: when ``embed_backend`` is None (the common case
+    — ``graphify .`` / ``graphify extract .`` / git commit hook all pass
+    None), the backend is auto-detected from .default-graphifyrc,
+    .graph/graphifyrc, and env vars. When nothing is configured,
+    `generate_embeddings_for_graph` returns None silently — the graph is
+    still valid, queries degrade to pure lexical. The config-file chain is
+    the sole switch: configured = generate, unconfigured = skip.
+
+    ``log_prefix`` labels the stderr output so the caller can identify
+    which path produced the sidecar (e.g. ``[graphify extract]`` vs
+    ``[graphify watch]``).
+
+    Reads every node's `desc` field (fallback `label`) and writes
+    ``<graph_dir>/embeddings/<model_slug>.{npy,index.json,meta.json}``.
+    A failure here is a warning, not fatal — the graph is the primary
+    artifact.
+    """
+    import sys
+    try:
+        _emb_path = generate_embeddings_for_graph(
+            graph_json_path, backend=embed_backend, model=embed_model
+        )
+        if _emb_path is not None:
+            print(
+                f"{log_prefix} wrote embeddings: "
+                f"{_emb_path.relative_to(graph_json_path.parent)}",
+                file=sys.stderr,
+            )
+        # else: no backend configured -> silently skipped, no message
+    except Exception as exc:
+        print(
+            f"{log_prefix} warning: embedding generation failed "
+            f"(queries will run in pure-lexical mode until fixed): {exc}",
+            file=sys.stderr,
+        )
+
+
 # ---------------------------------------------------------------------------
 # Query-time: load sidecar + embed query
 # ---------------------------------------------------------------------------
