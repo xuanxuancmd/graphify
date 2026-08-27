@@ -3,19 +3,32 @@
 本文档记录 hybrid semantic search 的 embedding 端到端手动验证流程，可完整复现。
 验证用真实项目 `tests/e2e/resources/user-management`（12 个 TypeScript 文件，81 节点）。
 
-## 前置说明：三种 embedding backend
+## 前置说明：四种 embedding backend
 
-验证前需明确三种 backend 的区别——本流程用的是 **sentence-transformers**（纯本地 CPU，无需服务进程）：
+验证前需明确四种 backend 的区别——本流程用的是 **sentence-transformers**（纯本地 CPU，无需服务进程）：
 
 | Backend | 运行方式 | 需要服务进程 | 需要 API key | 适用场景 |
 |---|---|---|---|---|
 | `sentence-transformers` | PyTorch 进程内 CPU 推理 | ❌ | ❌ | **测试 / CI**（本文档用此方式） |
 | `ollama` | HTTP 调用 localhost:11434 | ✅ `ollama serve` | ❌ | 本地开发 / 离线 / 隐私敏感 |
+| `openai-compatible` | HTTP 调任意 OpenAI 兼容端点 | ✅ 自托管服务 | 可选 | 自托管 vLLM/LM Studio/llama.cpp |
 | `openai` / `gemini` / `kimi` / `azure` | HTTPS 调云 API | ❌ | ✅ | 生产环境 |
 
-> **Ollama 兼容 OpenAI 的 `/v1/embeddings` 接口格式**，所以 graphify 代码里 `openai` 和 `ollama` backend 走同一段 OpenAI SDK 代码，只是 `base_url` 不同（`https://api.openai.com/v1` vs `http://localhost:11434/v1`）。
+> **Ollama 和 openai-compatible 都是跨进程方案**——通过 OpenAI SDK 调 HTTP 端点，只是 `base_url` 不同。Ollama 是本地部署的 HTTP 服务，openai-compatible 适用于任何 `/v1/embeddings` 端点（含云端和自托管）。
 >
-> **sentence-transformers 是独立的第三条路径**，不走 OpenAI SDK，不走 HTTP，是 PyTorch 进程内直接推理——专门为测试/CI 加的免费本地方案。
+> **sentence-transformers 是唯一的同进程方案**——PyTorch 进程内直接推理，无 HTTP，无服务进程。专为测试/CI 加的免费本地方案，不作为正式方案（模型文件 120MB）。
+
+### 配置方式（三选一，无需改代码）
+
+| 方式 | 位置 | 说明 |
+|---|---|---|
+| **配置文件**（推荐） | `.graph/graphifyrc` | 和 graph.json 同目录，4 个 key：`embed_backend` / `embed_base_url` / `embed_api_key` / `embed_model` |
+| 环境变量 | `GRAPHIFY_EMBED_BACKEND` 等 | 适用于 CI / 临时覆盖 |
+| CLI flag | `--embed-backend` | 仅 build-time（`graphify extract`） |
+
+> **两层配置 merge**：`graphify/.default-graphifyrc`（包内出厂默认，全注释占位）+ `.graph/graphifyrc`（项目级覆盖）。项目级覆盖 default 的对应 key，未覆盖的 fallback 到 default。
+>
+> 本文档验证用环境变量（最简单），实际项目推荐用 `.graph/graphifyrc` 配置文件。
 
 ---
 
@@ -477,9 +490,28 @@ Remove-Item -Path "_check_desc.py","_gen_embeddings.py","_e2e_verify.py" -Force 
 
 ## 切换到其他 backend（可选）
 
-如果你想用 Ollama 或 OpenAI 而非 sentence-transformers 重新验证：
+如果你想用 Ollama 或 OpenAI 而非 sentence-transformers 重新验证。推荐用 `.graph/graphifyrc` 配置文件（无需 env var，配置持久化）：
 
-### 用 Ollama
+### 用配置文件 `.graph/graphifyrc`（推荐）
+
+在项目的 `.graph/` 目录下创建 `graphifyrc`（和 graph.json 同目录）：
+
+```ini
+# tests/e2e/resources/user-management/src/.graph/graphifyrc
+embed_backend=openai-compatible
+embed_base_url=http://my-embedding-server:8080/v1
+embed_api_key=sk-your-key
+embed_model=text-embedding-3-small
+```
+
+配置后无需 env var，直接生成 sidecar + 查询：
+
+```powershell
+python -c "from graphify.embeddings import generate_embeddings_for_graph; from pathlib import Path; generate_embeddings_for_graph(Path('tests/e2e/resources/user-management/src/.graph/graph.json'), backend='openai-compatible')"
+python -m graphify query "how does authentication work" --graph tests/e2e/resources/user-management/src/.graph/graph.json
+```
+
+### 用 Ollama（env var 方式）
 
 ```powershell
 # 1. 安装并启动 ollama
@@ -493,13 +525,19 @@ python -c "from graphify.embeddings import generate_embeddings_for_graph; from p
 python -m graphify query "how does authentication work" --graph tests/e2e/resources/user-management/src/.graph/graph.json
 ```
 
-### 用 OpenAI
+### 用 OpenAI（env var 方式）
 
 ```powershell
 $env:OPENAI_API_KEY = "sk-..."
 $env:GRAPHIFY_EMBED_BACKEND = "openai"
 python -c "from graphify.embeddings import generate_embeddings_for_graph; from pathlib import Path; generate_embeddings_for_graph(Path('tests/e2e/resources/user-management/src/.graph/graph.json'), backend='openai', model='text-embedding-3-small')"
 python -m graphify query "how does authentication work" --graph tests/e2e/resources/user-management/src/.graph/graph.json
+```
+
+### 配置优先级
+
+```
+CLI flag (--embed-backend) > .graph/graphifyrc > 环境变量 > graphify/.default-graphifyrc (出厂默认)
 ```
 
 > **注意**：切换 backend 后需要重新生成 sidecar（不同模型的向量空间不兼容，不能混用）。

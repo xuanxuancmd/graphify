@@ -19,11 +19,12 @@ hybrid 语义检索的 vector tier 需要一个 embedding 模型。本文档说�
 
 ## 配置方式（三选一，无需改代码）
 
-### 方式 1：配置文件 `.graphifyrc`（推荐，最显式）
+### 方式 1：配置文件 `.graph/graphifyrc`（推荐，最显式）
 
-在项目根目录创建 `.graphifyrc` 文件：
+在项目的 graph 输出目录（默认 `.graph/`，和 graph.json 同目录）创建 `graphifyrc` 文件：
 
 ```ini
+# <project>/.graph/graphifyrc
 # embedding 后端配置 (无需环境变量, 无需改代码)
 embed_backend=openai-compatible
 embed_base_url=http://my-embedding-server:8080/v1
@@ -39,6 +40,8 @@ embed_model=text-embedding-3-small
 | `embed_base_url` | OpenAI 兼容端点 URL | `http://localhost:8080/v1` |
 | `embed_api_key` | API key（本地服务填任意非空值） | `sk-...` |
 | `embed_model` | 模型名（不填用后端默认） | `text-embedding-3-small` |
+
+> **两层配置 merge**：`graphify/.default-graphifyrc`（包内出厂默认，全注释占位）+ `.graph/graphifyrc`（项目级覆盖）。项目级覆盖 default 的对应 key，未覆盖的 fallback 到 default。你可以在 default 里 uncomment 配置让 graphify 开箱即用。
 
 ### 方式 2：环境变量
 
@@ -60,7 +63,7 @@ export OLLAMA_BASE_URL=http://localhost:11434  # ollama backend
 graphify extract . --embed-backend openai-compatible --embed-model text-embedding-3-small
 ```
 
-> **优先级**：CLI flag > `.graphifyrc` 配置文件 > 环境变量 > 自动检测。
+> **优先级**：CLI flag > `.graph/graphifyrc` 配置文件 > 环境变量 > `graphify/.default-graphifyrc`（出厂默认）。
 
 ---
 
@@ -83,9 +86,10 @@ graphify extract . --embed-backend openai-compatible --embed-model text-embeddin
 
 适用于任何实现了 `/v1/embeddings` 的服务：vLLM、LM Studio、llama.cpp、OpenRouter、自建网关等。
 
-`.graphifyrc` 示例：
+`.graph/graphifyrc` 示例：
 
 ```ini
+# <project>/.graph/graphifyrc
 embed_backend=openai-compatible
 embed_base_url=http://my-server:8080/v1
 embed_api_key=local-no-key-needed
