@@ -17,9 +17,9 @@ hybrid 语义检索的 vector tier 需要一个 embedding 模型。本文档说�
 
 ---
 
-## 配置方式（三选一，无需改代码）
+## 配置方式（配置文件，无需改代码）
 
-### 方式 1：配置文件 `.graph/graphifyrc`（推荐，最显式）
+### 唯一方式：配置文件 `.graph/graphifyrc`
 
 在项目的 graph 输出目录（默认 `.graph/`，和 graph.json 同目录）创建 `graphifyrc` 文件：
 
@@ -42,28 +42,16 @@ embed_model=text-embedding-3-small
 | `embed_model` | 模型名（不填用后端默认） | `text-embedding-3-small` |
 
 > **两层配置 merge**：`graphify/.default-graphifyrc`（包内出厂默认，全注释占位）+ `.graph/graphifyrc`（项目级覆盖）。项目级覆盖 default 的对应 key，未覆盖的 fallback 到 default。你可以在 default 里 uncomment 配置让 graphify 开箱即用。
+>
+> 环境变量（`GRAPHIFY_EMBED_BACKEND` 等）已废弃，不再支持。全部用配置文件。
 
-### 方式 2：环境变量
-
-```bash
-# 统一配置 (适用于任何 backend)
-export GRAPHIFY_EMBED_BACKEND=openai-compatible
-export GRAPHIFY_EMBED_BASE_URL=http://my-embedding-server:8080/v1
-export GRAPHIFY_EMBED_API_KEY=sk-your-key-here
-export GRAPHIFY_EMBED_MODEL=text-embedding-3-small
-
-# 或按 backend 专用 env (和 extraction 共用)
-export OPENAI_API_KEY=sk-...           # openai backend
-export OLLAMA_BASE_URL=http://localhost:11434  # ollama backend
-```
-
-### 方式 3：CLI flag（仅 build-time）
+### CLI flag（可选覆盖）
 
 ```bash
 graphify extract . --embed-backend openai-compatible --embed-model text-embedding-3-small
 ```
 
-> **优先级**：CLI flag > `.graph/graphifyrc` 配置文件 > 环境变量 > `graphify/.default-graphifyrc`（出厂默认）。
+> **优先级**：CLI flag > `.graph/graphifyrc` 配置文件 > `graphify/.default-graphifyrc`（出厂默认）。
 
 ---
 
@@ -102,7 +90,7 @@ embed_model=BAAI/bge-m3
 
 **`graphify .` / `graphify extract .` 默认会尝试生成 embedding**——无需传 `--embed-backend`，配置文件是唯一开关：
 
-- **配置了 backend**（`.default-graphifyrc` 或 `.graph/graphifyrc` 或 env vars）→ build 完成后自动生成 sidecar，查询时启用 vector tier
+- **配置了 backend**（`.default-graphifyrc` 或 `.graph/graphifyrc`）→ build 完成后自动生成 sidecar，查询时启用 vector tier
 - **未配置任何 backend** → 静默跳过 embedding 生成，不报错，graph 正常产出；查询时 `HybridScorer.available=False`，自动退回纯词法
 
 embedding 与 graph 提取/构建是同一次 `graphify .` 调用的两个阶段：先提取图谱，再（如果配置了 backend）生成 embedding sidecar。`--embed-backend` / `--embed-model` 仍是 CLI 覆盖参数，但不再是触发开关——触发完全由配置文件决定。
@@ -112,12 +100,11 @@ embedding 与 graph 提取/构建是同一次 `graphify .` 调用的两个阶段
 ## build-time 生成 sidecar
 
 ```bash
-# 配置了 .graph/graphifyrc 或 env vars 后, 直接 graphify . 即可生成
+# 配置了 .graph/graphifyrc 后, 直接 graphify . 即可生成
 graphify .
 
 # 或用 CLI flag 临时覆盖配置 (不是触发开关, 只是覆盖)
 graphify extract . --embed-backend openai-compatible --embed-model text-embedding-3-small
-graphify extract . --embed-backend openai --embed-model text-embedding-3-large
 ```
 
 生成产物：
@@ -136,7 +123,7 @@ graphify-out/embeddings/
 ## query-time 自动加载
 
 查询时无需显式指定 backend——`HybridScorer` 会：
-1. 读取 `.graphifyrc` / 环境变量确定 backend
+1. 读取 `.graph/graphifyrc` 配置文件确定 backend
 2. 加载 `graphify-out/embeddings/` 下最新的 sidecar
 3. embed query 字符串，算 cosine similarity
 4. 作为 additive bonus 加到词法分数上
@@ -157,12 +144,18 @@ graphify query "how does login work?" --no-semantic
 
 默认模型 `paraphrase-multilingual-MiniLM-L12-v2`（384 维，120MB，支持 50+ 语言含中英跨语言检索）。
 
+在 `.graph/graphifyrc` 中配置：
+
+```ini
+embed_backend=sentence-transformers
+embed_model=paraphrase-multilingual-MiniLM-L12-v2
+```
+
+然后直接 `graphify .` 即可生成 sidecar（无需 `--embed-backend` flag，无需环境变量）：
+
 ```bash
 pip install sentence-transformers
-
-# 生成 sidecar (首次会下载 ~120MB 模型到 ~/.cache/huggingface/)
-export GRAPHIFY_EMBED_BACKEND=sentence-transformers
-graphify extract . --embed-backend sentence-transformers
+graphify .
 
 # 查询
 graphify query "how does login work?"
@@ -195,19 +188,16 @@ graphify-out/embeddings/
 
 ---
 
-## 环境变量速查
+## 配置文件速查
 
-| 变量 | 用途 | 默认值 |
+| Key (in `.graph/graphifyrc`) | 用途 | 默认值 |
 |---|---|---|
-| `GRAPHIFY_EMBED_BACKEND` | query 时自动检测的 embedding backend | 自动检测 |
-| `GRAPHIFY_EMBED_BASE_URL` | 统一 endpoint URL（覆盖任何 backend 的 base_url） | — |
-| `GRAPHIFY_EMBED_API_KEY` | 统一 API key（覆盖任何 backend 的 key） | — |
-| `GRAPHIFY_EMBED_MODEL` | embedding 模型名覆盖 | 按 backend 自动选 |
-| `OPENAI_API_KEY` + `OPENAI_BASE_URL` | OpenAI / 兼容端点 | — |
-| `GEMINI_API_KEY` 或 `GOOGLE_API_KEY` | Gemini | — |
-| `MOONSHOT_API_KEY` | Kimi | — |
-| `OLLAMA_BASE_URL` + `OLLAMA_MODEL` | Ollama | `http://localhost:11434` / `nomic-embed-text` |
-| `AZURE_OPENAI_API_KEY` + `AZURE_OPENAI_ENDPOINT` | Azure OpenAI | — |
+| `embed_backend` | embedding 后端类型 | 无（未配置则跳过 embedding） |
+| `embed_base_url` | endpoint URL（openai-compatible 必填，其他可选覆盖） | 按 backend 默认 |
+| `embed_api_key` | API key（本地服务填任意非空值） | 无 |
+| `embed_model` | embedding 模型名 | 按 backend 默认 |
+
+> 环境变量（`GRAPHIFY_EMBED_BACKEND` 等）已废弃，不再支持。全部用 `.graph/graphifyrc` 配置文件。
 
 ---
 

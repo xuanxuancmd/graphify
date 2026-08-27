@@ -18,17 +18,15 @@
 >
 > **sentence-transformers 是唯一的同进程方案**——PyTorch 进程内直接推理，无 HTTP，无服务进程。专为测试/CI 加的免费本地方案，不作为正式方案（模型文件 120MB）。
 
-### 配置方式（三选一，无需改代码）
+### 配置方式（配置文件，无需改代码）
 
 | 方式 | 位置 | 说明 |
 |---|---|---|
-| **配置文件**（推荐） | `.graph/graphifyrc` | 和 graph.json 同目录，4 个 key：`embed_backend` / `embed_base_url` / `embed_api_key` / `embed_model` |
-| 环境变量 | `GRAPHIFY_EMBED_BACKEND` 等 | 适用于 CI / 临时覆盖 |
-| CLI flag | `--embed-backend` | 仅 build-time（`graphify extract`） |
+| **配置文件**（唯一方式） | `.graph/graphifyrc` | 和 graph.json 同目录，4 个 key：`embed_backend` / `embed_base_url` / `embed_api_key` / `embed_model` |
 
 > **两层配置 merge**：`graphify/.default-graphifyrc`（包内出厂默认，全注释占位）+ `.graph/graphifyrc`（项目级覆盖）。项目级覆盖 default 的对应 key，未覆盖的 fallback 到 default。
 >
-> 本文档验证用环境变量（最简单），实际项目推荐用 `.graph/graphifyrc` 配置文件。
+> 环境变量（`GRAPHIFY_EMBED_BACKEND` 等）已废弃，不再支持。全部用配置文件。
 
 ---
 
@@ -123,14 +121,33 @@ tests/e2e/resources/user-management/src/utils/logger.ts
 
 ## 步骤 3：重新 build graph（验证 desc 提取）
 
-### 3.1 设置环境变量
+### 3.1 确认配置文件
 
-embedding 默认开启——配置了 backend（env var 或 `.graph/graphifyrc`）就会自动生成 sidecar，无需传 `--embed-backend`。本验证用 `sentence-transformers` 本地模型：
+embedding 配置在 `.graph/graphifyrc` 文件里（和 graph.json 同目录）。fixture 已自带配置文件，开启 `sentence-transformers` 本地模型：
+
+```powershell
+Get-Content "tests\e2e\resources\user-management\src\.graph\graphifyrc"
+```
+
+**预期输出**：
+```
+embed_backend=sentence-transformers
+embed_model=paraphrase-multilingual-MiniLM-L12-v2
+```
+
+> 如果 `.graph/graphifyrc` 不存在（比如首次 build 后 `.graph` 目录被删），需要手动创建：
+> ```powershell
+> @'
+> embed_backend=sentence-transformers
+> embed_model=paraphrase-multilingual-MiniLM-L12-v2
+> '@ | Set-Content "tests\e2e\resources\user-management\src\.graph\graphifyrc" -Encoding utf8
+> ```
+
+只需设置 Python 路径编码（不再需要任何 `GRAPHIFY_EMBED_*` 环境变量）：
 
 ```powershell
 $env:PYTHONPATH = "."
 $env:PYTHONIOENCODING = "utf-8"
-$env:GRAPHIFY_EMBED_BACKEND = "sentence-transformers"
 ```
 
 ### 3.2 运行 extract（强制重建，自动生成 embedding sidecar）
@@ -158,10 +175,9 @@ python -m graphify extract tests/e2e/resources/user-management/src --no-cluster 
 
 > `--code-only` 只跑 AST，不调 LLM（无需提取 API key）。
 > `--no-cluster` 跳过社区检测（验证 desc 不需要）。
-> embedding sidecar 自动生成（因为步骤 3.1 设了 `GRAPHIFY_EMBED_BACKEND` env）——无需传 `--embed-backend` flag。
-> 不需要 `--force`——前面已删 `.graph` 目录，是全新 build。
+> embedding sidecar 自动生成——因为 `.graph/graphifyrc` 配置了 `embed_backend=sentence-transformers`，无需传 `--embed-backend` flag，也无需设任何环境变量。
 
-> **如果未配置任何 embedding backend**（env var + `.graph/graphifyrc` + `.default-graphifyrc` 全空），extract 仍会正常完成，只是跳过 embedding 生成（不报错），查询时退回纯词法。
+> **如果 `.graph/graphifyrc` 未配置 `embed_backend`**（且 `.default-graphifyrc` 也没配置），extract 仍会正常完成，只是跳过 embedding 生成（不报错），查询时退回纯词法。
 
 ### 3.3 验证 graph.json 节点携带 desc 字段
 
@@ -377,7 +393,6 @@ print(f"  hybrid: {get_seeds(r_hybrid2)}")
 ### 5.2 运行验证
 
 ```powershell
-$env:GRAPHIFY_EMBED_BACKEND = "sentence-transformers"
 python _e2e_verify.py
 ```
 
@@ -439,7 +454,6 @@ AC6: 精确查询 'AuthService' — hybrid 不应干扰 EXACT 主导
 ```powershell
 $env:PYTHONPATH = "."
 $env:PYTHONIOENCODING = "utf-8"
-$env:GRAPHIFY_EMBED_BACKEND = "sentence-transformers"
 python tests/fixtures/search_benchmark/run_benchmark.py
 ```
 
@@ -476,7 +490,6 @@ PASS: hybrid recall (100.0%) >= pure lexical (40.0%)
 ### 7.1 hybrid 模式查询
 
 ```powershell
-$env:GRAPHIFY_EMBED_BACKEND = "sentence-transformers"
 python -m graphify query "how does authentication work" --graph tests/e2e/resources/user-management/src/.graph/graph.json
 ```
 
@@ -506,28 +519,19 @@ Remove-Item -Path "_check_desc.py","_gen_embeddings.py","_e2e_verify.py" -Force 
 
 ## 切换到其他 backend（可选）
 
-如果你想用 Ollama 或 OpenAI 而非 sentence-transformers 重新验证。推荐用 `.graph/graphifyrc` 配置文件（无需 env var，配置持久化）：
+如果你想用 Ollama 或 OpenAI 而非 sentence-transformers 重新验证，只需修改 `.graph/graphifyrc` 配置文件（无需任何环境变量）：
 
-### 用配置文件 `.graph/graphifyrc`（推荐）
+### 用 Ollama
 
-在项目的 `.graph/` 目录下创建 `graphifyrc`（和 graph.json 同目录）：
+在 `.graph/graphifyrc` 中配置：
 
 ```ini
 # tests/e2e/resources/user-management/src/.graph/graphifyrc
-embed_backend=openai-compatible
-embed_base_url=http://my-embedding-server:8080/v1
-embed_api_key=sk-your-key
-embed_model=text-embedding-3-small
+embed_backend=ollama
+embed_model=nomic-embed-text
 ```
 
-配置后无需 env var，直接生成 sidecar + 查询：
-
-```powershell
-python -c "from graphify.embeddings import generate_embeddings_for_graph; from pathlib import Path; generate_embeddings_for_graph(Path('tests/e2e/resources/user-management/src/.graph/graph.json'), backend='openai-compatible')"
-python -m graphify query "how does authentication work" --graph tests/e2e/resources/user-management/src/.graph/graph.json
-```
-
-### 用 Ollama（env var 方式）
+然后启动 ollama 服务并重新生成 sidecar：
 
 ```powershell
 # 1. 安装并启动 ollama
@@ -535,26 +539,36 @@ ollama serve
 # 2. 拉模型
 ollama pull nomic-embed-text
 # 3. 重新生成 sidecar
-$env:GRAPHIFY_EMBED_BACKEND = "ollama"
-python -c "from graphify.embeddings import generate_embeddings_for_graph; from pathlib import Path; generate_embeddings_for_graph(Path('tests/e2e/resources/user-management/src/.graph/graph.json'), backend='ollama', model='nomic-embed-text')"
+python -c "from graphify.embeddings import generate_embeddings_for_graph; from pathlib import Path; generate_embeddings_for_graph(Path('tests/e2e/resources/user-management/src/.graph/graph.json'))"
 # 4. 查询 (sidecar 会自动用最新的)
 python -m graphify query "how does authentication work" --graph tests/e2e/resources/user-management/src/.graph/graph.json
 ```
 
-### 用 OpenAI（env var 方式）
+### 用 OpenAI
+
+在 `.graph/graphifyrc` 中配置：
+
+```ini
+# tests/e2e/resources/user-management/src/.graph/graphifyrc
+embed_backend=openai
+embed_api_key=sk-...
+embed_model=text-embedding-3-small
+```
+
+然后重新生成 sidecar + 查询：
 
 ```powershell
-$env:OPENAI_API_KEY = "sk-..."
-$env:GRAPHIFY_EMBED_BACKEND = "openai"
-python -c "from graphify.embeddings import generate_embeddings_for_graph; from pathlib import Path; generate_embeddings_for_graph(Path('tests/e2e/resources/user-management/src/.graph/graph.json'), backend='openai', model='text-embedding-3-small')"
+python -c "from graphify.embeddings import generate_embeddings_for_graph; from pathlib import Path; generate_embeddings_for_graph(Path('tests/e2e/resources/user-management/src/.graph/graph.json'))"
 python -m graphify query "how does authentication work" --graph tests/e2e/resources/user-management/src/.graph/graph.json
 ```
 
 ### 配置优先级
 
 ```
-CLI flag (--embed-backend) > .graph/graphifyrc > 环境变量 > graphify/.default-graphifyrc (出厂默认)
+CLI flag (--embed-backend) > .graph/graphifyrc > graphify/.default-graphifyrc (出厂默认)
 ```
+
+> 环境变量（`GRAPHIFY_EMBED_BACKEND` 等）已废弃，不再支持。全部用配置文件。
 
 > **注意**：切换 backend 后需要重新生成 sidecar（不同模型的向量空间不兼容，不能混用）。
 > `load_embedding_sidecar` 会按 mtime 选最新的 `.npy`，所以新 sidecar 会自动覆盖旧的。
