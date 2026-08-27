@@ -52,7 +52,7 @@ pip install sentence-transformers
 ```
 
 > 首次安装会带入 PyTorch（CPU 版）、transformers、tokenizers 等，约 500MB。
-> 如果机器上有 CUDA GPU，PyTorch 会自动用 GPU；CPU 也能跑（`all-MiniLM-L6-v2` 仅 80MB，CPU 推理 <100ms/查询）。
+> 如果机器上有 CUDA GPU，PyTorch 会自动用 GPU；CPU 也能跑（`paraphrase-multilingual-MiniLM-L12-v2` 120MB，CPU 推理 ~300ms/81节点）。
 
 ### 1.3 确认 graphify 核心依赖
 
@@ -80,57 +80,19 @@ PyTorch: 2.13.0+cpu CUDA: False
 
 ---
 
-## 步骤 2：确认真实项目存在
-
-### 2.1 检查 fixture 项目
-
-```powershell
-Get-ChildItem "tests\e2e\resources\user-management\src" -Recurse -File -Filter "*.ts" | Measure-Object | Select-Object Count
-```
-
-**预期输出**：
-```
-Count
------
-  12
-```
-
-### 2.2 查看项目结构（可选）
-
-```powershell
-Get-ChildItem "tests\e2e\resources\user-management\src" -Recurse -File -Filter "*.ts" | ForEach-Object { $_.FullName.Replace((Get-Location).Path + "\", "") }
-```
-
-**预期输出**（12 个 TS 文件）：
-```
-tests/e2e/resources/user-management/src/auth/auth.controller.ts
-tests/e2e/resources/user-management/src/auth/auth.service.ts
-tests/e2e/resources/user-management/src/auth/jwt.ts
-tests/e2e/resources/user-management/src/auth/password.ts
-tests/e2e/resources/user-management/src/config.ts
-tests/e2e/resources/user-management/src/index.ts
-tests/e2e/resources/user-management/src/middleware/auth.middleware.ts
-tests/e2e/resources/user-management/src/middleware/request-logger.ts
-tests/e2e/resources/user-management/src/models/user.ts
-tests/e2e/resources/user-management/src/repositories/user.repository.ts
-tests/e2e/resources/user-management/src/services/user.service.ts
-tests/e2e/resources/user-management/src/utils/logger.ts
-```
-
-> 这些 TS 文件带 JSDoc 注释（如 `/** Register a new user — ... */`），用于验证 desc 字段提取。
-
----
-
 ## 步骤 3：重新 build graph（验证 desc 提取）
 
 ### 3.1 设置环境变量
 
+embedding 默认开启——配置了 backend（env var 或 `.graph/graphifyrc`）就会自动生成 sidecar，无需传 `--embed-backend`。本验证用 `sentence-transformers` 本地模型：
+
 ```powershell
 $env:PYTHONPATH = "."
 $env:PYTHONIOENCODING = "utf-8"
+$env:GRAPHIFY_EMBED_BACKEND = "sentence-transformers"
 ```
 
-### 3.2 运行 extract（强制重建）
+### 3.2 运行 extract（强制重建，自动生成 embedding sidecar）
 
 ```powershell
 python -m graphify extract tests/e2e/resources/user-management/src --no-cluster --no-viz --code-only --force
@@ -142,11 +104,15 @@ python -m graphify extract tests/e2e/resources/user-management/src --no-cluster 
 [graphify extract] found 12 code, 0 docs, 0 papers, 0 images
 [graphify extract] AST extraction on 12 code files...
 [graphify extract] wrote ...\src\.graph\graph.json — 81 nodes, 204 edges (no clustering)
+[graphify extract] wrote embeddings: embeddings/paraphrase_multilingual_minilm_l12_v2.npy
 ```
 
 > `--force` 强制全量重建（否则增量扫描会跳过未改动文件）。
-> `--code-only` 只跑 AST，不调 LLM（无需 API key）。
+> `--code-only` 只跑 AST，不调 LLM（无需提取 API key）。
 > `--no-cluster` 跳过社区检测（验证 desc 不需要）。
+> embedding sidecar 自动生成（因为步骤 3.1 设了 `GRAPHIFY_EMBED_BACKEND` env）——无需传 `--embed-backend` flag。
+
+> **如果未配置任何 embedding backend**（env var + `.graph/graphifyrc` + `.default-graphifyrc` 全空），extract 仍会正常完成，只是跳过 embedding 生成（不报错），查询时退回纯词法。
 
 ### 3.3 验证 graph.json 节点携带 desc 字段
 
@@ -193,66 +159,67 @@ graph.json: 81 节点, 30 带 desc (37%)
 
 ---
 
-## 步骤 4：生成 embedding sidecar
+## 步骤 4：验证 embedding sidecar 已自动生成
 
-### 4.1 设置 backend 环境变量
+步骤 3.2 的 `graphify extract` 在配置了 backend 时会**自动生成 embedding sidecar**（无需单独脚本）。本步骤验证 sidecar 文件已正确产出。
+
+### 4.1 检查 sidecar 文件
 
 ```powershell
-$env:GRAPHIFY_EMBED_BACKEND = "sentence-transformers"
+Get-ChildItem "tests\e2e\resources\user-management\src\.graph\embeddings" -Name
 ```
 
-### 4.2 生成 sidecar
+**预期输出**：
+```
+paraphrase_multilingual_minilm_l12_v2.index.json
+paraphrase_multilingual_minilm_l12_v2.meta.json
+paraphrase_multilingual_minilm_l12_v2.npy
+```
 
-创建脚本 `_gen_embeddings.py`：
+### 4.2 验证 sidecar 内容
+
+创建脚本 `_check_sidecar.py`：
 
 ```python
-import sys
-sys.path.insert(0, ".")
-from pathlib import Path
-from graphify.embeddings import generate_embeddings_for_graph
-
-GRAPH = Path("tests/e2e/resources/user-management/src/.graph/graph.json")
-print(f"输入: {GRAPH}")
-print("生成 embedding sidecar (sentence-transformers + all-MiniLM-L6-v2)...")
-
-npy_path = generate_embeddings_for_graph(
-    GRAPH, backend="sentence-transformers", model="all-MiniLM-L6-v2"
-)
-print(f"输出: {npy_path}")
-
-# 验证 sidecar 文件
-emb_dir = GRAPH.parent / "embeddings"
-for f in sorted(emb_dir.glob("all_minilm_l6_v2.*")):
-    size = f.stat().st_size
-    print(f"  {f.name:35s} {size:>8} bytes")
-
 import json
-idx = json.loads((emb_dir / "all_minilm_l6_v2.index.json").read_text(encoding="utf-8"))
+from pathlib import Path
+
+emb_dir = Path("tests/e2e/resources/user-management/src/.graph/embeddings")
+for f in sorted(emb_dir.glob("paraphrase_multilingual_minilm_l12_v2.*")):
+    size = f.stat().st_size
+    print(f"  {f.name:50s} {size:>8} bytes")
+
+idx = json.loads((emb_dir / "paraphrase_multilingual_minilm_l12_v2.index.json").read_text(encoding="utf-8"))
 print(f"index.json: {len(idx['node_ids'])} node_ids, dim={idx['dim']}, model={idx['model']}")
 ```
 
 运行：
 
 ```powershell
-python _gen_embeddings.py
+python _check_sidecar.py
 ```
 
 **预期输出**：
 ```
-输入: tests\e2e\resources\user-management\src\.graph\graph.json
-生成 embedding sidecar (sentence-transformers + all-MiniLM-L6-v2)...
-输出: tests\e2e\resources\user-management\src\.graph\embeddings\all_minilm_l6_v2.npy
-
-  all_minilm_l6_v2.index.json             2993 bytes
-  all_minilm_l6_v2.meta.json               147 bytes
-  all_minilm_l6_v2.npy                  124544 bytes
-index.json: 81 node_ids, dim=384, model=all-MiniLM-L6-v2
+  paraphrase_multilingual_minilm_l12_v2.index.json     2993 bytes
+  paraphrase_multilingual_minilm_l12_v2.meta.json       147 bytes
+  paraphrase_multilingual_minilm_l12_v2.npy          124544 bytes
+index.json: 81 node_ids, dim=384, model=paraphrase-multilingual-MiniLM-L12-v2
 ```
 
 > **验证点**：
 > - `.npy` 文件 124KB（81 节点 × 384 维 × 4 字节 = 124,416 字节，符合预期）
 > - `.index.json` 含 81 个 node_id 到 row index 的映射
-> - 模型维度 384（`all-MiniLM-L6-v2` 的标准维度）
+> - 模型维度 384（`paraphrase-multilingual-MiniLM-L12-v2` 的标准维度）
+> - 模型名是 `paraphrase-multilingual-MiniLM-L12-v2`（支持中英跨语言检索）
+
+> **手动重新生成（可选）**：如果 graph.json 变了想单独重新生成 sidecar，可以用：
+> ```python
+> from graphify.embeddings import generate_embeddings_for_graph
+> from pathlib import Path
+> generate_embeddings_for_graph(Path("tests/e2e/resources/user-management/src/.graph/graph.json"))
+> ```
+> 不传 `backend` 时自动从配置文件/env 检测，配置全空则跳过返回 None。
 > - 首次运行会从 HuggingFace Hub 下载 ~80MB 模型到 `~/.cache/huggingface/`，后续从缓存读
 
 ### 4.3 确认 sidecar 文件结构

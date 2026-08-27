@@ -3110,13 +3110,13 @@ def dispatch_command(cmd: str) -> None:
 
         backend: str | None = None
         model: str | None = None
-        # NEW: hybrid semantic search embedding backend. Default to None —
-        # the extractor does not run embedding generation unless --embed-backend
-        # is passed (AC4). When set, generate_embeddings_for_graph runs as a
-        # post-build step over graphify-out/graph.json and writes sidecar files
-        # under graphify-out/embeddings/. Defaults to the same backend env vars
-        # as --backend so a user who already configured OPENAI_API_KEY for
-        # extraction only needs --embed-backend openai to also get embeddings.
+        # Hybrid semantic search embedding. Default-on: `graphify .` /
+        # `graphify extract .` generate a sidecar after every build when an
+        # embedding backend is configured (in .default-graphifyrc,
+        # .graph/graphifyrc, or env vars). When nothing is configured, the
+        # sidecar is silently skipped — the graph is still valid and queries
+        # degrade to pure lexical. --embed-backend / --embed-model remain as
+        # CLI overrides for the config-file + env chain.
         embed_backend: str | None = None
         embed_model: str | None = None
         extract_mode: str | None = None
@@ -4542,29 +4542,36 @@ def dispatch_command(cmd: str) -> None:
             f"`graphify cluster-only {graphify_out.parent}` "
             "to generate GRAPH_REPORT.md and name communities"
         )
-        # NEW: post-build embedding generation for hybrid semantic search. Runs
-        # only when --embed-backend is passed (AC4: build-time generation when
-        # requested). Reads every node's `desc` field (fallback `label`) and
-        # writes graphify-out/embeddings/<model_slug>.{npy,index.json,meta.json}.
-        # A failure here is a warning, not fatal — the graph is still valid;
-        # queries simply run in pure-lexical mode until the sidecar exists (AC3).
-        if embed_backend:
-            try:
-                from graphify.embeddings import generate_embeddings_for_graph
-                _emb_path = generate_embeddings_for_graph(
-                    graph_json_path, backend=embed_backend, model=embed_model
-                )
+        # Embedding generation for hybrid semantic search. Default-on: runs
+        # after every extract (including `graphify .`). When no embedding
+        # backend is configured (neither .default-graphifyrc nor
+        # .graph/graphifyrc nor env vars), generate_embeddings_for_graph
+        # returns None silently — the graph is still valid, queries degrade to
+        # pure lexical. The config-file chain is the sole switch: configured =
+        # generate, unconfigured = skip. --embed-backend / --embed-model are
+        # CLI overrides for that chain, not a trigger.
+        # Reads every node's `desc` field (fallback `label`) and writes
+        # graphify-out/embeddings/<model_slug>.{npy,index.json,meta.json}.
+        # A failure here is a warning, not fatal.
+        try:
+            from graphify.embeddings import generate_embeddings_for_graph
+            _emb_path = generate_embeddings_for_graph(
+                graph_json_path, backend=embed_backend, model=embed_model
+            )
+            if _emb_path is not None:
                 print(
                     f"[graphify extract] wrote embeddings: "
                     f"{_emb_path.relative_to(graph_json_path.parent)}",
                     file=sys.stderr,
                 )
-            except Exception as exc:
-                print(
-                    f"[graphify extract] warning: embedding generation failed "
-                    f"(queries will run in pure-lexical mode until fixed): {exc}",
-                    file=sys.stderr,
-                )
+            # else: no backend configured -> silently skipped, no message
+            # (the graph is the primary artifact; embedding is optional)
+        except Exception as exc:
+            print(
+                f"[graphify extract] warning: embedding generation failed "
+                f"(queries will run in pure-lexical mode until fixed): {exc}",
+                file=sys.stderr,
+            )
         stages.total()
 
     elif cmd == "cache-check":

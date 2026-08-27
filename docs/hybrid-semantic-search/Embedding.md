@@ -98,25 +98,25 @@ embed_model=BAAI/bge-m3
 
 ---
 
-## 初始化安全性
+## 初始化行为
 
-**`graphify .` 初始化时不影响图谱构建**：
+**`graphify .` / `graphify extract .` 默认会尝试生成 embedding**——无需传 `--embed-backend`，配置文件是唯一开关：
 
-- 不传 `--embed-backend` → embedding 完全跳过，不调任何 API，不报错
-- 没配置 backend → `HybridScorer.available=False` → query 自动退回纯词法
-- 没生成 sidecar → 同上，纯词法降级
+- **配置了 backend**（`.default-graphifyrc` 或 `.graph/graphifyrc` 或 env vars）→ build 完成后自动生成 sidecar，查询时启用 vector tier
+- **未配置任何 backend** → 静默跳过 embedding 生成，不报错，graph 正常产出；查询时 `HybridScorer.available=False`，自动退回纯词法
 
-embedding 是**完全可选的增强层**，不影响 graph 提取/构建/查询的既有流程。
+embedding 与 graph 提取/构建是同一次 `graphify .` 调用的两个阶段：先提取图谱，再（如果配置了 backend）生成 embedding sidecar。`--embed-backend` / `--embed-model` 仍是 CLI 覆盖参数，但不再是触发开关——触发完全由配置文件决定。
 
 ---
 
 ## build-time 生成 sidecar
 
 ```bash
-# 用 .graphifyrc 配置 (推荐)
-graphify extract . --embed-backend openai-compatible
+# 配置了 .graph/graphifyrc 或 env vars 后, 直接 graphify . 即可生成
+graphify .
 
-# 或用 CLI flag 覆盖
+# 或用 CLI flag 临时覆盖配置 (不是触发开关, 只是覆盖)
+graphify extract . --embed-backend openai-compatible --embed-model text-embedding-3-small
 graphify extract . --embed-backend openai --embed-model text-embedding-3-large
 ```
 

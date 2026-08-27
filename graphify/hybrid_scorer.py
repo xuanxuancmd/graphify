@@ -79,11 +79,13 @@ def _embed_backend_from_env() -> str | None:
     Priority (later wins):
     1. Auto-detect from extraction backend env vars (OPENAI_API_KEY etc.)
     2. ``GRAPHIFY_EMBED_BACKEND`` env var
-    3. ``embed_backend`` key in ``.graphifyrc`` config file (highest)
+    3. ``embed_backend`` key in ``.graph/graphifyrc`` (highest)
 
-    Returns ``None`` when nothing usable is configured so the HybridScorer
-    stays ``available=False`` and degrades to pure lexical at query time
-    (the default — hybrid search is opt-in).
+    Returns ``None`` when nothing usable is configured — the sole "skip"
+    signal. When None, embedding generation is silently skipped at build
+    time and queries degrade to pure lexical at query time. This is the
+    intended behavior for an environment with no embedding endpoint: the
+    graph is the primary artifact, embedding is an optional enhancement.
     """
     rc_cfg = _load_embed_config_from_graphifyrc()
     # 1. .graphifyrc file (highest priority)

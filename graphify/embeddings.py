@@ -303,14 +303,41 @@ def _embed_batch(
 
 
 def generate_embeddings_for_graph(
-    graph_json_path: Path, *, backend: str, model: str | None = None
-) -> Path:
+    graph_json_path: Path, *, backend: str | None = None, model: str | None = None
+) -> Path | None:
     """Generate embeddings for all nodes in ``graph.json``. Writes sidecar files.
 
     Text source: ONLY ``desc`` (fallback ``label``). See ``_node_embed_text``.
-    Returns the path to the written ``.npy`` file. Raises ``ValueError`` if
-    the graph has no nodes or the backend is misconfigured.
+    Returns the path to the written ``.npy`` file, or ``None`` when no embedding
+    backend is configured (default + project config + env all empty = skip).
+
+    When ``backend`` is ``None`` (the default — ``graphify .`` / ``graphify
+    extract .`` without ``--embed-backend``), the function auto-detects the
+    backend from the same resolution chain as query-time
+    (``graphify/.default-graphifyrc`` -> ``.graph/graphifyrc`` -> env vars ->
+    extraction-backend env auto-detect). When that chain resolves to nothing,
+    embedding generation is silently skipped — the graph is still valid, and
+    queries will run in pure-lexical mode until a backend is configured.
+
+    Raises ``ValueError`` if the graph has no nodes or the backend is
+    misconfigured (e.g. ``openai-compatible`` without ``embed_base_url``).
     """
+    # Auto-resolve backend when not explicitly passed. This makes embedding
+    # generation default-on for `graphify .` / `graphify extract .` — the
+    # only skip case is "no backend configured anywhere", which is the
+    # correct behavior for an environment with no embedding endpoint.
+    if backend is None:
+        from graphify.hybrid_scorer import _embed_backend_from_env
+        backend = _embed_backend_from_env()
+        if backend is None:
+            # Nothing configured — skip silently rather than crash. The graph
+            # is still valid; queries degrade to pure lexical automatically.
+            return None
+        # Also auto-resolve model from the same config chain when unset.
+        if model is None:
+            from graphify.hybrid_scorer import _embed_model_from_env
+            model = _embed_model_from_env()
+
     graph_dir = graph_json_path.parent
     data = json.loads(graph_json_path.read_text(encoding="utf-8"))
     nodes = data.get("nodes", [])
