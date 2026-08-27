@@ -34,10 +34,10 @@ _PINNED='__PINNED_PYTHON__'
 if [ -n "$_PINNED" ] && [ -x "$_PINNED" ] && "$_PINNED" -c "$_GFY_PROBE" 2>/dev/null; then
     GRAPHIFY_PYTHON="$_PINNED"
 fi
-# Second probe: read graphify-out/.graphify_python (written by the skill and
+# Second probe: read .graph/.graphify_python (written by the skill and
 # CLI; survives uv-tool reinstalls and is the same source the README documents).
 if [ -z "$GRAPHIFY_PYTHON" ]; then
-    _GFY_PYTHON_FILE="graphify-out/.graphify_python"
+    _GFY_PYTHON_FILE=".graph/.graphify_python"
     if [ -f "$_GFY_PYTHON_FILE" ]; then
         _FROM_FILE=$(cat "$_GFY_PYTHON_FILE" 2>/dev/null | tr -d '[:space:]')
         case "$_FROM_FILE" in
@@ -162,7 +162,7 @@ try:
             _watchdog.start()
     _force = os.environ.get('GRAPHIFY_FORCE', '').lower() in ('1', 'true', 'yes')
     _root = Path('.')
-    _out = os.environ.get('GRAPHIFY_OUT', 'graphify-out')
+    _out = os.environ.get('GRAPHIFY_OUT', '.graph')
     _saved = Path(_out) / '.graphify_root'
     if _saved.exists():
         _txt = _saved.read_text(encoding='utf-8-sig').strip()
@@ -211,7 +211,7 @@ try:
     # (no changed_paths) is correct here. The flock inside _rebuild_code still
     # prevents pile-ups when commit + checkout fire back-to-back.
     _root = Path('.')
-    _out = os.environ.get('GRAPHIFY_OUT', 'graphify-out')
+    _out = os.environ.get('GRAPHIFY_OUT', '.graph')
     _saved = Path(_out) / '.graphify_root'
     if _saved.exists():
         _txt = _saved.read_text(encoding='utf-8-sig').strip()
@@ -287,10 +287,10 @@ def _detached_launch(rebuild_body: str) -> str:
 
 # Skip the rebuild inside a linked worktree (git worktree add), shared by both
 # hooks. With core.hooksPath shared across worktrees a commit in any worktree
-# fires these hooks; the canonical graphify-out/ belongs to the primary checkout,
+# fires these hooks; the canonical .graph/ belongs to the primary checkout,
 # so rebuilding from a worktree is wasteful, writes a rogue delta-only graph the
 # user never asked for, and races deploy/CI `git clean` against the detached
-# rebuild ("failed to remove graphify-out/: Directory not empty") (#1809, #1806).
+# rebuild ("failed to remove .graph/: Directory not empty") (#1809, #1806).
 # A linked worktree has git-dir != git-common-dir. Both are resolved to absolute
 # via `cd ... && pwd` before comparing: git's exported GIT_DIR / --git-dir can be
 # absolute while --git-common-dir is the relative ".git", and a raw compare would
@@ -311,7 +311,7 @@ _HOOK_SCRIPT = """\
 
 # Deterministic clustering: networkx louvain iterates string-keyed sets whose
 # order is randomized per-process by PYTHONHASHSEED, so community assignments
-# churn run-to-run. Pinning it makes graphify-out reproducible.
+# churn run-to-run. Pinning it makes .graph reproducible.
 export PYTHONHASHSEED=0
 __VIZ_LIMIT_EXPORT__
 # Git for Windows/MSYS hooks can inherit fragile pipe handles from GUI clients
@@ -338,8 +338,8 @@ if [ -z "$CHANGED" ]; then
     exit 0
 fi
 
-# Skip when only graphify-out/ artifacts changed (avoids rebuild loop when graph outputs are tracked in git)
-_NON_GRAPH=$(echo "$CHANGED" | grep -v '^graphify-out/' || true)
+# Skip when only .graph/ artifacts changed (avoids rebuild loop when graph outputs are tracked in git)
+_NON_GRAPH=$(echo "$CHANGED" | grep -v '^.graph/' || true)
 if [ -z "$_NON_GRAPH" ]; then
     exit 0
 fi
@@ -366,7 +366,7 @@ _CHECKOUT_SCRIPT = """\
 
 # Deterministic clustering: networkx louvain iterates string-keyed sets whose
 # order is randomized per-process by PYTHONHASHSEED, so community assignments
-# churn run-to-run. Pinning it makes graphify-out reproducible.
+# churn run-to-run. Pinning it makes .graph reproducible.
 export PYTHONHASHSEED=0
 __VIZ_LIMIT_EXPORT__
 # Git for Windows/MSYS hooks can inherit fragile pipe handles from GUI clients
@@ -389,8 +389,8 @@ fi
 # branch switch but leaves the tree unchanged ΓÇö nothing to rebuild (#2421).
 [ "$PREV_HEAD" = "$NEW_HEAD" ] && exit 0
 
-# Only run if graphify-out/ exists (graph has been built before)
-if [ ! -d "graphify-out" ]; then
+# Only run if .graph/ exists (graph has been built before)
+if [ ! -d ".graph" ]; then
     exit 0
 fi
 
@@ -471,7 +471,7 @@ def _project_graphifyrc_path(root: Path) -> Path:
     """Path to the per-project ``graphifyrc`` next to the graph output.
 
     graphify writes graph.json under ``<root>/.graph/`` (or
-    ``graphify-out/`` when GRAPHIFY_OUT is overridden). The per-project
+    ``.graph/`` when GRAPHIFY_OUT is overridden). The per-project
     config lives IN that output dir — same place as graph.json — so the
     config travels with the graph and isn't scattered at the repo root.
     """
@@ -688,7 +688,7 @@ def _merge_attr_line() -> str:
     from graphify.paths import GRAPHIFY_OUT
     out = GRAPHIFY_OUT
     if not out or Path(out).is_absolute() or "\\" in out:
-        out = "graphify-out"
+        out = ".graph"
     return f"{out.rstrip('/')}/graph.json merge=graphify"
 
 

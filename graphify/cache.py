@@ -13,8 +13,8 @@ from collections.abc import Callable, Iterable
 from pathlib import Path
 
 # Output directory name — override with GRAPHIFY_OUT env var for worktrees or
-# shared-output setups. Accepts a relative name ("graphify-out-feature") or an
-# absolute path ("/shared/graphify-out"). Single source of truth in graphify.paths
+# shared-output setups. Accepts a relative name (".graph-feature") or an
+# absolute path ("/shared/.graph"). Single source of truth in graphify.paths
 # (#1423); re-exported here as _GRAPHIFY_OUT for the existing call sites.
 from graphify.paths import GRAPHIFY_OUT as _GRAPHIFY_OUT
 
@@ -332,7 +332,7 @@ def _ensure_stat_index(root: Path, cache_root: "Path | None" = None) -> None:
     # _stat_index_root determines the cache FILE location, so honoring an
     # explicit cache_root keeps detect()'s word-count cache under the requested
     # --out dir instead of polluting the scanned corpus with a stray
-    # graphify-out/ (#1747). _stat_index_anchor is the separate KEY anchor:
+    # .graph/ (#1747). _stat_index_anchor is the separate KEY anchor:
     # in-memory keys stay absolute, but the on-disk index stores in-anchor keys
     # relative so a moved/cloned corpus still hits (#2199) — same load/save
     # re-anchoring the detect manifest uses.
@@ -436,7 +436,7 @@ def file_hash(path: Path, root: Path = Path("."), cache_root: "Path | None" = No
 
     # The stat index is a cache artifact, so it must follow the cache location
     # (cache_root), not the key-anchor root — otherwise it leaves a stray
-    # graphify-out/cache/stat-index.json inside the analyzed source tree even when
+    # .graph/cache/stat-index.json inside the analyzed source tree even when
     # the AST cache itself is redirected to CWD (#1774 completion).
     _ensure_stat_index(root, cache_root=cache_root)
     resolved = p.resolve()
@@ -897,12 +897,12 @@ def cache_dir(root: Path = Path("."), kind: str = "ast",
     "semantic-deep" (#1894). Separate subdirectories prevent semantic cache
     entries from overwriting AST cache entries for the same source_file (#582).
 
-    AST entries live in graphify-out/cache/ast/v{version}-s{schema}/, namespaced
+    AST entries live in .graph/cache/ast/v{version}-s{schema}/, namespaced
     by graphify version and cache-key schema because they depend on extractor
     code and key semantics, not just file contents. Semantic entries are still
     NOT version-namespaced (re-extraction
-    costs LLM calls, #1252): they live in graphify-out/cache/semantic/, with
-    deep-mode entries beside them in graphify-out/cache/semantic-deep/.
+    costs LLM calls, #1252): they live in .graph/cache/semantic/, with
+    deep-mode entries beside them in .graph/cache/semantic-deep/.
 
     ``prompt_fp`` (semantic kinds only) adds a p{fingerprint}/ subdirectory so
     entries are attributed to the extraction prompt that produced them (#1939).
@@ -929,7 +929,7 @@ def load_cached(path: Path, root: Path = Path("."), kind: str = "ast",
     """Return cached extraction for this file if hash matches, else None.
 
     Cache key: SHA256 of file contents.
-    Cache value: stored as graphify-out/cache/{kind}/{hash}.json (AST entries
+    Cache value: stored as .graph/cache/{kind}/{hash}.json (AST entries
     under the per-version subdirectory, see :func:`cache_dir`).
 
     ``root`` anchors the content-hash key and source_file relativization (it
@@ -1032,7 +1032,7 @@ def save_cached(path: Path, result: dict, root: Path = Path("."), kind: str = "a
                 prompt_file: "str | Path | None" = None) -> None:
     """Save extraction result for this file.
 
-    Stores as graphify-out/cache/{kind}/{hash}.json where hash = SHA256 of current file contents.
+    Stores as .graph/cache/{kind}/{hash}.json where hash = SHA256 of current file contents.
     result should be a dict with 'nodes' and 'edges' lists.
 
     ``root`` anchors the content-hash key and source_file relativization;
@@ -1169,7 +1169,7 @@ def prune_semantic_cache(root: Path, live_hashes: set[str]) -> int:
     under a fingerprint other than the current one are pruned by liveness only,
     never swept wholesale the way :func:`_cleanup_stale_ast_entries` sweeps old
     AST versions — two hosts with different prompts (verbose vs compact
-    extraction-spec) can share one graphify-out/, and a wholesale sweep would
+    extraction-spec) can share one .graph/, and a wholesale sweep would
     have each run delete the other's entries and re-bill extraction on every
     alternation. Liveness keeps the total bounded by live docs × prompts seen.
 

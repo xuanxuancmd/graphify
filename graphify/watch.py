@@ -975,7 +975,7 @@ def _stabilize_rebuild_cwd(watch_path: Path) -> bool:
 
     Detached git hooks can inherit a transient working directory that is deleted
     before the background rebuild starts. In that state Path.cwd(),
-    Path('.').resolve(), and relative graphify-out mkdirs raise FileNotFoundError
+    Path('.').resolve(), and relative .graph mkdirs raise FileNotFoundError
     before the normal rebuild error handling can run. Hooks that know the repo
     root export GRAPHIFY_REPO_ROOT so the rebuild can recover by chdir'ing there.
     """
@@ -1112,7 +1112,7 @@ def _rebuild_code(
     ``graphify update`` CLI).
 
     ``no_cluster`` skips community detection and writes raw merged extraction
-    JSON to graphify-out/graph.json (mirrors ``extract --no-cluster``).
+    JSON to .graph/graph.json (mirrors ``extract --no-cluster``).
 
     Returns True on success, False on error or skipped-due-to-lock.
     """
@@ -1562,7 +1562,7 @@ def _rebuild_code(
         # #2543: AST sources that failed this run (error result, or extractor
         # present but zero nodes) must not be stamped kind="ast" below, and any
         # prior stamp must be blanked (clear_ast) — otherwise the incremental
-        # gate reports them unchanged forever and only deleting graphify-out/
+        # gate reports them unchanged forever and only deleting .graph/
         # recovers. Mirrors the extract CLI's _stamped_manifest_files handling.
         _failed_ast_sources = set(result.get("failed_sources") or [])
 

@@ -331,7 +331,7 @@ def to_wiki(
     used_slugs: set[str] = set()
 
     # Articles are capped against THIS wiki directory, not just NAME_MAX: on
-    # Windows a 200-char slug under an ordinary graphify-out/wiki/ overruns
+    # Windows a 200-char slug under an ordinary .graph/wiki/ overruns
     # MAX_PATH and write_text raises FileNotFoundError partway through the
     # export (#2655). No-op on POSIX.
     _slug_limit = stem_filename_budget(out, reserve=_SLUG_SUFFIX_RESERVE)

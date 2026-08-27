@@ -1040,7 +1040,7 @@ def _antigravity_install(project_dir: Path) -> None:
     print('  "graphify": {')
     print('    "command": "uv",')
     print(
-        '    "args": ["run", "--with", "graphifyy", "--with", "mcp", "-m", "graphify.serve", "${workspace.path}/graphify-out/graph.json"]'
+        '    "args": ["run", "--with", "graphifyy", "--with", "mcp", "-m", "graphify.serve", "${workspace.path}/.graph/graph.json"]'
     )
     print("  }")
 def _antigravity_uninstall(project_dir: Path, *, project: bool = False) -> None:
@@ -1086,7 +1086,7 @@ description: graphify knowledge graph context
 alwaysApply: true
 ---
 
-This project has a graphify knowledge graph at graphify-out/.
+This project has a graphify knowledge graph at .graph/.
 
 **MANDATORY: Before using Read, Grep, Glob, or Bash to explore the codebase, you MUST run graphify first:**
 - `graphify query "<question>"` — scoped subgraph for any codebase or architecture question
@@ -1097,10 +1097,10 @@ This applies to YOU and to every subagent you spawn. Include this rule explicitl
 
 Only use Read/Grep/Glob directly when:
 1. graphify has already oriented you and you need to modify or debug specific lines
-2. `graphify-out/graph.json` does not exist yet
+2. `.graph/graph.json` does not exist yet
 
-- If `graphify-out/wiki/index.md` exists, navigate it instead of reading raw files
-- Read `graphify-out/GRAPH_REPORT.md` only for broad architecture review when query/path/explain do not surface enough context
+- If `.graph/wiki/index.md` exists, navigate it instead of reading raw files
+- Read `.graph/GRAPH_REPORT.md` only for broad architecture review when query/path/explain do not surface enough context
 - After modifying code files, run `graphify update .` to keep the graph current (AST-only, no API cost)
 """
 def _cursor_install(project_dir: Path) -> None:
@@ -1132,12 +1132,12 @@ _DEVIN_RULES_PATH = Path(".windsurf") / "rules" / "graphify.md"
 _DEVIN_RULES = """\
 ## graphify
 
-This project has a graphify knowledge graph at graphify-out/.
+This project has a graphify knowledge graph at .graph/.
 
 Rules:
-- For codebase or architecture questions, when `graphify-out/graph.json` exists, first run `graphify query "<question>"` (or `graphify path "<A>" "<B>"` / `graphify explain "<concept>"`). These return a scoped subgraph, usually much smaller than `GRAPH_REPORT.md` or raw grep output.
-- If graphify-out/wiki/index.md exists, navigate it instead of reading raw files
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context
+- For codebase or architecture questions, when `.graph/graph.json` exists, first run `graphify query "<question>"` (or `graphify path "<A>" "<B>"` / `graphify explain "<concept>"`). These return a scoped subgraph, usually much smaller than `GRAPH_REPORT.md` or raw grep output.
+- If .graph/wiki/index.md exists, navigate it instead of reading raw files
+- Read .graph/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context
 - After modifying code files in this session, run `graphify update .` to keep the graph current (AST-only, no API cost)
 """
 def _devin_rules_install(project_dir: Path) -> None:
@@ -1169,7 +1169,7 @@ export const GraphifyPlugin = async ({ directory }) => {
   return {
     "tool.execute.before": async (input, output) => {
       if (reminded) return;
-      if (!existsSync(join(directory, "graphify-out", "graph.json"))) return;
+      if (!existsSync(join(directory, ".graph", "graph.json"))) return;
 
       if (input.tool === "bash") {
         // Separate with ';' not '&&' — Windows PowerShell 5.1 rejects '&&' as a
@@ -1177,7 +1177,7 @@ export const GraphifyPlugin = async ({ directory }) => {
         // the first bash command in every OpenCode session on Windows (#1646).
         // ';' works in PowerShell 5.1, Bash, and POSIX shells alike.
         output.args.command =
-          'echo "[graphify] Knowledge graph available. Read graphify-out/GRAPH_REPORT.md for god nodes and architecture context before searching files." ; ' +
+          'echo "[graphify] Knowledge graph available. Read .graph/GRAPH_REPORT.md for god nodes and architecture context before searching files." ; ' +
           output.args.command;
         reminded = true;
       }
@@ -1335,13 +1335,13 @@ export const GraphifyPlugin = async ({ directory }) => {
   return {
     "tool.execute.before": async (input, output) => {
       if (reminded) return;
-      if (!existsSync(join(directory, "graphify-out", "graph.json"))) return;
+      if (!existsSync(join(directory, ".graph", "graph.json"))) return;
 
       if (input.tool === "bash") {
         // ';' not '&&' — Windows PowerShell 5.1 rejects '&&' as a statement
         // separator, breaking the first bash command of the session (#1646).
         output.args.command =
-          'echo "[graphify] knowledge graph at graphify-out/. For focused questions, run graphify query with your question (scoped subgraph, usually much smaller than GRAPH_REPORT.md) instead of grepping raw files. Read GRAPH_REPORT.md only for broad architecture context." ; ' +
+          'echo "[graphify] knowledge graph at .graph/. For focused questions, run graphify query with your question (scoped subgraph, usually much smaller than GRAPH_REPORT.md) instead of grepping raw files. Read GRAPH_REPORT.md only for broad architecture context." ; ' +
           output.args.command;
         reminded = true;
       }

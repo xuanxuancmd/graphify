@@ -530,7 +530,7 @@ def _html_document_title(output_path: str) -> str:
 
     Tracked artifacts must not embed the generator host absolute path
     (regression of #433; reported again as #2598 on Windows). Keep from the
-    configured output-dir bare name (``graphify-out`` / ``GRAPHIFY_OUT``
+    configured output-dir bare name (``.graph`` / ``GRAPHIFY_OUT``
     basename) onward — portable in every case; otherwise fall back to a
     cwd-relative label, and finally the filename only.
     """
@@ -551,7 +551,7 @@ def _html_document_title(output_path: str) -> str:
     # the graph is built from a directory ABOVE the project (#2598 follow-up).
     marker = GRAPHIFY_OUT_NAME
     for i, part in enumerate(parts):
-        if part == marker or part.startswith("graphify-out"):
+        if part == marker or part.startswith(".graph"):
             return "/".join(parts[i:])
 
     # No standard out-dir marker (fully custom output path): fall back to a

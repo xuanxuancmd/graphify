@@ -125,7 +125,7 @@ def _sidecar_path(path: Path, out_dir: Path, root: "Path | None" = None) -> Path
     # Hash the scan-root-relative, NFC-normalized path — not the absolute path.
     # The absolute form salts the sidecar name with the checkout location, so the
     # same shortcut in two clones/worktrees emits differently-named byte-identical
-    # sidecars, each ingested as a distinct source doc when graphify-out/ is
+    # sidecars, each ingested as a distinct source doc when .graph/ is
     # committed (#2059; mirrors convert_office_file). NFC guards macOS NFD drift
     # (#1226). The relative path still disambiguates same-stem files.
     import unicodedata

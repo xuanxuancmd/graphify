@@ -1,7 +1,7 @@
 """Embedding generation and storage for hybrid semantic search.
 
 Build-time: generates per-node embeddings from ``desc`` (fallback ``label``),
-stored as a binary sidecar under ``graphify-out/embeddings/``. Query-time:
+stored as a binary sidecar under ``.graph/embeddings/``. Query-time:
 loads the sidecar and embeds the query string for cosine similarity.
 
 Decoupled from extract.py / llm.py — called as a post-build step (CLI
@@ -57,23 +57,22 @@ def _node_embed_text(node: dict) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _model_slug(model: str) -> str:
-    """Normalize a model name to a filesystem-safe slug.
-
-    ``text-embedding-3-small`` -> ``text_embedding_3_small``. Used as the
-    sidecar filename stem so multiple models can coexist under
-    ``graphify-out/embeddings/``.
-    """
-    return model.replace("/", "_").replace("-", "_").replace(".", "_").lower()
-
-
 def _sidecar_paths(graph_dir: Path, model: str) -> dict[str, Path]:
-    slug = _model_slug(model)
+    """Paths for the embedding sidecar files.
+
+    Uses fixed, generic filenames so the sidecar is a stable contract:
+    ``.graph/embeddings/embedding.npy``, ``embedding.index.json``,
+    ``embedding.meta.json``. The actual model name is stored inside
+    ``embedding.meta.json`` (and ``embedding.index.json``) for anyone who
+    needs to know which model produced the vectors — but the filename
+    itself is always ``embedding.*``, so downstream readers (HybridScorer,
+    query path, tests) never need to glob or guess the slug.
+    """
     base = graph_dir / "embeddings"
     return {
-        "npy": base / f"{slug}.npy",
-        "index": base / f"{slug}.index.json",
-        "meta": base / f"{slug}.meta.json",
+        "npy": base / "embedding.npy",
+        "index": base / "embedding.index.json",
+        "meta": base / "embedding.meta.json",
     }
 
 
@@ -82,119 +81,102 @@ def _sidecar_paths(graph_dir: Path, model: str) -> dict[str, Path]:
 # ---------------------------------------------------------------------------
 
 
-def _resolve_embed_backend_config(backend: str, model: str | None) -> tuple[str, str, str]:
+def _resolve_embed_backend_config(
+    backend: str, model: str | None, graph_dir: "str | Path | None" = None
+) -> tuple[str, str, str]:
     """Resolve (base_url, api_key, model) for an embedding backend.
 
-    Configuration sources (later wins):
-    1. Hardcoded per-backend defaults below.
-    2. Backend-specific env vars (``OPENAI_BASE_URL`` etc.) — same as llm.py.
-    3. **Unified embedding env vars** ``GRAPHIFY_EMBED_BASE_URL`` and
-       ``GRAPHIFY_EMBED_API_KEY`` — let the user point any OpenAI-compatible
-       endpoint at one place without learning each backend's env var name.
-    4. ``.graphifyrc`` file keys (``embed_backend`` / ``embed_model`` /
-       ``embed_base_url`` / ``embed_api_key``) — read by hybrid_scorer.py
-       before this function is called, so the backend/model args already
-       reflect the file when we get here.
+    Configuration is read ONLY from config files (no environment variables):
+      1. ``.default-graphifyrc`` shipped with the package (base defaults)
+      2. ``.graph/graphifyrc`` in the project (overrides per-key)
 
-    Raises ``ValueError`` for unknown backends or missing API keys (the
-    caller surfaces this as a CLI error rather than silently degrading —
-    silent degrade only happens at query time when no sidecar is present).
+    The four ``embed_*`` keys recognized there:
+      embed_backend  — selects the backend (handled by the caller)
+      embed_base_url — OpenAI-compatible endpoint URL (for openai-compatible,
+                       or to override any backend's default base_url)
+      embed_api_key  — API key for the backend
+      embed_model    — model name override
 
-    The ``sentence-transformers`` backend is supported for **test/CI
-    fixtures**: it does not call any API, so no API key is required and no
-    network is touched. Production deployments should use ``openai`` /
-    ``gemini`` / ``ollama`` / ``openai-compatible`` / etc.
+    ``graph_dir`` is the directory containing graph.json — pass it so the
+    config lookup finds the right project's ``.graph/graphifyrc``. When
+    None, falls back to CWD (less reliable — prefer passing graph_dir).
+
+    Environment variables (GRAPHIFY_EMBED_* / OPENAI_API_KEY etc.) are NOT
+    read — use the config file instead. This avoids "works on my machine"
+    issues where env vars are set in one shell session but not visible to
+    the python subprocess that actually runs the extract.
+
+    Raises ``ValueError`` for unknown backends or missing API keys.
     """
+    # Read config files (default + project). Pass graph_dir so the lookup
+    # finds .graph/graphifyrc next to this graph.json.
+    from graphify.hybrid_scorer import _load_embed_config_from_graphifyrc
+    rc_cfg = _load_embed_config_from_graphifyrc(graph_dir)
+    rc_base_url = rc_cfg.get("embed_base_url", "").strip()
+    rc_api_key = rc_cfg.get("embed_api_key", "").strip()
+    rc_model = rc_cfg.get("embed_model", "").strip()
+
     backend = (backend or "").lower()
     if backend == "sentence-transformers":
-        # Test/CI-only backend: no API, no key. The model name carries through
-        # to the sidecar so cosine similarity is computed across a consistent
-        # embedding space. Default is paraphrase-multilingual-MiniLM-L12-v2
-        # (384-dim, 120MB, supports 50+ languages incl. Chinese-English
-        # cross-lingual retrieval). all-MiniLM-L6-v2 is NOT used because it
-        # fails on Chinese-English mixed queries (cosine ≈ 0).
-        return "", "", model or "paraphrase-multilingual-MiniLM-L12-v2"
+        # Local PyTorch CPU model for test/CI. No API, no key. Default is
+        # paraphrase-multilingual-MiniLM-L12-v2 (384-dim, 120MB, 50+ languages
+        # incl. Chinese-English cross-lingual). all-MiniLM-L6-v2 NOT used —
+        # it fails on Chinese-English mixed queries (cosine ≈ 0).
+        return "", "", model or rc_model or "paraphrase-multilingual-MiniLM-L12-v2"
     if backend == "openai-compatible":
         # Generic OpenAI-compatible endpoint (vLLM / LM Studio / llama.cpp /
         # OpenRouter / any /v1/embeddings shim). The user MUST supply
-        # GRAPHIFY_EMBED_BASE_URL and GRAPHIFY_EMBED_API_KEY (via env var or
-        # .graphifyrc); there are no defaults because there is no canonical
-        # endpoint. This is the recommended backend for self-hosted remote
-        # embedding services that aren't Ollama.
-        base_url = os.environ.get("GRAPHIFY_EMBED_BASE_URL", "")
-        api_key = os.environ.get("GRAPHIFY_EMBED_API_KEY", "")
+        # embed_base_url and embed_api_key in .graph/graphifyrc; there are no
+        # defaults because there is no canonical endpoint.
+        base_url = rc_base_url
+        api_key = rc_api_key
         if not base_url:
             raise ValueError(
-                "openai-compatible backend requires GRAPHIFY_EMBED_BASE_URL "
-                "(or embed_base_url in .graphifyrc). Set it to your /v1 endpoint."
+                "openai-compatible backend requires embed_base_url in "
+                ".graph/graphifyrc. Set it to your /v1 endpoint."
             )
         if not api_key:
             raise ValueError(
-                "openai-compatible backend requires GRAPHIFY_EMBED_API_KEY "
-                "(or embed_api_key in .graphifyrc). Local servers accept any "
-                "non-empty value."
+                "openai-compatible backend requires embed_api_key in "
+                ".graph/graphifyrc. Local servers accept any non-empty value."
             )
-        # Model: explicit arg > GRAPHIFY_EMBED_MODEL env > "default" placeholder.
-        # The user must name the model their endpoint serves — there is no
-        # canonical default for a self-hosted endpoint.
-        model = model or os.environ.get("GRAPHIFY_EMBED_MODEL", "") or "default"
-        return base_url, api_key, model
+        return base_url, api_key, model or rc_model or "default"
     if backend == "openai":
-        base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-        api_key = os.environ.get("OPENAI_API_KEY", "")
-        model = model or "text-embedding-3-small"
+        base_url = rc_base_url or "https://api.openai.com/v1"
+        api_key = rc_api_key
+        model = model or rc_model or "text-embedding-3-small"
     elif backend == "gemini":
-        base_url = os.environ.get(
-            "GEMINI_BASE_URL",
-            "https://generativelanguage.googleapis.com/v1beta/openai/",
-        )
-        api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY", "")
-        model = model or "text-embedding-004"
+        base_url = rc_base_url or "https://generativelanguage.googleapis.com/v1beta/openai/"
+        api_key = rc_api_key
+        model = model or rc_model or "text-embedding-004"
     elif backend == "kimi":
-        base_url = os.environ.get("KIMI_BASE_URL", "https://api.moonshot.ai/v1")
-        api_key = os.environ.get("MOONSHOT_API_KEY", "")
-        model = model or "embedding-2"
+        base_url = rc_base_url or "https://api.moonshot.ai/v1"
+        api_key = rc_api_key
+        model = model or rc_model or "embedding-2"
     elif backend == "deepseek":
-        # DeepSeek has no public embedding endpoint as of 2025-Q4 — route to
-        # OpenAI-compatible base URL and let the user override the model.
-        base_url = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
-        api_key = os.environ.get("DEEPSEEK_API_KEY", "")
-        model = model or "deepseek-embed"
+        base_url = rc_base_url or "https://api.deepseek.com"
+        api_key = rc_api_key
+        model = model or rc_model or "deepseek-embed"
     elif backend == "ollama":
-        # Ollama exposes embeddings at /api/embeddings but the OpenAI-compat
-        # /v1/embeddings shim also works and reuses the same SDK path.
-        base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434/v1")
-        api_key = os.environ.get("OLLAMA_API_KEY", "ollama")  # ollama accepts any non-empty key
-        model = model or os.environ.get("OLLAMA_MODEL", "nomic-embed-text")
+        base_url = rc_base_url or "http://localhost:11434/v1"
+        api_key = rc_api_key or "ollama"  # ollama accepts any non-empty key
+        model = model or rc_model or "nomic-embed-text"
     elif backend == "azure":
-        base_url = os.environ.get("AZURE_OPENAI_ENDPOINT", "").rstrip("/")
-        api_key = os.environ.get("AZURE_OPENAI_API_KEY", "")
-        model = model or os.environ.get("AZURE_OPENAI_DEPLOYMENT") or os.environ.get(
-            "GRAPHIFY_AZURE_MODEL", "text-embedding-3-small"
-        )
-        # Azure needs /openai/deployments/<deployment>/embeddings on its base URL.
-        # If the user gave a bare endpoint, append the standard path.
+        base_url = (rc_base_url or "").rstrip("/")
+        api_key = rc_api_key
+        model = model or rc_model or "text-embedding-3-small"
         if base_url and "/openai/deployments/" not in base_url:
             base_url = f"{base_url}/openai/deployments/{model}/embeddings"
-        # Azure uses api-version query param; the SDK passes it via extra_body.
     else:
         raise ValueError(
             f"Unknown embedding backend {backend!r}. "
             "Supported: openai/openai-compatible/gemini/kimi/deepseek/ollama/azure/sentence-transformers. "
             "Anthropic Claude has no embedding API — use a different backend."
         )
-    # Unified override: GRAPHIFY_EMBED_BASE_URL / GRAPHIFY_EMBED_API_KEY win
-    # over any backend-specific env var. Lets the user repoint e.g. an
-    # `openai` backend at a self-hosted OpenAI-compatible endpoint without
-    # setting OPENAI_BASE_URL (which would also affect extraction backends).
-    base_url = os.environ.get("GRAPHIFY_EMBED_BASE_URL") or base_url
-    api_key = os.environ.get("GRAPHIFY_EMBED_API_KEY") or api_key
     if not api_key and backend not in ("ollama",):
-        # Local Ollama accepts any non-empty key; everything else needs a real one.
         raise ValueError(
-            f"No API key set for embedding backend {backend!r}. "
-            f"Set GRAPHIFY_EMBED_API_KEY (or the backend-specific env var), "
-            f"or use the .graphifyrc file with embed_api_key=..."
+            f"No embed_api_key set for embedding backend {backend!r} in "
+            f".graph/graphifyrc. Set embed_api_key=... in the config file."
         )
     return base_url, api_key, model
 
@@ -249,7 +231,8 @@ def _embed_batch_sentence_transformers(
 
 
 def _embed_batch(
-    texts: list[str], *, backend: str, model: str | None = None
+    texts: list[str], *, backend: str, model: str | None = None,
+    graph_dir: "str | Path | None" = None,
 ) -> tuple[np.ndarray, str]:
     """Embed a batch of texts. Returns (embeddings (N, D) float32, actual_model).
 
@@ -257,6 +240,10 @@ def _embed_batch(
     backend's base_url for online backends (openai/gemini/kimi/deepseek/
     ollama/azure). For the ``sentence-transformers`` backend (test/CI only),
     uses the local SentenceTransformer model — no API call, no network.
+
+    ``graph_dir`` is passed to ``_resolve_embed_backend_config`` so it can
+    find ``.graph/graphifyrc`` for embed_base_url / embed_api_key. When
+    None, falls back to CWD (less reliable).
 
     Batches in chunks of ``_EMBED_BATCH_SIZE`` to stay under provider input
     limits. Empty / whitespace-only texts are replaced with a single space
@@ -278,7 +265,7 @@ def _embed_batch(
             "Install with: uv tool install 'graphifyy[openai]'"
         ) from exc
 
-    base_url, api_key, actual_model = _resolve_embed_backend_config(backend, model)
+    base_url, api_key, actual_model = _resolve_embed_backend_config(backend, model, graph_dir)
     client = OpenAI(api_key=api_key, base_url=base_url)
 
     # Sanitize: empty strings would 400 from most providers.
@@ -327,16 +314,19 @@ def generate_embeddings_for_graph(
     # only skip case is "no backend configured anywhere", which is the
     # correct behavior for an environment with no embedding endpoint.
     if backend is None:
-        from graphify.hybrid_scorer import _embed_backend_from_env
-        backend = _embed_backend_from_env()
+        from graphify.hybrid_scorer import _load_embed_config_from_graphifyrc
+        # Pass graph_dir so the config lookup finds .graph/graphifyrc next
+        # to this graph.json. Without graph_dir the lookup falls back to CWD
+        # and misses the project config — the "env var set but no effect" bug.
+        rc_cfg = _load_embed_config_from_graphifyrc(graph_json_path.parent)
+        backend = rc_cfg.get("embed_backend", "").strip().lower() or None
         if backend is None:
             # Nothing configured — skip silently rather than crash. The graph
             # is still valid; queries degrade to pure lexical automatically.
             return None
-        # Also auto-resolve model from the same config chain when unset.
+        # Also auto-resolve model from the same config.
         if model is None:
-            from graphify.hybrid_scorer import _embed_model_from_env
-            model = _embed_model_from_env()
+            model = rc_cfg.get("embed_model", "").strip() or None
 
     graph_dir = graph_json_path.parent
     data = json.loads(graph_json_path.read_text(encoding="utf-8"))
@@ -345,7 +335,8 @@ def generate_embeddings_for_graph(
         raise ValueError("graph has no nodes to embed")
 
     texts = [_node_embed_text(n) for n in nodes]
-    embeddings, actual_model = _embed_batch(texts, backend=backend, model=model)
+    embeddings, actual_model = _embed_batch(texts, backend=backend, model=model,
+                                            graph_dir=graph_json_path.parent)
 
     paths = _sidecar_paths(graph_dir, actual_model)
     paths["npy"].parent.mkdir(parents=True, exist_ok=True)

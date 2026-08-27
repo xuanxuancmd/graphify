@@ -5789,9 +5789,9 @@ def extract(
             symbol resolution. Pass the SCAN root whenever the cache lives
             somewhere else (`--out`); without it the anchor falls back to
             cache_root and every scanned file reads as out-of-root (#1941).
-        cache_root: explicit root for graphify-out/cache/ (overrides the
+        cache_root: explicit root for .graph/cache/ (overrides the
             inferred common path prefix). Pass Path('.') when running on a
-            subdirectory so the cache stays at ./graphify-out/cache/.
+            subdirectory so the cache stays at ./.graph/cache/.
             Anchors ids/source_file only as a fallback when `root` is unset.
         parallel: if True and there are >= _PARALLEL_THRESHOLD uncached files,
             use ProcessPoolExecutor for multi-core extraction.
@@ -5862,7 +5862,7 @@ def extract(
 
     # #1774: the cache is an OUTPUT, so when no explicit cache_root is given it is
     # written under the current working directory — never `root` (the inferred
-    # common parent of the inputs), which would drop graphify-out/ inside a
+    # common parent of the inputs), which would drop .graph/ inside a
     # read-only or foreign corpus. `root` still anchors the content-hash keys,
     # node ids, symbol resolution, and the XAML project-scan boundary; only the
     # cache directory's location diverges from it.
@@ -6024,7 +6024,7 @@ def extract(
     #   - extractor exists but produced zero nodes (#1666 empty-source set)
     # The CLI drops these from the stamped file set and clears any prior
     # hashes so the next run retries them after the user installs the extra
-    # (or the transient failure self-heals) without deleting graphify-out/.
+    # (or the transient failure self-heals) without deleting .graph/.
     _failed_sources: list[str] = []
     _failed_seen: set[str] = set()
     for i, _p in enumerate(paths):

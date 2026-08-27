@@ -1,0 +1,6 @@
+# graphify project-level embedding config
+# Configures sentence-transformers as the embedding backend for hybrid search.
+# This is the SOLE switch: configured = generate embeddings at build time,
+# unconfigured = skip silently (pure lexical mode).
+embed_backend = sentence-transformers
+embed_model = paraphrase-multilingual-MiniLM-L12-v2

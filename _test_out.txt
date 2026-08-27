@@ -1,0 +1,22 @@
+﻿python : [DEBUG embed] generate_embedding_sidecar called: graph_json_path=C:\wanglong\graphify\tests\e2e\resources\user
+-management\src\.graph\graph.json, embed_backend=None, embed_model=None
+所在位置 行:1 字符: 165
++ ... nsformers"; python -m graphify extract tests/e2e/resources/user-manag ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([DEBUG embed] g...mbed_model=None:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[DEBUG embed] auto-detect backend (backend=None -> _embed_backend_from_env) = 'sentence-transformers'
+[DEBUG embed] auto-detect model = None
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and
+ faster downloads.
+[graphify extract] scanning C:\wanglong\graphify\tests\e2e\resources\user-management\src
+[graphify extract] found 12 code, 0 docs, 0 papers, 0 images
+[graphify extract] AST extraction on 12 code files...
+[graphify extract] wrote C:\wanglong\graphify\tests\e2e\resources\user-management\src\.graph\graph.json 鈥?81 nodes, 204 edges (no clustering)
+
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]
+Loading weights: 100%|鈻堚枅鈻堚枅鈻堚枅鈻堚枅鈻堚枅| 199/199 [00:00<00:00, 6208.01it/s]
+[DEBUG embed] generate_embeddings_for_graph returned: WindowsPath('C:/wanglong/graphify/tests/e2e/resources/user-manage
+ment/src/.graph/embeddings/paraphrase_multilingual_minilm_l12_v2.npy')
+[graphify extract] wrote embeddings: embeddings\paraphrase_multilingual_minilm_l12_v2.npy

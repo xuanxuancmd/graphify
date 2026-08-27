@@ -19,7 +19,7 @@ _SEARCH_NUDGE = json.dumps({
     "hookSpecificOutput": {
         "hookEventName": "PreToolUse",
         "additionalContext": (
-            'MANDATORY: graphify-out/graph.json exists. You MUST run '
+            'MANDATORY: .graph/graph.json exists. You MUST run '
             '`graphify query "<question>"` before grepping raw files. Only grep '
             'after graphify has oriented you, or to modify/debug specific lines.'
         ),
@@ -29,7 +29,7 @@ _READ_NUDGE = json.dumps({
     "hookSpecificOutput": {
         "hookEventName": "PreToolUse",
         "additionalContext": (
-            'MANDATORY: graphify-out/graph.json exists. You MUST run graphify '
+            'MANDATORY: .graph/graph.json exists. You MUST run graphify '
             'before reading source files. Use: `graphify query "<question>"` '
             '(scoped subgraph), `graphify explain "<concept>"`, or '
             '`graphify path "<A>" "<B>"`. Only read raw files after graphify has '
@@ -43,7 +43,7 @@ _READ_NUDGE_STALE = json.dumps({
     "hookSpecificOutput": {
         "hookEventName": "PreToolUse",
         "additionalContext": (
-            'graphify-out/graph.json exists but may be STALE for this file (the file '
+            '.graph/graph.json exists but may be STALE for this file (the file '
             'changed after the last build). Prefer `graphify query "<question>"` for '
             'orientation, and run `graphify update` to refresh the graph. Reading the '
             'file directly is fine.'
@@ -74,7 +74,7 @@ _HOOK_SOURCE_EXTS = (
     '.swift', '.php', '.scala', '.lua', '.sh', '.md', '.rst', '.txt', '.mdx',
 )
 _GEMINI_NUDGE_TEXT = (
-    'graphify: knowledge graph at graphify-out/. For focused questions, run '
+    'graphify: knowledge graph at .graph/. For focused questions, run '
     '`graphify query "<question>"` (scoped subgraph, usually much smaller than '
     'GRAPH_REPORT.md) instead of grepping raw files. Read GRAPH_REPORT.md only '
     'for broad architecture context.'
@@ -212,7 +212,7 @@ def _stale_graph_sources(
         root_res = scan_root.resolve()
     except (OSError, RuntimeError):
         root_res = scan_root
-    # <out>/graphify-out/graph.json — relative source_files may be anchored here.
+    # <out>/.graph/graph.json — relative source_files may be anchored here.
     out_base = graph_path.parent.parent
     try:
         out_base = out_base.resolve()
@@ -353,7 +353,7 @@ def _zero_node_stamped_code_sources(
     The failed-source unstamping only covers failures that happen AFTER it
     shipped; a manifest poisoned by an earlier run (extraction failed, hashes
     stamped anyway) keeps reporting the file unchanged forever, and the only
-    documented recovery was deleting graphify-out/. A stamped file that the
+    documented recovery was deleting .graph/. A stamped file that the
     graph has no nodes for, despite an extractor being wired up for it, is
     exactly that state — re-queue it as changed. Bounded by the same no-wedge
     property: if it fails again this run it is now left unstamped, and if it
@@ -376,7 +376,7 @@ def _zero_node_stamped_code_sources(
         root_res = scan_root.resolve()
     except (OSError, RuntimeError):
         root_res = scan_root
-    # <out>/graphify-out/graph.json — legacy relative source_files may be
+    # <out>/.graph/graph.json — legacy relative source_files may be
     # anchored here instead of the scan root (<=0.9.16, #555/#1899).
     out_base = graph_path.parent.parent
     try:
@@ -743,7 +743,7 @@ def _run_hook_guard(kind: str, strict: bool = False) -> None:
                 for seg in [v.lower().replace("\\", "/").rsplit("/", 1)[-1]]
                 if "." in seg
             ]
-            under_out = "graphify-out/" in j or (GRAPHIFY_OUT_NAME.lower() + "/") in j
+            under_out = ".graph/" in j or (GRAPHIFY_OUT_NAME.lower() + "/") in j
             if under_out or not any(tl in _HOOK_SOURCE_EXTS for tl in tails):
                 return
             # #1840 (a): skip files outside the graph's project. cwd (or
@@ -2043,12 +2043,12 @@ def dispatch_command(cmd: str) -> None:
         stages.mark("analyze")
         # Where outputs (GRAPH_REPORT.md, re-clustered graph.json, labels,
         # analysis, html) land. When `--graph` points at a graph INSIDE a
-        # graphify-out/ dir (another project/tenant's output), write beside it,
-        # not into a stray graphify-out/ in the CWD (#1747). But when `--graph`
+        # .graph/ dir (another project/tenant's output), write beside it,
+        # not into a stray .graph/ in the CWD (#1747). But when `--graph`
         # points at an arbitrary path — e.g. a `backup/graph.json` archived
-        # before re-clustering (#934) — fall back to the CWD's graphify-out/,
+        # before re-clustering (#934) — fall back to the CWD's .graph/,
         # which is the restore-into-place workflow that test pins. The default
-        # (no --graph) case already has graph_json under watch_path/graphify-out.
+        # (no --graph) case already has graph_json under watch_path/.graph.
         _out_name = Path(_GRAPHIFY_OUT).name
         if graph_override is not None and graph_json.parent.name == _out_name:
             out = graph_json.parent
@@ -2440,8 +2440,8 @@ def dispatch_command(cmd: str) -> None:
                 project_label = args[i_arg + 1]; i_arg += 2
             elif a in ("-h", "--help"):
                 print("Usage: graphify tree [--graph PATH] [--output HTML]")
-                print("  --graph PATH         path to graph.json (default graphify-out/graph.json)")
-                print("  --output HTML        output path (default graphify-out/GRAPH_TREE.html)")
+                print("  --graph PATH         path to graph.json (default .graph/graph.json)")
+                print("  --output HTML        output path (default .graph/GRAPH_TREE.html)")
                 print("  --root PATH          filesystem root (default: longest common dir of all source_files)")
                 print("  --max-children N     cap visible children per node (default 200)")
                 print("  --top-k-edges N      pre-compute top-K outbound edges per symbol (default 12)")
@@ -2601,8 +2601,8 @@ def dispatch_command(cmd: str) -> None:
             if type(g) is not _nx.Graph:
                 return _nx.Graph(g)
             return g
-        # Unique repo tag per graph. The bare `graphify-out/..` dir name is not
-        # unique across inputs (src/graphify-out and frontend/src/graphify-out both
+        # Unique repo tag per graph. The bare `.graph/..` dir name is not
+        # unique across inputs (src/.graph and frontend/src/.graph both
         # → "src"), which collides same-stem node ids and silently merges unrelated
         # entities (#1729). distinct_repo_tags guarantees a distinct prefix per graph.
         repo_tags = _repo_tags(graph_paths)
@@ -2780,7 +2780,7 @@ def dispatch_command(cmd: str) -> None:
                 print("Usage: graphify export callflow-html [GRAPH|DIR] [--graph PATH] [--labels PATH]")
                 print("  --report PATH          path to GRAPH_REPORT.md")
                 print("  --sections PATH        JSON section definitions")
-                print("  --output HTML          output path (default graphify-out/<project>-callflow.html)")
+                print("  --output HTML          output path (default .graph/<project>-callflow.html)")
                 print("  --lang LANG            auto, zh-CN, en, etc. (default auto)")
                 print("  --max-sections N       maximum auto-derived sections (default 15)")
                 print("  --diagram-scale N      Mermaid diagram scale (default 1.0)")
@@ -3314,8 +3314,8 @@ def dispatch_command(cmd: str) -> None:
         if cli_max_workers is not None:
             os.environ["GRAPHIFY_MAX_WORKERS"] = str(cli_max_workers)
 
-        # Resolve output dir. The user-facing contract is "<out>/graphify-out/"
-        # so a fresh checkout writes graphify-out/ at the project root, matching
+        # Resolve output dir. The user-facing contract is "<out>/.graph/"
+        # so a fresh checkout writes .graph/ at the project root, matching
         # the skill.md pipeline.
         out_root = (out_dir.resolve() if out_dir else target)
         graphify_out = out_root / _GRAPHIFY_OUT
@@ -3700,8 +3700,8 @@ def dispatch_command(cmd: str) -> None:
                     _pure_code_files.append(_f)
 
             # Anchor the cache at the output root, not the scanned project:
-            # with --out, a <target>/graphify-out/cache/ would leak a
-            # graphify-out/ dir into a project that asked for external output.
+            # with --out, a <target>/.graph/cache/ would leak a
+            # .graph/ dir into a project that asked for external output.
             # `root` stays the scanned project so source_file/ids relativize
             # against it; conflating the two basenamed every node (#1941).
             ast_kwargs: dict = {"cache_root": out_root, "root": target}
@@ -4581,8 +4581,8 @@ def dispatch_command(cmd: str) -> None:
         # that same prompt (#1939). Omitting it reads the unattributed layout, which
         # cannot see entries a fingerprinted run wrote.
         # Writes:
-        #   graphify-out/.graphify_cached.json   — already-cached nodes/edges/hyperedges
-        #   graphify-out/.graphify_uncached.txt  — paths that need extraction
+        #   .graph/.graphify_cached.json   — already-cached nodes/edges/hyperedges
+        #   .graph/.graphify_uncached.txt  — paths that need extraction
         # Stdout: "Cache: N hit, M miss"
         from graphify.cache import check_semantic_cache
         if len(sys.argv) < 3:

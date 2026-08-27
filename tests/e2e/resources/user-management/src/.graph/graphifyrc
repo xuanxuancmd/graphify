@@ -1,0 +1,5 @@
+# graphify embedding config for test fixture
+# This enables sentence-transformers (local CPU, no API key) so the test
+# suite and manual verification can run end-to-end without external services.
+embed_backend=sentence-transformers
+embed_model=paraphrase-multilingual-MiniLM-L12-v2

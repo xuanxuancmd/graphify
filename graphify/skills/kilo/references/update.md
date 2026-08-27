@@ -7,7 +7,7 @@ Load this only when the user passed `--update` or `--cluster-only`. A first-time
 Use when you've added or modified files since the last run. Only re-extracts changed files - saves tokens and time.
 
 ```bash
-$(cat graphify-out/.graphify_python) -c "
+$(cat .graph/.graphify_python) -c "
 import sys, json
 from graphify.detect import detect_incremental, save_manifest
 from pathlib import Path
@@ -15,7 +15,7 @@ from pathlib import Path
 result = detect_incremental(Path('INPUT_PATH'))
 new_total = result.get('new_total', 0)
 print(json.dumps(result, indent=2, ensure_ascii=False))
-Path('graphify-out/.graphify_incremental.json').write_text(json.dumps(result, ensure_ascii=False), encoding=\"utf-8\")
+Path('.graph/.graphify_incremental.json').write_text(json.dumps(result, ensure_ascii=False), encoding=\"utf-8\")
 deleted = list(result.get('deleted_files', []))
 if new_total == 0 and not deleted:
     print('No files changed since last run. Nothing to update.')
@@ -30,11 +30,11 @@ if new_total > 0:
 Then populate `.graphify_detect.json` so Steps 3A–6 (which read it unconditionally) see the right state for an incremental run. `files` carries the changed subset (drives Step 3A AST + Step 3B0 cache check on only what changed); `all_files` carries the full corpus for any step that needs corpus-wide context:
 
 ```bash
-$(cat graphify-out/.graphify_python) -c "
+$(cat .graph/.graphify_python) -c "
 import json
 from pathlib import Path
-r = json.loads(Path('graphify-out/.graphify_incremental.json').read_text(encoding=\"utf-8\"))
-Path('graphify-out/.graphify_detect.json').write_text(json.dumps({
+r = json.loads(Path('.graph/.graphify_incremental.json').read_text(encoding=\"utf-8\"))
+Path('.graph/.graphify_detect.json').write_text(json.dumps({
     'files': r.get('new_files', {}),
     'all_files': r.get('files', {}),
     'total_files': r.get('new_total', 0),
@@ -48,11 +48,11 @@ Path('graphify-out/.graphify_detect.json').write_text(json.dumps({
 If new files exist, first check whether all changed files are code files:
 
 ```bash
-$(cat graphify-out/.graphify_python) -c "
+$(cat .graph/.graphify_python) -c "
 import json
 from pathlib import Path
 
-result = json.loads(open('graphify-out/.graphify_incremental.json', encoding='utf-8').read()) if Path('graphify-out/.graphify_incremental.json').exists() else {}
+result = json.loads(open('.graph/.graphify_incremental.json', encoding='utf-8').read()) if Path('.graph/.graphify_incremental.json').exists() else {}
 code_exts = {'.py','.ts','.js','.go','.rs','.java','.cpp','.c','.rb','.swift','.kt','.cs','.scala','.php','.cc','.cxx','.hpp','.h','.kts','.lua','.toc','.f','.F','.f90','.F90','.f95','.F95','.f03','.F03','.f08','.F08'}
 new_files = result.get('new_files', {})
 all_changed = [f for files in new_files.values() for f in files]
@@ -69,12 +69,12 @@ If `code_only` is False (any changed file is a doc/paper/image/video): **first, 
 If no new files exist (only deletions), create an empty extraction so the merge step can prune:
 
 ```bash
-if [ ! -f graphify-out/.graphify_extract.json ]; then
+if [ ! -f .graph/.graphify_extract.json ]; then
     echo '[graphify update] Only deletions -- creating empty extraction for merge.'
-    $(cat graphify-out/.graphify_python) -c "
+    $(cat .graph/.graphify_python) -c "
 import json
 from pathlib import Path
-Path('graphify-out/.graphify_extract.json').write_text(json.dumps({'nodes':[],'edges':[],'hyperedges':[],'input_tokens':0,'output_tokens':0}), encoding='utf-8')
+Path('.graph/.graphify_extract.json').write_text(json.dumps({'nodes':[],'edges':[],'hyperedges':[],'input_tokens':0,'output_tokens':0}), encoding='utf-8')
 "
 fi
 ```
@@ -83,15 +83,15 @@ fi
 Then:
 
 ```bash
-$(cat graphify-out/.graphify_python) -c "
+$(cat .graph/.graphify_python) -c "
 import json
 from pathlib import Path
 from graphify.build import build_merge
 from graphify.detect import save_manifest
 
 # Load new extraction and incremental state
-new_extraction = json.loads(Path('graphify-out/.graphify_extract.json').read_text(encoding=\"utf-8\"))
-incremental = json.loads(Path('graphify-out/.graphify_incremental.json').read_text(encoding=\"utf-8\"))
+new_extraction = json.loads(Path('.graph/.graphify_extract.json').read_text(encoding=\"utf-8\"))
+incremental = json.loads(Path('.graph/.graphify_incremental.json').read_text(encoding=\"utf-8\"))
 deleted = list(incremental.get('deleted_files', []))
 # prune_sources is ONLY for genuinely DELETED files. Changed/re-extracted files are
 # handled by build_merge's replace-on-re-extract (#1344): every source_file in
@@ -111,7 +111,7 @@ prune = list(deleted) or None
 # reciprocal A<->B edges (#1392).
 G = build_merge(
     [new_extraction],
-    graph_path='graphify-out/graph.json',
+    graph_path='.graph/graph.json',
     prune_sources=prune,
     root='INPUT_PATH',
     directed=IS_DIRECTED,
@@ -134,7 +134,7 @@ merged_out = {
     'input_tokens': new_extraction.get('input_tokens', 0),
     'output_tokens': new_extraction.get('output_tokens', 0),
 }
-Path('graphify-out/.graphify_extract.json').write_text(json.dumps(merged_out, ensure_ascii=False), encoding=\"utf-8\")
+Path('.graph/.graphify_extract.json').write_text(json.dumps(merged_out, ensure_ascii=False), encoding=\"utf-8\")
 print(f'[graphify update] Merged extraction written ({len(merged_out[\"nodes\"])} nodes, {len(merged_out[\"edges\"])} edges)')
 
 # Save manifest so next --update diffs against today's state, not the
@@ -170,7 +170,7 @@ Then run Steps 4–8 on the merged graph as normal.
 After Step 4, show the graph diff:
 
 ```bash
-$(cat graphify-out/.graphify_python) -c "
+$(cat .graph/.graphify_python) -c "
 import json
 from graphify.analyze import graph_diff
 from graphify.build import build_from_json
@@ -179,8 +179,8 @@ import networkx as nx
 from pathlib import Path
 
 # Load old graph (before update) from backup written before merge
-old_data = json.loads(Path('graphify-out/.graphify_old.json').read_text(encoding=\"utf-8\")) if Path('graphify-out/.graphify_old.json').exists() else None
-new_extract = json.loads(Path('graphify-out/.graphify_extract.json').read_text(encoding=\"utf-8\"))
+old_data = json.loads(Path('.graph/.graphify_old.json').read_text(encoding=\"utf-8\")) if Path('.graph/.graphify_old.json').exists() else None
+new_extract = json.loads(Path('.graph/.graphify_extract.json').read_text(encoding=\"utf-8\"))
 G_new = build_from_json(new_extract, directed=IS_DIRECTED)
 
 if old_data:
@@ -194,8 +194,8 @@ if old_data:
 "
 ```
 
-Before the merge step, save the old graph: `cp graphify-out/graph.json graphify-out/.graphify_old.json`
-Clean up after: `rm -f graphify-out/.graphify_old.json`
+Before the merge step, save the old graph: `cp .graph/graph.json .graph/.graphify_old.json`
+Clean up after: `rm -f .graph/.graphify_old.json`
 
 ---
 

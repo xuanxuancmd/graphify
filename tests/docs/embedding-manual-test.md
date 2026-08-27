@@ -141,7 +141,7 @@ $env:GRAPHIFY_EMBED_BACKEND = "sentence-transformers"
 Remove-Item -Recurse -Force "tests\e2e\resources\user-management\src\.graph" -ErrorAction SilentlyContinue
 ```
 
-然后运行 extract（不需要 `--embed-backend` flag，配置了 env var 即自动生成）：
+然后运行 extract：
 
 ```powershell
 python -m graphify extract tests/e2e/resources/user-management/src --no-cluster --no-viz --code-only

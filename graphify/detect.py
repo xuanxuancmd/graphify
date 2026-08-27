@@ -740,7 +740,7 @@ def convert_office_file(path: Path, out_dir: Path, root: "Path | None" = None) -
     # Hash the path RELATIVE to the scan root, not the absolute path: the
     # absolute form salts the name with the checkout location, so the same
     # tracked .xlsx in two clones/worktrees emits two differently-named,
-    # byte-identical sidecars — unbounded duplicates when graphify-out/ is
+    # byte-identical sidecars — unbounded duplicates when .graph/ is
     # committed, each ingested as a distinct source doc (#2059). The relative
     # path still disambiguates same-stem files in different directories.
     # Normalize to NFC before hashing: on macOS (HFS+/APFS) os.walk/rglob return
@@ -751,7 +751,7 @@ def convert_office_file(path: Path, out_dir: Path, root: "Path | None" = None) -
     import hashlib
     import unicodedata
     if root is None:
-        # Default layout: out_dir is <root>/<graphify-out>/converted.
+        # Default layout: out_dir is <root>/<.graph>/converted.
         root = out_dir.parent.parent
     try:
         key = path.resolve().relative_to(Path(root).resolve()).as_posix()
@@ -831,7 +831,7 @@ _SKIP_DIRS = {
     "site-packages", "lib64",
     ".pytest_cache", ".mypy_cache", ".ruff_cache",
     ".tox", ".nox", ".eggs", "*.egg-info",  # nox is tox's successor, same .nox/ venv shape (#1804)
-    "graphify-out",  # never treat the default output as source input (#524)
+    ".graph",  # never treat the default output as source input (#524)
     # Coverage/test-artefact dirs — generated, never architecturally meaningful
     "lcov-report",                          # Vitest/Istanbul/nyc HTML reports (#870);
                                             # bare "coverage" is gated on report
@@ -1744,7 +1744,7 @@ def detect(root: Path, *, follow_symlinks: bool | None = None, google_workspace:
             explicit_cache=explicit_ignore_cache,
         )
 
-    # Always include graphify-out/memory/ - query results filed back into the graph
+    # Always include .graph/memory/ - query results filed back into the graph
     memory_dir = root / GRAPHIFY_OUT / "memory"
     scan_paths = [root]
     if memory_dir.exists():
@@ -2091,7 +2091,7 @@ def load_manifest(
 
     When ``root`` is provided, stored relative keys are re-anchored against
     it so callers see absolute paths regardless of on-disk format. Legacy
-    manifests with absolute keys pass through unchanged, so a graphify-out/
+    manifests with absolute keys pass through unchanged, so a .graph/
     written by an older version (or by a caller that didn't supply ``root``
     to :func:`save_manifest`) remains readable.
 
@@ -2157,7 +2157,7 @@ def save_manifest(
     zero-node anomalous extract). Blanks BOTH ``ast_hash`` and
     ``semantic_hash`` on the seeded row so either detect_incremental kind
     re-queues the file after the failure is fixed, without deleting
-    graphify-out/.
+    .graph/.
     """
     existing = load_manifest(manifest_path, root=root)
 

@@ -13,7 +13,7 @@ then produces a self-contained HTML file with:
 
 Usage:
   python3 -m graphify export callflow-html
-  python3 -m graphify export callflow-html /path/to/project/graphify-out/graph.json
+  python3 -m graphify export callflow-html /path/to/project/.graph/graph.json
   python3 -m graphify export callflow-html --graph /path/to/graph.json --output docs/architecture.html
 """
 
@@ -2013,7 +2013,7 @@ def main():
         description="Generate call-flow architecture HTML from graphify knowledge graph outputs"
     )
     parser.add_argument("project", nargs="?", default=None, help="Project root or graphify output directory")
-    parser.add_argument("--graphify-out", default=None, help="Path to graphify output directory")
+    parser.add_argument("--.graph", default=None, help="Path to graphify output directory")
     parser.add_argument("--graph", default=None, help="Path to graph.json")
     parser.add_argument("--report", default=None, help="Path to GRAPH_REPORT.md")
     parser.add_argument("--labels", default=None, help="Path to .graphify_labels.json")
