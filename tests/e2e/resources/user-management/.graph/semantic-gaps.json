@@ -1,0 +1,52 @@
+[
+  {
+    "file": "AGENTS.md",
+    "backend": "openai",
+    "reason": "LLM semantic extraction failed (all chunks)"
+  },
+  {
+    "file": "README.md",
+    "backend": "openai",
+    "reason": "LLM semantic extraction failed (all chunks)"
+  },
+  {
+    "file": "docs\\context-map.md",
+    "backend": "openai",
+    "reason": "LLM semantic extraction failed (all chunks)"
+  },
+  {
+    "file": "docs\\features\\user-management\\business-flow.md",
+    "backend": "openai",
+    "reason": "LLM semantic extraction failed (all chunks)"
+  },
+  {
+    "file": "docs\\features\\user-management\\contracts.md",
+    "backend": "openai",
+    "reason": "LLM semantic extraction failed (all chunks)"
+  },
+  {
+    "file": "docs\\features\\user-management\\domain-events.md",
+    "backend": "openai",
+    "reason": "LLM semantic extraction failed (all chunks)"
+  },
+  {
+    "file": "docs\\features\\user-management\\domain-model.md",
+    "backend": "openai",
+    "reason": "LLM semantic extraction failed (all chunks)"
+  },
+  {
+    "file": "docs\\features\\user-management\\index.md",
+    "backend": "openai",
+    "reason": "LLM semantic extraction failed (all chunks)"
+  },
+  {
+    "file": "docs\\features\\user-management\\invariants.md",
+    "backend": "openai",
+    "reason": "LLM semantic extraction failed (all chunks)"
+  },
+  {
+    "file": "docs\\technical-constraints.md",
+    "backend": "openai",
+    "reason": "LLM semantic extraction failed (all chunks)"
+  }
+]

@@ -23,7 +23,7 @@ import stat
 import tempfile
 from pathlib import Path, PurePosixPath, PureWindowsPath
 
-GRAPHIFY_OUT = os.environ.get("GRAPHIFY_OUT", "graphify-out")
+GRAPHIFY_OUT = os.environ.get("GRAPHIFY_OUT", ".graph")
 
 
 def _atomic_replace(path: "str | Path", write_fn) -> None:

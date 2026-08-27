@@ -10,6 +10,9 @@ build/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.omo
+node_modules
+.codegraph
 *.so
 *.egg
 .graphify/
@@ -40,3 +43,12 @@ paper/
 
 # macOS Finder metadata
 .DS_Store
+**/.graph/cache
+graphify-out
+
+.graph/*
+
+!.graph/graph.json
+!.graph/GRAPH_REPORT.md
+!.graph/graph.html
+!.graph/manifest.json

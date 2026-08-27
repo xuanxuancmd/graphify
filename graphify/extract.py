@@ -5662,6 +5662,109 @@ def _extract_sequential(
 _PARALLEL_THRESHOLD = 20
 
 
+def _write_islands(out_anchor: Path, unmatched: list[dict]) -> None:
+    """Append unmatched anchors to ``<GRAPHIFY_OUT>/islands.json``.
+
+    The file accumulates across runs so a user can audit every anchor that a
+    custom extractor (DDD, Swagger, ...) could not bind to a code node.
+    ``out_anchor`` is the ``cache_location`` passed to :func:`extract` —
+    typically the output directory itself (when called from cli.py with
+    ``cache_root=out_root``). Falls back to writing inside the configured
+    output dir, detected by the ``GRAPHIFY_OUT`` env var /
+    ``graphify.paths.GRAPHIFY_OUT`` constant so a custom output name (e.g.
+    ``.graph``) is honoured.
+
+    Renamed from ``_write_ddd_unmatched``: the old name was misleading because
+    Swagger's unmatched endpoints are also written here. The output file is now
+    ``islands.json`` (was ``ddd-unmatched.json``). For backward compatibility,
+    if ``islands.json`` does not exist but the legacy ``ddd-unmatched.json``
+    does, the legacy file is migrated (renamed) to ``islands.json`` before
+    appending.
+    """
+    import json
+    if not unmatched:
+        return
+    from graphify.paths import GRAPHIFY_OUT
+    # cache_location is the output dir itself (cli.py passes out_root), OR the
+    # cwd when no cache_root was given. Detect the right output dir:
+    #   1. out_anchor itself (if it has cache/ subdir — it IS the output dir)
+    #   2. out_anchor / GRAPHIFY_OUT (if out_anchor is the project root and
+    #      the output dir sits inside it under its configured name)
+    #   3. out_anchor (last resort — write in the given dir)
+    if (out_anchor / "cache").is_dir():
+        out_dir = out_anchor
+    elif (out_anchor / GRAPHIFY_OUT).is_dir():
+        out_dir = out_anchor / GRAPHIFY_OUT
+    else:
+        out_dir = out_anchor
+    out_path = out_dir / "islands.json"
+    # Backward compatibility: migrate legacy ddd-unmatched.json → islands.json
+    legacy_path = out_dir / "ddd-unmatched.json"
+    if not out_path.is_file() and legacy_path.is_file():
+        try:
+            legacy_path.rename(out_path)
+        except OSError:
+            pass
+    existing: list = []
+    if out_path.is_file():
+        try:
+            existing = json.loads(out_path.read_text(encoding="utf-8"))
+            if not isinstance(existing, list):
+                existing = []
+        except Exception:
+            existing = []
+    existing.extend(unmatched)
+    try:
+        out_path.write_text(
+            json.dumps(existing, indent=2, ensure_ascii=False), encoding="utf-8",
+        )
+    except Exception:
+        pass
+
+
+def _write_semantic_gaps(out_anchor: Path, gaps: list[dict]) -> None:
+    """Append files whose LLM semantic extraction failed to ``<GRAPHIFY_OUT>/semantic-gaps.json``.
+
+    Records files that were dispatched to the LLM tier but produced no semantic
+    nodes (e.g. ``--allow-partial`` runs with a fake/unavailable API key). The
+    dashboard surfaces these in the Review Queue so the user knows which docs
+    lack semantic concept nodes.
+
+    Same output-dir resolution as :func:`_write_islands`.
+    """
+    import json
+    if not gaps:
+        return
+    from graphify.paths import GRAPHIFY_OUT
+    if (out_anchor / "cache").is_dir():
+        out_dir = out_anchor
+    elif (out_anchor / GRAPHIFY_OUT).is_dir():
+        out_dir = out_anchor / GRAPHIFY_OUT
+    else:
+        out_dir = out_anchor
+    out_path = out_dir / "semantic-gaps.json"
+    existing: list = []
+    if out_path.is_file():
+        try:
+            existing = json.loads(out_path.read_text(encoding="utf-8"))
+            if not isinstance(existing, list):
+                existing = []
+        except Exception:
+            existing = []
+    # Dedup by file path to avoid duplicates on incremental runs
+    seen = {g.get("file") for g in existing if isinstance(g, dict)}
+    for g in gaps:
+        if g.get("file") not in seen:
+            existing.append(g)
+            seen.add(g.get("file"))
+    try:
+        out_path.write_text(
+            json.dumps(existing, indent=2, ensure_ascii=False), encoding="utf-8",
+        )
+    except Exception:
+        pass
+
+
 def extract(
     paths: list[Path],
     cache_root: Path | None = None,
@@ -5671,6 +5774,7 @@ def extract(
     max_workers: int | None = None,
     resolution_context_nodes: list[dict] | None = None,
     resolution_context_edges: list[dict] | None = None,
+    nodes: list[dict] | None = None,
 ) -> dict:
     """Extract AST nodes and edges from a list of code files.
 
@@ -5769,7 +5873,92 @@ def extract(
     per_file: list[dict | None] = [None] * total
     uncached_work: list[tuple[int, Path]] = []
 
+    # --- NEW: external extractor pre-pass (main process, avoids subprocess
+    # pickle of nodes). For files whose external extractor claims the
+    # file, fill per_file[idx] directly and skip the default dispatch. The
+    # merge_mode on the returned ExtractionResult decides whether the default
+    # extract_markdown also runs (merge), is replaced (replace), or the file is
+    # fully self-contained (supplement_only, also suppresses LLM Tier 2).
+    #
+    # Gap-1: scan range is no longer hardcoded to .md/.mdx/.qmd/.skill — ALL
+    # files are offered to try_external_extractors. Extractors return None to
+    # decline files they don't handle, so non-matching files fall back to the
+    # default dispatch unchanged. For merge mode on non-doc files (YAML/JSON
+    # etc.), extract_markdown is skipped (it only handles doc extensions), so
+    # merge degrades to replace (external result only).
+    suppress_llm_files: set[str] = set()
+    if nodes is not None:
+        from graphify.extractors.registry import try_external_extractors
+        _DOC_EXTS = {".md", ".mdx", ".qmd", ".skill"}  # only for merge-mode判断是否跑 extract_markdown
+        _external_handled: set[int] = set()
+        # Mutable nodes list: as each external extractor produces nodes for a
+        # file, append them so subsequent files in the SAME extract() call can
+        # match anchors against them (e.g. ddd contracts.md matching swagger
+        # endpoints produced from user-api.yaml earlier in the same loop).
+        _live_nodes: list[dict] = list(nodes) if nodes else []
+        # Process config files (yaml/json/etc.) BEFORE .md docs so that ddd
+        # docs can match swagger endpoint anchors produced from yaml in the
+        # same pass. Without this, a yaml listed alphabetically after .md
+        # files would not have its endpoint nodes available when ddd runs.
+        # Sort key: (is_doc_ext, path) — doc exts sort last (True > False).
+        _ordered_indices = sorted(
+            range(len(paths)),
+            key=lambda _idx: (paths[_idx].suffix in _DOC_EXTS, paths[_idx])
+        )
+        for _i in _ordered_indices:
+            _path = paths[_i]
+            try:
+                _ext = try_external_extractors(_path, root=root, nodes=_live_nodes)
+            except Exception:
+                _ext = None
+            if _ext is None:
+                continue
+            _external_handled.add(_i)
+            if _ext.suppress_llm:
+                suppress_llm_files.add(str(_path))
+            if _ext.merge_mode == "merge" and _path.suffix in _DOC_EXTS:
+                # merge mode + doc file: external + default extract_markdown,
+                # dedup edges by (src, tgt, rel)
+                try:
+                    _md = extract_markdown(_path)
+                except Exception:
+                    _md = {"nodes": [], "edges": []}
+                _merged_nodes = list(_ext.nodes) + list(_md.get("nodes", []))
+                _merged_edges = list(_ext.edges) + list(_md.get("edges", []))
+                _seen_e: set[tuple] = set()
+                _dedup_e: list[dict] = []
+                for _e in _merged_edges:
+                    _k = (_e.get("source"), _e.get("target"), _e.get("relation"))
+                    if _k not in _seen_e:
+                        _seen_e.add(_k)
+                        _dedup_e.append(_e)
+                if _ext.unmatched:
+                    _write_islands(cache_location, _ext.unmatched)
+                per_file[_i] = {
+                    "nodes": _merged_nodes, "edges": _dedup_e,
+                    "hyperedges": list(_ext.hyperedges),
+                    "pending_edges": list(_ext.pending_edges),
+                    "input_tokens": 0, "output_tokens": 0,
+                }
+                _live_nodes.extend(_merged_nodes)
+            else:
+                # replace / supplement_only / non-doc merge (degraded to replace):
+                # external result only
+                if _ext.unmatched:
+                    _write_islands(cache_location, _ext.unmatched)
+                per_file[_i] = {
+                    "nodes": list(_ext.nodes), "edges": list(_ext.edges),
+                    "hyperedges": list(_ext.hyperedges),
+                    "pending_edges": list(_ext.pending_edges),
+                    "input_tokens": 0, "output_tokens": 0,
+                }
+                _live_nodes.extend(_ext.nodes)
+
     for i, path in enumerate(paths):
+        if per_file[i] is not None:
+            # Already filled by an external extractor — skip default dispatch
+            # (and skip the no-extractor warning path below).
+            continue
         if _get_extractor(path) is None:
             per_file[i] = {"nodes": [], "edges": []}
             continue
@@ -5974,10 +6163,28 @@ def extract(
     all_nodes: list[dict] = []
     all_edges: list[dict] = []
     all_raw_calls: list[dict] = []
+    _all_pending_edges: list[dict] = []
     for result in per_file:
         all_nodes.extend(result.get("nodes", []))
         all_edges.extend(result.get("edges", []))
         all_raw_calls.extend(result.get("raw_calls", []))
+        _all_pending_edges.extend(result.get("pending_edges", []))
+
+    # --- Global edge re-resolution for external extractors (spec §4.4) ---
+    # Each file's external extractor resolved WITHIN-file edges; cross-file
+    # references (e.g. business-flow's 源聚合=订单 → context-map's BC-01
+    # node) need a global node index spanning ALL files. Re-resolve the
+    # collected pending_edges against the full node set and append any NEW
+    # edges that weren't already resolved per-file.
+    if _all_pending_edges:
+        from graphify.extractors.custom.ddd import _resolve_pending_edges as _resolve_ddd
+        _existing_keys = {(e.get("source"), e.get("target"), e.get("relation")) for e in all_edges}
+        _global_edges = _resolve_ddd(all_nodes, _all_pending_edges)
+        for _ge in _global_edges:
+            _gk = (_ge.get("source"), _ge.get("target"), _ge.get("relation"))
+            if _gk not in _existing_keys:
+                _existing_keys.add(_gk)
+                all_edges.append(_ge)
     # Function / method / class def ids for the cross-file indirect_call callable
     # guard. Built from the `_callable` node marker AFTER the id-remap / disambiguation
     # passes below (which rewrite node ids), so it can never go stale — see the
@@ -7084,6 +7291,11 @@ def extract(
         # manifest does not freeze them as processed (#2543). Callers that
         # only read nodes/edges ignore this key.
         "failed_sources": _failed_sources,
+        # Files whose external extractor returned suppress_llm=True. The CLI
+        # removes these from the LLM Tier 2 (semantic) extraction batch.
+        # Empty when no external extractor ran (nodes is None) or none
+        # suppressed LLM; callers that ignore this key are unaffected.
+        "suppress_llm_files": suppress_llm_files,
     }
 
 

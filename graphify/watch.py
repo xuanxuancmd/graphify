@@ -1217,10 +1217,25 @@ def _rebuild_code(
         ) if _gitignore_enabled else _ignored_always
 
         # Include document files that have AST extractors (e.g. .md, .mdx, .qmd)
+        # AND doc files whose extensions are claimed by a registered custom
+        # extractor (e.g. .yaml/.yml for swagger). Without the second check, a
+        # .yaml swagger spec is invisible to the post-commit hook: graphify
+        # classifies .yaml as a document, but no built-in _get_extractor handles
+        # it, so the file never enters code_files/doc_targets and
+        # try_external_extractors (which runs inside extract() when ``nodes``
+        # is passed) never sees it. The three-stage pipeline below (L1468+)
+        # passes ``nodes`` in stage 3, so once the file is in doc_targets the
+        # custom extractor fires and produces nodes/edges on commit — no manual
+        # /graphify --update needed.
+        from graphify.extractors.registry import external_extractor_extensions
+        _external_exts = external_extractor_extensions()
         ast_doc_files: list[Path] = []
         for doc_file in detected['files'].get('document', []):
             p = Path(doc_file)
             if _get_extractor(p) is not None:
+                code_files.append(p)
+                ast_doc_files.append(p)
+            elif _external_exts and p.suffix.lower() in _external_exts:
                 code_files.append(p)
                 ast_doc_files.append(p)
 
@@ -1451,15 +1466,97 @@ def _rebuild_code(
                 resolution_context_edges = []
 
         commit = _git_head(cwd=watch_root)
-        result = extract(
-            extract_targets,
-            cache_root=watch_root,
-            resolution_context_nodes=resolution_context_nodes or None,
-            resolution_context_edges=resolution_context_edges or None,
-        ) if extract_targets else {
-            "nodes": [], "edges": [], "hyperedges": [],
-            "input_tokens": 0, "output_tokens": 0,
-        }
+
+        # Three-stage extraction (mirrors cli.py's code→config→doc pipeline):
+        #
+        # Stage 1 — code AST. ``resolution_context_nodes``/``edges`` widen the
+        # cross-file symbol resolvers with unchanged code files' AST nodes
+        # (#2406/#2437/#2438). No ``nodes`` is passed: code extraction has
+        # no external-extractor pre-pass.
+        #
+        # Stage 2 — config files (.json non-manifest etc.). Runs after code
+        # AST so config extractors can reference code nodes.
+        #
+        # Stage 3 — docs (md + yaml with external extractors). Receives
+        # ``nodes`` = Stage 1 code nodes + Stage 2 config nodes + persisted
+        # code nodes from graph.json (so anchors referencing unchanged files
+        # still resolve). Without the graph.json supplement, a commit touching
+        # only docs would pass zero code nodes → all ddd/swagger anchors
+        # enter unmatched even though the referenced code is in graph.json.
+        code_targets = [
+            p for p in extract_targets
+            if p.suffix.lower() in _CODE_EXTENSIONS
+        ]
+        doc_targets = [
+            p for p in extract_targets
+            if p.suffix.lower() not in _CODE_EXTENSIONS
+        ]
+
+        if extract_targets:
+            # Stage 1: code AST
+            code_result = (
+                extract(
+                    code_targets,
+                    cache_root=watch_root,
+                    resolution_context_nodes=resolution_context_nodes or None,
+                    resolution_context_edges=resolution_context_edges or None,
+                )
+                if code_targets
+                else {"nodes": [], "edges": [], "hyperedges": [],
+                      "input_tokens": 0, "output_tokens": 0}
+            )
+            # Stage 2: config files are already in doc_targets (non-code suffix).
+            # graphify's current pipeline runs .json config via _DISPATCH inside
+            # extract() — they share the same extract() call as docs, so they
+            # are NOT a separate stage here. The ``nodes`` passed to Stage 3
+            # includes code_result's nodes, which config extractors in the same
+            # batch can also use.
+
+            # Build nodes for Stage 3: fresh code nodes + persisted code nodes
+            # from graph.json (so anchors to unchanged files resolve).
+            _stage3_nodes = list(code_result.get("nodes", []))
+            if existing_graph.exists() and doc_targets:
+                try:
+                    check_graph_file_size_cap(existing_graph)
+                    _prior_graph = json.loads(existing_graph.read_text(encoding="utf-8"))
+                    _seen_ids = {n.get("id") for n in _stage3_nodes if isinstance(n, dict) and n.get("id")}
+                    for n in _prior_graph.get("nodes", []):
+                        if not isinstance(n, dict) or n.get("file_type") != "code":
+                            continue
+                        nid = n.get("id")
+                        if nid and nid not in _seen_ids:
+                            _stage3_nodes.append(n)
+                            _seen_ids.add(nid)
+                except Exception:
+                    pass  # unreadable/oversized graph → resolve with fresh nodes only
+
+            # Stage 3: docs with nodes (fresh code + persisted code)
+            if doc_targets:
+                doc_result = extract(
+                    doc_targets,
+                    cache_root=watch_root,
+                    nodes=_stage3_nodes,
+                )
+            else:
+                doc_result = {"nodes": [], "edges": [], "hyperedges": [],
+                              "input_tokens": 0, "output_tokens": 0}
+            # Merge. suppress_llm_files is dropped: _rebuild_code is AST-only
+            # (no Tier 2 LLM), so the cli.py Tier-2 filter never runs here.
+            # Keeping it in the dict would also break JSON serialization
+            # (extract() returns it as a set, watch.py:1618 serializes result).
+            result = {
+                "nodes": list(code_result.get("nodes", [])) + list(doc_result.get("nodes", [])),
+                "edges": list(code_result.get("edges", [])) + list(doc_result.get("edges", [])),
+                "hyperedges": list(code_result.get("hyperedges", [])) + list(doc_result.get("hyperedges", [])),
+                "input_tokens": code_result.get("input_tokens", 0) + doc_result.get("input_tokens", 0),
+                "output_tokens": code_result.get("output_tokens", 0) + doc_result.get("output_tokens", 0),
+                "failed_sources": list(code_result.get("failed_sources") or []) + list(doc_result.get("failed_sources") or []),
+            }
+        else:
+            result = {
+                "nodes": [], "edges": [], "hyperedges": [],
+                "input_tokens": 0, "output_tokens": 0,
+            }
         _rebase_relative_source_files(result, watch_root, project_root)
 
         # #2543: AST sources that failed this run (error result, or extractor

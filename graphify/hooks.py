@@ -421,6 +421,17 @@ def _load_graphifyrc(root: Path) -> dict[str, str | int]:
 
     Supported options:
       viz_node_limit: integer >= 0 (e.g. viz_node_limit=0)
+      embed_backend: str — embedding backend for hybrid search
+        (openai/openai-compatible/gemini/kimi/deepseek/ollama/azure/
+        sentence-transformers)
+      embed_base_url: str — OpenAI-compatible endpoint URL for the
+        ``openai-compatible`` backend, or override for any backend's base_url
+      embed_api_key: str — API key for the embedding backend (local servers
+        accept any non-empty value)
+      embed_model: str — model name override (e.g. text-embedding-3-small)
+
+    Embedding keys let the user configure hybrid search without environment
+    variables or code changes. See docs/hybrid-semantic-search/Embedding.md.
     """
     rc_path = root / ".graphifyrc"
     if not rc_path.is_file():
@@ -448,6 +459,11 @@ def _load_graphifyrc(root: Path) -> dict[str, str | int]:
                     f"Invalid viz_node_limit in {rc_path} at line {line_num}: {val!r}. "
                     f"Must be a non-negative integer."
                 ) from exc
+        elif key in ("embed_backend", "embed_base_url", "embed_api_key", "embed_model"):
+            # String values — stored as-is. embed_backend is lowercased by
+            # the caller (hybrid_scorer._embed_backend_from_env) so we keep
+            # the raw value here for round-trip fidelity.
+            cfg[key] = val
     return cfg
 
 

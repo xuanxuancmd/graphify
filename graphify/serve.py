@@ -354,7 +354,15 @@ def _node_search_text(data: dict, nid: str) -> str:
     source = (data.get("source_file") or "").lower()
     source_tokens = " ".join(_search_tokens(data.get("source_file") or ""))
     nid_text = str(nid).lower()
+    # tags: generic list field. External extractors (e.g. DDD) encode type
+    # info here so queries like "aggregate_root" or "ddd" match doc-anchor
+    # nodes via substring/prefix/exact tiers. Only appended when the node
+    # actually carries a non-empty tags list, so nodes without tags produce
+    # byte-identical search text to upstream (no trailing NUL, no field shift).
     fields = (norm_label, label_tokens, nid_text, source, source_tokens)
+    tags = data.get("tags")
+    if isinstance(tags, list) and tags:
+        fields += (" ".join(tags),)
     if not nid_text.isascii():
         nid_folded = _strip_diacritics(str(nid)).lower()
         if nid_folded != nid_text:

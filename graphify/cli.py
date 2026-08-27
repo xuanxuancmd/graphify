@@ -927,6 +927,34 @@ def _reenter_main() -> None:
     main()
 
 
+def _load_review_queue(out_dir: Path) -> list[dict]:
+    """Load review queue items from islands.json + semantic-gaps.json.
+
+    Reads the two sidecar artifacts written during extraction and returns a
+    merged list of dicts. Each dict carries a ``type`` field so the dashboard
+    can classify it. ``islands.json`` records come from DDD/Swagger unmatched
+    anchors; ``semantic-gaps.json`` records come from LLM extraction failures.
+    AMBIGUOUS/INFERRED edges are extracted by ``to_html`` from the graph itself,
+    so they are NOT included here.
+    """
+    import json as _json
+    items: list[dict] = []
+    for fname, default_type in (("islands.json", "island"), ("semantic-gaps.json", "semantic_gap")):
+        fpath = out_dir / fname
+        if not fpath.is_file():
+            continue
+        try:
+            data = _json.loads(fpath.read_text(encoding="utf-8"))
+            if isinstance(data, list):
+                for rec in data:
+                    if isinstance(rec, dict):
+                        rec.setdefault("type", default_type)
+                        items.append(rec)
+        except Exception:
+            pass
+    return items
+
+
 def dispatch_command(cmd: str) -> None:
     if cmd == "provider":
         from graphify.llm import _custom_providers_path, BACKENDS
@@ -2267,12 +2295,14 @@ def dispatch_command(cmd: str) -> None:
                 else:
                     # Passing the positive visualization limit explicitly selects
                     # the community meta-graph when the full graph is too large.
+                    _rq = _load_review_queue(out)
                     html_written = to_html(
                         G,
                         communities,
                         str(html_target),
                         community_labels=labels or None,
                         node_limit=viz_limit,
+                        review_queue=_rq,
                     )
                     if html_written:
                         _clear_html_stale_marker()
@@ -2899,8 +2929,10 @@ def dispatch_command(cmd: str) -> None:
                 # Over-cap fallback (#1019): force the community-aggregation
                 # path so the oversized graph still renders a usable artifact.
                 _effective_node_limit = 5000 if _over_cap else node_limit
+                _rq = _load_review_queue(out_dir)
                 _to_html(G, communities, str(out_dir / "graph.html"),
-                         community_labels=labels or None, node_limit=_effective_node_limit)
+                         community_labels=labels or None, node_limit=_effective_node_limit,
+                         review_queue=_rq)
                 if G.number_of_nodes() <= _effective_node_limit:
                     print(f"graph.html written - open in any browser, no server needed")
                 if _over_cap:
@@ -3060,7 +3092,8 @@ def dispatch_command(cmd: str) -> None:
                 "[--no-gitignore] [--code-only] [--no-dedup] "
                 "[--max-workers N] [--token-budget N] [--max-concurrency N] "
                 "[--api-timeout S] [--postgres DSN] [--cargo] [--allow-partial] [--timing] "
-                "[--embed-backend openai|gemini|kimi|deepseek|ollama|azure] [--embed-model M]",
+                "[--embed-backend openai|openai-compatible|gemini|kimi|deepseek|ollama|azure|sentence-transformers] "
+                "[--embed-model M]",
                 file=sys.stderr,
             )
             sys.exit(1)
@@ -3632,6 +3665,24 @@ def dispatch_command(cmd: str) -> None:
         ast_result: dict = {"nodes": [], "edges": [], "input_tokens": 0, "output_tokens": 0}
         if code_files:
             from graphify.extract import extract as _ast_extract
+            from graphify.manifest_ingest import is_package_manifest_path
+
+            # Gap-5: split config JSON from pure code files for three-phase
+            # extraction (code+manifests → config JSON → docs). Config JSON
+            # (package.json/tsconfig.json/composer.json — anything .json that
+            # is_package_manifest_path() does NOT recognize) goes to stage 2 so
+            # its key/ref nodes + depends_on edges land after code AST nodes.
+            # is_package_manifest_path() whitelist: pyproject.toml/cargo.toml/
+            # go.mod/pom.xml/apm.yml — these stay in stage 1 (canonical package
+            # hub nodes). package.json is NOT in the whitelist → stage 2.
+            _config_json_files: list[Path] = []
+            _pure_code_files: list[Path] = []
+            for _f in code_files:
+                if _f.suffix == ".json" and not is_package_manifest_path(_f):
+                    _config_json_files.append(_f)
+                else:
+                    _pure_code_files.append(_f)
+
             # Anchor the cache at the output root, not the scanned project:
             # with --out, a <target>/graphify-out/cache/ would leak a
             # graphify-out/ dir into a project that asked for external output.
@@ -3722,9 +3773,9 @@ def dispatch_command(cmd: str) -> None:
                     ast_kwargs["resolution_context_nodes"] = _ctx_nodes
                 if _ctx_edges:
                     ast_kwargs["resolution_context_edges"] = _ctx_edges
-            print(f"[graphify extract] AST extraction on {len(code_files)} code files...")
+            print(f"[graphify extract] AST extraction on {len(_pure_code_files)} code files...")
             try:
-                ast_result = _ast_extract(code_files, **ast_kwargs)
+                ast_result = _ast_extract(_pure_code_files, **ast_kwargs)
             except Exception as exc:
                 print(f"[graphify extract] AST extraction failed: {exc}", file=sys.stderr)
                 # #2445: losing the whole AST pass is fatal by default. The
@@ -3736,7 +3787,92 @@ def dispatch_command(cmd: str) -> None:
                     sys.exit(1)
                 ast_result = {"nodes": [], "edges": [], "input_tokens": 0, "output_tokens": 0}
                 _extraction_incomplete = True  # the whole AST pass was lost
+
+            # Gap-5 stage 2: config JSON extraction (package.json/tsconfig.json
+            # etc.). Runs AFTER code AST so json_config.py's key/ref nodes +
+            # depends_on edges can reference code nodes. Merged into ast_result
+            # so stage 3 (doc extraction) sees code + config in ``nodes``.
+            if _config_json_files:
+                print(f"[graphify extract] config extraction on {len(_config_json_files)} file(s)...")
+                try:
+                    _config_result = _ast_extract(_config_json_files, **ast_kwargs)
+                except Exception as exc:
+                    print(f"[graphify extract] config extraction failed: {exc}", file=sys.stderr)
+                    _config_result = {"nodes": [], "edges": [], "input_tokens": 0, "output_tokens": 0}
+                    if not cli_allow_partial:
+                        _extraction_incomplete = True
+                ast_result["nodes"] = list(ast_result.get("nodes", [])) + list(_config_result.get("nodes", []))
+                ast_result["edges"] = list(ast_result.get("edges", [])) + list(_config_result.get("edges", []))
         stages.mark("AST extract")
+
+        # DDD / external doc extractor stage (G3: code AST first). Now that
+        # ast_result carries every code node, run extract() a SECOND time on
+        # the doc files with ``nodes`` = ast_result's nodes + graph.json
+        # persisted code nodes. External extractors (e.g. DDD) use these
+        # nodes for code-anchor matching; non-whitelist .md files fall back
+        # to the default extract_markdown
+        # inside the same pass. Files whose external extractor returned
+        # suppress_llm=True are collected and excluded from the LLM Tier 2
+        # batch below.
+        _doc_suppress_llm: set[str] = set()
+        if doc_files:
+            from graphify.extract import extract as _doc_extract
+            # Build nodes for external extractors (ddd/swagger): fresh AST+config
+            # from Stage 1/2, PLUS persisted code/config nodes from graph.json so
+            # anchors referencing unchanged files still resolve. Without the
+            # graph.json supplement, incremental runs only see this run's
+            # changed files → unmatched anchors for every symbol in an
+            # unchanged file (the ddd-unmatched.json bloat problem).
+            _doc_nodes = list(ast_result.get("nodes", []))
+            if existing_graph_path.exists():
+                try:
+                    from graphify.security import check_graph_file_size_cap as _cfsc
+                    _cfsc(existing_graph_path)
+                    _prior = json.loads(existing_graph_path.read_text(encoding="utf-8"))
+                    _prior_code = [
+                        n for n in _prior.get("nodes", [])
+                        if isinstance(n, dict) and n.get("file_type") == "code"
+                    ]
+                    # Dedup by id: fresh nodes win (last-writer in the dict merge).
+                    _seen_ids = {n.get("id") for n in _doc_nodes if n.get("id")}
+                    for n in _prior_code:
+                        nid = n.get("id")
+                        if nid and nid not in _seen_ids:
+                            _doc_nodes.append(n)
+                            _seen_ids.add(nid)
+                except Exception:
+                    pass  # unreadable/oversized graph → resolve with fresh nodes only
+            doc_kwargs: dict = {"cache_root": out_root, "root": target,
+                                "nodes": _doc_nodes}
+            if cli_max_workers is not None:
+                doc_kwargs["max_workers"] = cli_max_workers
+            print(f"[graphify extract] doc extraction on {len(doc_files)} doc file(s)...")
+            try:
+                doc_result = _doc_extract(doc_files, **doc_kwargs)
+            except Exception as exc:
+                print(f"[graphify extract] doc extraction failed: {exc}", file=sys.stderr)
+                doc_result = {"nodes": [], "edges": [], "input_tokens": 0, "output_tokens": 0}
+                if not cli_allow_partial:
+                    _extraction_incomplete = True
+            else:
+                _doc_suppress_llm = set(doc_result.get("suppress_llm_files", set()))
+            # Merge doc nodes/edges into ast_result so the downstream build
+            # pass sees them as one AST tier.
+            ast_result["nodes"] = list(ast_result.get("nodes", [])) + list(doc_result.get("nodes", []))
+            ast_result["edges"] = list(ast_result.get("edges", [])) + list(doc_result.get("edges", []))
+        stages.mark("Doc extract")
+        # Exclude suppress_llm files from the LLM Tier 2 batch. Comparison is
+        # by str(path) — the same form extract() stored in suppress_llm_files.
+        if _doc_suppress_llm and semantic_files:
+            _before = len(semantic_files)
+            semantic_files = [p for p in semantic_files if str(p) not in _doc_suppress_llm]
+            _dropped = _before - len(semantic_files)
+            if _dropped:
+                print(
+                    f"[graphify extract] {_dropped} doc file(s) suppressed from "
+                    f"semantic extraction (external extractor requested suppress_llm)",
+                    file=sys.stderr,
+                )
 
         # Semantic extraction on docs/papers/images. Check cache first.
         from graphify.cache import (
@@ -3833,16 +3969,46 @@ def dispatch_command(cmd: str) -> None:
 
                 # on_chunk_done only fires after a chunk succeeds. If fresh
                 # semantic extraction was requested and no chunks completed,
-                # fail instead of writing an AST-only graph with exit 0.
+                # fail instead of writing an AST-only graph with exit 0 —
+                # UNLESS --allow-partial was passed, in which case the AST +
+                # DDD doc-anchor nodes (from the doc extraction stage above)
+                # are still valuable and should be written to graph.json.
                 if uncached_paths and _chunk_stats["succeeded"] == 0:
-                    print(
-                        f"[graphify extract] error: all semantic chunks failed "
-                        f"for backend '{backend}' ({len(uncached_paths)} uncached files) - "
-                        f"see per-chunk errors above. If you see 'requires the X package', "
-                        f"run `pip install X` and retry.",
-                        file=sys.stderr,
-                    )
-                    sys.exit(1)
+                    if cli_allow_partial:
+                        print(
+                            f"[graphify extract] warning: all semantic chunks failed "
+                            f"for backend '{backend}' ({len(uncached_paths)} uncached files) "
+                            f"— --allow-partial set, writing AST + DDD nodes only "
+                            f"(LLM semantic nodes will be missing).",
+                            file=sys.stderr,
+                        )
+                        _extraction_incomplete = True
+                        # Record semantic gaps so the dashboard Review Queue can
+                        # surface which docs are missing LLM concept nodes.
+                        try:
+                            from graphify.extract import _write_semantic_gaps
+                            _gaps = [
+                                {
+                                    "file": str(Path(p).relative_to(target))
+                                        if Path(p).is_absolute() else str(p),
+                                    "backend": backend or "auto",
+                                    "reason": "LLM semantic extraction failed (all chunks)",
+                                }
+                                for p in uncached_paths
+                            ]
+                            _write_semantic_gaps(graphify_out, _gaps)
+                        except Exception:
+                            pass  # best-effort — must not break extraction
+                    else:
+                        print(
+                            f"[graphify extract] error: all semantic chunks failed "
+                            f"for backend '{backend}' ({len(uncached_paths)} uncached files) - "
+                            f"see per-chunk errors above. If you see 'requires the X package', "
+                            f"run `pip install X` and retry. Pass --allow-partial to write "
+                            f"the AST + DDD nodes without LLM semantic extraction.",
+                            file=sys.stderr,
+                        )
+                        sys.exit(1)
                 # Some (but not all) chunks failed — the graph is missing nodes
                 # from the failed chunks, so it must not clobber a larger complete
                 # graph without an explicit --allow-partial override.

@@ -1,0 +1,89 @@
+swagger: "2.0"
+info:
+  title: App Publish Service API
+  version: "1.0"
+basePath: /rest
+paths:
+  /apppublishservice/v1/app/list:
+    get:
+      summary: 查询所有APP信息
+      description: 查询所有APP信息
+      tags:
+        - APPPublishService
+      operationId: query
+      produces:
+        - application/json
+      x-examples: |
+        get /rest/apppublishservice/v1/app/list
+      responses:
+        200:
+          description: 查询所有app信息
+          schema:
+            type: string
+          x-examples: |
+            HTTP/1.1 200 OK
+            [
+              {
+                "id": 0,
+                "appName": null,
+                "url": null,
+                "versionName": "3.0.0.1",
+                "versionCode": 3,
+                "changeLog": "3:优化了什么",
+                "size": 0,
+                "publishTime": null,
+                "type": "ios",
+                "sha256": null,
+                "history": [
+                  {
+                    "versionName": "2.0.0.1",
+                    "changeLog": "2:优化了什么"
+                  },
+                  {
+                    "versionName": "1.0.0.0",
+                    "changeLog": "1:优化了什么什么"
+                  }
+                ]
+              }
+            ]
+  /apppublishservice/v1/app/{id}:
+    get:
+      summary: 查询单个APP信息
+      description: 根据ID查询单个APP信息
+      tags:
+        - APPPublishService
+      operationId: getById
+      produces:
+        - application/json
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: integer
+      responses:
+        200:
+          description: 单个app信息
+          schema:
+            type: object
+  /apppublishservice/v1/app:
+    post:
+      summary: 创建APP
+      description: 创建新的APP记录
+      tags:
+        - APPPublishService
+      operationId: create
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+      responses:
+        201:
+          description: 创建成功
+          schema:
+            type: object

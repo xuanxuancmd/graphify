@@ -67,6 +67,42 @@ def _html_styles() -> str:
   .legend-cb:checked::after, #select-all-cb:checked::after { content: ''; position: absolute; left: 3.5px; top: 1px; width: 4px; height: 7px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
   #select-all-cb:indeterminate { background: #4E79A7; border-color: #4E79A7; }
   #select-all-cb:indeterminate::after { content: ''; position: absolute; left: 2px; top: 5px; width: 8px; height: 2px; background: #fff; border: none; transform: none; }
+  /* Review Queue panel */
+  #review-wrap { border-bottom: 1px solid #2a2a4e; }
+  #review-header { display: flex; align-items: center; gap: 6px; padding: 10px 14px; cursor: pointer; user-select: none; }
+  #review-header:hover { background: #1e1e36; }
+  #review-header h3 { font-size: 13px; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; flex: 1; }
+  .review-chevron { color: #666; font-size: 10px; transition: transform 0.15s; display: inline-block; }
+  #review-wrap.collapsed .review-chevron { transform: rotate(-90deg); }
+  #review-wrap.collapsed #review-body { display: none; }
+  .review-badge { font-size: 11px; padding: 1px 7px; border-radius: 10px; font-weight: 600; min-width: 18px; text-align: center; }
+  .review-badge-zero { background: #1a3a1a; color: #4ade80; }
+  .review-badge-low { background: #3a3a1a; color: #fbbf24; }
+  .review-badge-high { background: #3a1a1a; color: #f87171; }
+  #review-body { max-height: 320px; overflow-y: auto; }
+  #review-filters { padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .review-filter-chip { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #aaa; cursor: pointer; padding: 2px 6px; border-radius: 4px; background: #0f0f1a; border: 1px solid #2a2a4e; user-select: none; }
+  .review-filter-chip:hover { border-color: #4E79A7; }
+  .review-filter-chip input { appearance: none; -webkit-appearance: none; width: 12px; height: 12px; border: 1.5px solid #3a3a5e; border-radius: 2px; background: #0f0f1a; cursor: pointer; position: relative; flex-shrink: 0; }
+  .review-filter-chip input:checked { background: #4E79A7; border-color: #4E79A7; }
+  .review-filter-chip input:checked::after { content: ''; position: absolute; left: 2.5px; top: 0px; width: 3px; height: 6px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  .review-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  #review-file-filter-wrap { padding: 0 12px 8px; }
+  #review-file-filter { width: 100%; background: #0f0f1a; border: 1px solid #3a3a5e; color: #ccc; padding: 4px 6px; border-radius: 4px; font-size: 11px; outline: none; max-width: 100%; }
+  #review-file-filter:focus { border-color: #4E79A7; }
+  #review-list { padding: 0; }
+  .review-item { padding: 8px 14px; border-top: 1px solid #1f1f3a; cursor: pointer; }
+  .review-item:hover { background: #1e1e36; }
+  .review-item-row { display: flex; align-items: center; gap: 6px; }
+  .review-item-title { font-size: 12px; color: #e0e0e0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .review-item-detail { font-size: 11px; color: #777; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .review-item-file { font-size: 10px; color: #555; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; }
+  .review-type-badge { font-size: 9px; padding: 0 5px; border-radius: 3px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; flex-shrink: 0; }
+  .rt-island { background: #3a1a1a; color: #f87171; }
+  .rt-ambiguous_edge { background: #3a2a1a; color: #fbbf24; }
+  .rt-inferred_edge { background: #1a2a3a; color: #60a5fa; }
+  .rt-semantic_gap { background: #2a2a2a; color: #aaa; }
+  .review-empty { padding: 16px 14px; font-size: 12px; color: #555; font-style: italic; text-align: center; }
 </style>"""
 
 def _hyperedge_script(hyperedges_json: str) -> str:
@@ -135,6 +171,145 @@ network.on('afterDrawing', function(ctx) {{
     }});
 }});
 </script>"""
+
+def _review_queue_script(review_json: str) -> str:
+    return f"""<script>
+// Review Queue — items needing human verification.
+// Types: island (unmatched anchor), ambiguous_edge (multi-match, score 0.3),
+//        inferred_edge (framework-inferred), semantic_gap (LLM failed).
+const REVIEW = {review_json};
+const REVIEW_TYPE_META = {{
+    island:          {{ label: '孤岛',       dot: '#f87171', badge: 'rt-island' }},
+  ambiguous_edge:  {{ label: '多匹配',     dot: '#fbbf24', badge: 'rt-ambiguous_edge' }},
+  inferred_edge:   {{ label: '推断',       dot: '#60a5fa', badge: 'rt-inferred_edge' }},
+  semantic_gap:    {{ label: 'LLM缺失',   dot: '#aaa',    badge: 'rt-semantic_gap' }},
+}};
+const REVIEW_ACTIVE = {{ island: true, ambiguous_edge: true, inferred_edge: true, semantic_gap: true }};
+let REVIEW_FILE_FILTER = '';
+
+function toggleReview() {{
+  document.getElementById('review-wrap').classList.toggle('collapsed');
+}}
+
+function reviewTypeOf(item) {{
+  if (item.type) return item.type;
+  if (item.anchorKind) return 'island';   // swagger/ddd island record
+  if (item.reason && item.reason.includes('LLM')) return 'semantic_gap';
+  return 'island';
+}}
+
+function reviewTitleOf(item) {{
+  if (item.title) return item.title;
+  if (item.anchor) return item.anchor;
+  if (item.endpointLabel) return item.endpointLabel;
+  if (item.file) return item.file.split('/').pop();
+  return '(unnamed)';
+}}
+
+function reviewDetailOf(item) {{
+  if (item.detail) return item.detail;
+  if (item.reason) return item.reason;
+  if (item.anchorKind) return item.anchorKind;
+  return '';
+}}
+
+function reviewFileOf(item) {{
+  return item.source_file || item.docPath || item.file || '';
+}}
+
+function reviewNodeIdOf(item) {{
+  return item.node_id || item.endpointId || null;
+}}
+
+function renderReviewBadge() {{
+  const badge = document.getElementById('review-badge');
+  const n = REVIEW.length;
+  badge.textContent = n;
+  badge.className = 'review-badge ' + (n === 0 ? 'review-badge-zero' : (n <= 10 ? 'review-badge-low' : 'review-badge-high'));
+}}
+
+function renderReviewFilters() {{
+  const container = document.getElementById('review-filters');
+  const counts = {{}};
+  REVIEW.forEach(item => {{ const t = reviewTypeOf(item); counts[t] = (counts[t] || 0) + 1; }});
+  container.innerHTML = '';
+  Object.keys(REVIEW_TYPE_META).forEach(type => {{
+    const meta = REVIEW_TYPE_META[type];
+    const count = counts[type] || 0;
+    const chip = document.createElement('label');
+    chip.className = 'review-filter-chip';
+    chip.innerHTML = `<input type="checkbox" ${{REVIEW_ACTIVE[type] ? 'checked' : ''}}>` +
+      `<span class="review-dot" style="background:${{meta.dot}}"></span>` +
+      `<span>${{meta.label}} (${{count}})</span>`;
+    const cb = chip.querySelector('input');
+    cb.addEventListener('change', () => {{
+      REVIEW_ACTIVE[type] = cb.checked;
+      renderReviewList();
+    }});
+    container.appendChild(chip);
+  }});
+}}
+
+function renderReviewFileFilter() {{
+  const sel = document.getElementById('review-file-filter');
+  const files = new Set();
+  REVIEW.forEach(item => {{ const f = reviewFileOf(item); if (f) files.add(f); }});
+  const sorted = Array.from(files).sort();
+  sel.innerHTML = '<option value="">全部文件</option>';
+  sorted.forEach(f => {{
+    const opt = document.createElement('option');
+    opt.value = f;
+    opt.textContent = f.length > 42 ? '...' + f.slice(-42) : f;
+    sel.appendChild(opt);
+  }});
+  sel.value = REVIEW_FILE_FILTER;
+  sel.onchange = () => {{ REVIEW_FILE_FILTER = sel.value; renderReviewList(); }};
+}}
+
+function renderReviewList() {{
+  const list = document.getElementById('review-list');
+  const filtered = REVIEW.filter(item => {{
+    if (!REVIEW_ACTIVE[reviewTypeOf(item)]) return false;
+    if (REVIEW_FILE_FILTER && reviewFileOf(item) !== REVIEW_FILE_FILTER) return false;
+    return true;
+  }});
+  if (!filtered.length) {{
+    list.innerHTML = '<div class="review-empty">暂无待审核项</div>';
+    return;
+  }}
+  list.innerHTML = '';
+  filtered.forEach(item => {{
+    const type = reviewTypeOf(item);
+    const meta = REVIEW_TYPE_META[type];
+    const el = document.createElement('div');
+    el.className = 'review-item';
+    const title = esc(reviewTitleOf(item));
+    const detail = esc(reviewDetailOf(item));
+    const file = esc(reviewFileOf(item));
+    const nodeId = reviewNodeIdOf(item);
+    el.innerHTML =
+      `<div class="review-item-row">` +
+        `<span class="review-type-badge ${{meta.badge}}">${{meta.label}}</span>` +
+        `<span class="review-item-title" title="${{title}}">${{title}}</span>` +
+      `</div>` +
+      (detail ? `<div class="review-item-detail">${{detail}}</div>` : '') +
+      (file ? `<div class="review-item-file">${{file}}</div>` : '');
+    el.style.borderLeft = `3px solid ${{meta.dot}}`;
+    el.addEventListener('click', () => {{
+      if (nodeId && nodesDS.get(nodeId)) {{
+        focusNode(nodeId);
+      }}
+    }});
+    list.appendChild(el);
+  }});
+}}
+
+renderReviewBadge();
+renderReviewFilters();
+renderReviewFileFilter();
+renderReviewList();
+</script>"""
+
 
 def _html_script(nodes_json: str, edges_json: str, legend_json: str) -> str:
     return f"""<script>
@@ -206,11 +381,11 @@ function showInfo(nodeId) {{
   }}).join('');
   document.getElementById('info-content').innerHTML = `
     <div class="field"><b>${{esc(n.label)}}</b></div>
-    <div class="field">Type: ${{esc(n._file_type || 'unknown')}}</div>
-    <div class="field">Community: ${{esc(n._community_name)}}</div>
-    <div class="field">Source: ${{esc(n._source_file || '-')}}</div>
-    <div class="field">Degree: ${{n._degree}}</div>
-    ${{neighborIds.length ? `<div class="field" style="margin-top:8px;color:#aaa;font-size:11px">Neighbors (${{neighborIds.length}})</div><div id="neighbors-list">${{neighborItems}}</div>` : ''}}
+    <div class="field">类型: ${{esc(n._file_type || '未知')}}</div>
+    <div class="field">社区: ${{esc(n._community_name)}}</div>
+    <div class="field">来源: ${{esc(n._source_file || '-')}}</div>
+    <div class="field">连接数: ${{n._degree}}</div>
+    ${{neighborIds.length ? `<div class="field" style="margin-top:8px;color:#aaa;font-size:11px">相邻节点 (${{neighborIds.length}})</div><div id="neighbors-list">${{neighborItems}}</div>` : ''}}
   `;
 }}
 
@@ -253,7 +428,7 @@ network.on('click', params => {{
   if (params.nodes.length > 0) {{
     showInfo(params.nodes[0]);
   }} else if (hoveredNodeId === null) {{
-    document.getElementById('info-content').innerHTML = '<span class="empty">Click a node to inspect it</span>';
+    document.getElementById('info-content').innerHTML = '<span class="empty">点击节点查看详情</span>';
   }}
 }});
 
@@ -401,6 +576,7 @@ def to_html(
     member_counts: dict[int, int] | None = None,
     node_limit: int | None = None,
     learning_overlay: dict | None = None,
+    review_queue: list[dict] | None = None,
 ) -> bool:
     """Generate an interactive vis.js HTML visualization of the graph.
 
@@ -413,6 +589,12 @@ def to_html(
 
     If node_limit is set and the graph exceeds it, automatically builds an
     aggregated community-level meta-graph instead of raising ValueError.
+
+    If review_queue is provided, a collapsible "Review Queue" panel is added
+    to the sidebar, surfacing items that need human verification: unmatched
+    anchors (islands), ambiguous multi-match edges, inferred edges, and
+    LLM semantic gaps. Each item carries its source file so the user can
+    filter by file. Clicking an item focuses the related node in the graph.
 
     Returns True when the output was written. Returns False when an aggregated
     view would contain fewer than two communities and is intentionally skipped.
@@ -587,6 +769,30 @@ def to_html(
         n = member_counts.get(cid, len(communities.get(cid, []))) if member_counts else len(communities.get(cid, []))
         legend_data.append({"cid": cid, "color": color, "label": lbl, "count": n})
 
+    # Build review queue items from the graph's low-confidence edges + the
+    # externally-supplied islands/gaps. The graph edges are the source of
+    # AMBIGUOUS (multi-match) and INFERRED items; islands (unmatched anchors)
+    # and semantic gaps (LLM failures) come from the review_queue argument.
+    review_items: list[dict] = []
+    if review_queue:
+        for r in review_queue:
+            review_items.append(dict(r))
+    # Extract AMBIGUOUS and INFERRED edges from the graph itself.
+    for u, v, data in G.edges(data=True):
+        confidence = data.get("confidence", "EXTRACTED")
+        if confidence in ("AMBIGUOUS", "INFERRED"):
+            src_label = sanitize_label(G.nodes[u].get("label", u))
+            tgt_label = sanitize_label(G.nodes[v].get("label", v))
+            relation = data.get("relation", "")
+            review_items.append({
+                "type": "ambiguous_edge" if confidence == "AMBIGUOUS" else "inferred_edge",
+                "title": f"{src_label} → {tgt_label}",
+                "detail": f"{relation} [{confidence}]",
+                "source_file": sanitize_label(str(data.get("source_file") or "")),
+                "source_location": sanitize_label(str(data.get("source_location") or "")),
+                "node_id": u,  # focus the source node on click
+            })
+
     # Escape </script> sequences so embedded JSON cannot break out of the script tag
     def _js_safe(obj) -> str:
         return json.dumps(obj).replace("</", "<\\/")
@@ -594,9 +800,10 @@ def to_html(
     nodes_json = _js_safe(vis_nodes)
     edges_json = _js_safe(vis_edges)
     legend_json = _js_safe(legend_data)
+    review_json = _js_safe(review_items)
     hyperedges_json = _js_safe(getattr(G, "graph", {}).get("hyperedges", []))
     title = _html.escape(sanitize_label(_html_document_title(output_path)))
-    stats = f"{G.number_of_nodes()} nodes &middot; {G.number_of_edges()} edges &middot; {len(communities)} communities"
+    stats = f"{G.number_of_nodes()} 节点 &middot; {G.number_of_edges()} 条边 &middot; {len(communities)} 个社区"
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -612,23 +819,38 @@ def to_html(
 <div id="graph"></div>
 <div id="sidebar">
   <div id="search-wrap">
-    <input id="search" type="text" placeholder="Search nodes..." autocomplete="off">
+    <input id="search" type="text" placeholder="搜索节点..." autocomplete="off">
     <div id="search-results"></div>
   </div>
   <div id="info-panel">
-    <h3>Node Info</h3>
-    <div id="info-content"><span class="empty">Click a node to inspect it</span></div>
+    <h3>节点信息</h3>
+    <div id="info-content"><span class="empty">点击节点查看详情</span></div>
+  </div>
+  <div id="review-wrap">
+    <div id="review-header" onclick="toggleReview()">
+      <span class="review-chevron">&#9660;</span>
+      <h3>待审核队列</h3>
+      <span id="review-badge" class="review-badge review-badge-zero">0</span>
+    </div>
+    <div id="review-body">
+      <div id="review-filters"></div>
+      <div id="review-file-filter-wrap">
+        <select id="review-file-filter"><option value="">全部文件</option></select>
+      </div>
+      <div id="review-list"></div>
+    </div>
   </div>
   <div id="legend-wrap">
-    <h3>Communities</h3>
+    <h3>社区</h3>
     <div id="legend-controls">
-      <label><input type="checkbox" id="select-all-cb" checked onchange="toggleAllCommunities(!this.checked)">Select All</label>
+      <label><input type="checkbox" id="select-all-cb" checked onchange="toggleAllCommunities(!this.checked)">全选</label>
     </div>
     <div id="legend"></div>
   </div>
   <div id="stats">{stats}</div>
 </div>
 {_html_script(nodes_json, edges_json, legend_json)}
+{_review_queue_script(review_json)}
 {_hyperedge_script(hyperedges_json)}
 </body>
 </html>"""

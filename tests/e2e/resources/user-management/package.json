@@ -1,0 +1,12 @@
+{
+  "name": "user-management-test-project",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "E2E test fixture — user management scenario with auth, profile, and domain events",
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

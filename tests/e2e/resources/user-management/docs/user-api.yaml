@@ -1,0 +1,666 @@
+swagger: "2.0"
+info:
+  title: User Management Service API
+  description: |
+    REST API for the user-management service.
+
+    Covers user CRUD operations (UserService) and authentication
+    flows (AuthController: register / login / refresh).
+  version: "1.0.0"
+  contact:
+    name: User Management Team
+    email: user-mgmt@example.com
+
+# basePath prefixes every path below; the full endpoint URL is basePath + path.
+basePath: /rest
+
+# Produces/consumes at the top level apply to all operations unless overridden.
+produces:
+  - application/json
+consumes:
+  - application/json
+
+paths:
+  # --- User CRUD endpoints (UserService) --------------------------------
+  /userservice/v1/users:
+    get:
+      summary: List all users
+      description: |
+        Returns a paginated list of all registered users.
+        Delegates to UserService.getUser for individual lookups;
+        the list endpoint iterates the repository directly.
+      tags:
+        - UserService
+      operationId: getUser
+      produces:
+        - application/json
+      x-examples: |
+        get /rest/userservice/v1/users
+      responses:
+        200:
+          description: A list of users
+          schema:
+            type: array
+            items:
+              type: object
+          x-examples: |
+            HTTP/1.1 200 OK
+            [
+              {
+                "id": "user_123",
+                "email": "alice@example.com",
+                "displayName": "Alice",
+                "status": "active"
+              }
+            ]
+    post:
+      summary: Create a new user
+      description: |
+        Creates a new user account (admin/CLI flow).
+        Self-registration goes through POST /auth/register instead.
+        Delegates to UserService.createUser.
+      tags:
+        - UserService
+      operationId: createUser
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          description: User creation payload
+          schema:
+            type: object
+            required:
+              - email
+              - passwordHash
+              - displayName
+            properties:
+              email:
+                type: string
+                format: email
+              passwordHash:
+                type: string
+              displayName:
+                type: string
+      x-examples: |
+        post /rest/userservice/v1/users
+        Content-Type: application/json
+
+        {
+          "email": "bob@example.com",
+          "passwordHash": "$2b$10$...",
+          "displayName": "Bob"
+        }
+      responses:
+        201:
+          description: User created successfully
+          schema:
+            type: object
+            properties:
+              id:
+                type: string
+              email:
+                type: string
+              displayName:
+                type: string
+        400:
+          description: Email already registered or invalid payload
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+  /userservice/v1/users/{id}:
+    get:
+      summary: Get a user by ID
+      description: Returns the user with the given ID. Delegates to UserService.getUser.
+      tags:
+        - UserService
+      operationId: getUser
+      produces:
+        - application/json
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          description: The user ID (e.g. user_123)
+      responses:
+        200:
+          description: The user object
+          schema:
+            type: object
+        404:
+          description: User not found
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    put:
+      summary: Update a user's profile
+      description: Updates displayName / avatarUrl / bio. Delegates to UserService.updateUser.
+      tags:
+        - UserService
+      operationId: updateUser
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              displayName:
+                type: string
+              avatarUrl:
+                type: string
+              bio:
+                type: string
+      responses:
+        200:
+          description: Updated user object
+          schema:
+            type: object
+        404:
+          description: User not found
+          schema:
+            type: object
+    delete:
+      summary: Delete a user (soft delete)
+      description: Marks the user as deleted; the record is retained. Delegates to UserService.deleteUser.
+      tags:
+        - UserService
+      operationId: deleteUser
+      produces:
+        - application/json
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Deleted user object
+          schema:
+            type: object
+        404:
+          description: User not found
+          schema:
+            type: object
+
+  /userservice/v1/users/{id}/suspend:
+    post:
+      summary: Suspend a user
+      description: Blocks login and API access for the user. Delegates to UserService.suspendUser.
+      tags:
+        - UserService
+      operationId: suspendUser
+      produces:
+        - application/json
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Suspended user object
+          schema:
+            type: object
+        404:
+          description: User not found
+          schema:
+            type: object
+
+  /userservice/v1/users/{id}/reactivate:
+    post:
+      summary: Reactivate a suspended user
+      description: Restores login and API access. Delegates to UserService.reactivateUser.
+      tags:
+        - UserService
+      operationId: reactivateUser
+      produces:
+        - application/json
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Reactivated user object
+          schema:
+            type: object
+        404:
+          description: User not found
+          schema:
+            type: object
+
+  # --- Authentication endpoints (AuthController) -------------------------
+  # Contracts: docs/features/user-management/contracts.md
+  #   跨BC: C-02-01 (register) | C-02-02 (login) | C-02-03 (refresh)
+  #   BC内:  C-001 (注册)       | C-002 (登录)
+  /auth/register:
+    post:
+      summary: Register a new user account
+      description: |
+        Self-registration endpoint. Creates a user and returns a JWT.
+
+        契约 C-02-01 / C-001:
+          - 业务承诺: 接收邮箱+密码，创建用户并返回令牌
+          - 前置条件: 邮箱未被注册；密码 >= 8 字符
+          - 后置条件: 用户已持久化；令牌已签发
+          - 失败语义: 邮箱重复或密码不合规时抛出错误，无副作用 (400)
+          - 幂等性: 否 — 重复注册同一邮箱会失败
+
+        Delegates to AuthController.handleRegister → AuthService.register.
+      tags:
+        - AuthController
+      operationId: handleRegister
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - email
+              - password
+              - displayName
+            properties:
+              email:
+                type: string
+                format: email
+                description: 邮箱未被注册 (契约前置条件)
+                example: carol@example.com
+              password:
+                type: string
+                format: password
+                minLength: 8
+                description: 密码 >= 8 字符 (契约前置条件, PasswordHasher.hash 强制)
+                example: secret123
+              displayName:
+                type: string
+                minLength: 1
+                example: Carol
+      x-examples: |
+        post /rest/auth/register
+        Content-Type: application/json
+
+        {
+          "email": "carol@example.com",
+          "password": "secret123",
+          "displayName": "Carol"
+        }
+      x-test-scenarios:
+        - name: register_success
+          description: 正常注册 — 邮箱未注册且密码 >= 8 字符，返回 201 + JWT 令牌
+          request:
+            method: POST
+            path: /rest/auth/register
+            body:
+              email: carol@example.com
+              password: secret123
+              displayName: Carol
+          expected:
+            status: 201
+            body:
+              userId: user_<generated>
+              email: carol@example.com
+              token: <jwt>
+        - name: register_duplicate_email
+          description: 邮箱已注册 — 400, 无副作用 (契约 C-001 失败语义 — 用户未创建)
+          request:
+            method: POST
+            path: /rest/auth/register
+            body:
+              email: alice@example.com
+              password: secret123
+              displayName: Alice2
+          expected:
+            status: 400
+            body:
+              error: Email already registered
+        - name: register_password_too_short
+          description: 密码 < 8 字符 — 400 (违反契约前置条件, PasswordHasher.hash 抛出)
+          request:
+            method: POST
+            path: /rest/auth/register
+            body:
+              email: dave@example.com
+              password: short
+              displayName: Dave
+          expected:
+            status: 400
+            body:
+              error: Password must be at least 8 characters
+        - name: register_missing_displayName
+          description: 缺少必填字段 displayName — 400
+          request:
+            method: POST
+            path: /rest/auth/register
+            body:
+              email: frank@example.com
+              password: secret123
+          expected:
+            status: 400
+            body:
+              error: <validation error>
+      responses:
+        201:
+          description: 注册成功 — 用户已持久化，JWT 令牌已签发
+          schema:
+            type: object
+            required:
+              - userId
+              - email
+              - token
+            properties:
+              userId:
+                type: string
+                description: 格式 user_{timestamp}_{random}
+                example: user_1718107200_abc123
+              email:
+                type: string
+                format: email
+                example: carol@example.com
+              token:
+                type: string
+                description: JWT 访问令牌 (payload.exp = 当前时间 + 3600s)
+                example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        400:
+          description: |
+            注册失败 — 邮箱重复或密码不合规。
+            契约 C-001 失败语义: 抛出错误, 无副作用 (用户未创建)。
+            error 值: "Email already registered"
+                    | "Password must be at least 8 characters"
+                    | <其他验证错误>
+          schema:
+            type: object
+            required:
+              - error
+            properties:
+              error:
+                type: string
+                description: 错误信息 (来自 AuthService.register 抛出的 Error.message)
+
+  /auth/login:
+    post:
+      summary: Login and receive a JWT token
+      description: |
+        Authenticates the user with email + password and returns a JWT.
+
+        契约 C-02-02 / C-002:
+          - 业务承诺: 验证凭据并返回访问令牌
+          - 前置条件: 用户存在且状态为 active
+          - 后置条件: 令牌已签发
+          - 失败语义: 用户不存在、密码错误或状态非 active 时抛出错误 (401)
+          - 幂等性: 是 — 同一凭据多次登录返回等效令牌
+
+        Delegates to AuthController.handleLogin → AuthService.login.
+      tags:
+        - AuthController
+      operationId: handleLogin
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - email
+              - password
+            properties:
+              email:
+                type: string
+                format: email
+                example: alice@example.com
+              password:
+                type: string
+                format: password
+                minLength: 8
+                description: 密码 >= 8 字符 (PasswordHasher.verify 对短密码返回 false → Invalid password)
+                example: secret123
+      x-examples: |
+        post /rest/auth/login
+        Content-Type: application/json
+
+        {
+          "email": "alice@example.com",
+          "password": "secret123"
+        }
+      x-test-scenarios:
+        - name: login_success
+          description: 正常登录 — 用户存在且 active, 密码正确，返回 200 + JWT 令牌
+          request:
+            method: POST
+            path: /rest/auth/login
+            body:
+              email: alice@example.com
+              password: secret123
+          expected:
+            status: 200
+            body:
+              userId: user_123
+              email: alice@example.com
+              token: <jwt>
+        - name: login_user_not_found
+          description: 用户不存在 — 401 (契约 C-002 失败语义 — 无令牌签发)
+          request:
+            method: POST
+            path: /rest/auth/login
+            body:
+              email: ghost@example.com
+              password: secret123
+          expected:
+            status: 401
+            body:
+              error: User not found
+        - name: login_wrong_password
+          description: 密码错误 — 401 (契约 C-002 失败语义)
+          request:
+            method: POST
+            path: /rest/auth/login
+            body:
+              email: alice@example.com
+              password: wrongpass1
+          expected:
+            status: 401
+            body:
+              error: Invalid password
+        - name: login_suspended_user
+          description: 用户状态非 active (suspended) — 401 (违反契约前置条件 — 状态为 active)
+          request:
+            method: POST
+            path: /rest/auth/login
+            body:
+              email: bob@example.com
+              password: secret123
+          expected:
+            status: 401
+            body:
+              error: User account is suspended
+        - name: login_password_too_short
+          description: 密码 < 8 字符 — 401 (PasswordHasher.verify 返回 false → 归为 Invalid password)
+          request:
+            method: POST
+            path: /rest/auth/login
+            body:
+              email: alice@example.com
+              password: short
+          expected:
+            status: 401
+            body:
+              error: Invalid password
+      responses:
+        200:
+          description: 登录成功 — JWT 令牌已签发
+          schema:
+            type: object
+            required:
+              - userId
+              - email
+              - token
+            properties:
+              userId:
+                type: string
+                example: user_123
+              email:
+                type: string
+                format: email
+                example: alice@example.com
+              token:
+                type: string
+                description: JWT 访问令牌
+                example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        401:
+          description: |
+            登录失败 — 凭据无效或用户状态非 active。
+            契约 C-002 失败语义: 无令牌签发。
+            error 值: "User not found"
+                    | "Invalid password"
+                    | "User account is {status}"
+          schema:
+            type: object
+            required:
+              - error
+            properties:
+              error:
+                type: string
+                description: 错误信息 (来自 AuthService.login 抛出的 Error.message)
+
+  /auth/refresh:
+    post:
+      summary: Refresh an expired JWT token
+      description: |
+        Exchanges an expired (but still signed) token for a fresh one.
+
+        契约 C-02-03:
+          - 业务承诺: 从过期令牌签发新令牌
+          - 失败语义: 令牌无效或被篡改时 401, 用户需重新登录
+          - 注意: 刷新端点不校验签名与过期时间, 仅解码 payload 后签发新令牌;
+            篡改的 token 若 payload 无法解析则返回 401。
+
+        Delegates to AuthController.handleRefresh → AuthService.refreshToken → JwtManager.refreshToken.
+      tags:
+        - AuthController
+      operationId: handleRefresh
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            required:
+              - token
+            properties:
+              token:
+                type: string
+                description: 过期但签名有效的 JWT 令牌
+                example: eyJ1c2VySWQiOiJ1c2VyXzEyMyIsImVtYWlsIjoiYWxpY2VAZXhhbXBsZS5jb20iLCJleHAiOjF9.<signature>
+      x-examples: |
+        post /rest/auth/refresh
+        Content-Type: application/json
+
+        {
+          "token": "eyJ1c2VySWQiOiJ1c2VyXzEyMyIsImVtYWlsIjoiYWxpY2VAZXhhbXBsZS5jb20iLCJleHAiOjF9.sig"
+        }
+      x-test-scenarios:
+        - name: refresh_expired_token_success
+          description: 过期令牌刷新成功 — payload.exp 已过期但签名有效，返回 200 + 新令牌 (契约 C-02-03 业务承诺)
+          request:
+            method: POST
+            path: /rest/auth/refresh
+            body:
+              token: eyJ1c2VySWQiOiJ1c2VyXzEyMyIsImVtYWlsIjoiYWxpY2VAZXhhbXBsZS5jb20iLCJleHAiOjF9.sig
+          expected:
+            status: 200
+            body:
+              token: <new jwt with fresh exp>
+        - name: refresh_valid_token_success
+          description: 未过期令牌刷新 — 同样返回 200 + 新令牌 (刷新端点不校验过期时间)
+          request:
+            method: POST
+            path: /rest/auth/refresh
+            body:
+              token: eyJ1c2VySWQiOiJ1c2VyXzEyMyIsImVtYWlsIjoiYWxpY2VAZXhhbXBsZS5jb20iLCJleHAiOjk5OTk5OTk5OTl9.sig
+          expected:
+            status: 200
+            body:
+              token: <new jwt>
+        - name: refresh_invalid_token_format
+          description: 令牌缺少 "." 分隔符 — 401 (JwtManager.refreshToken 抛出 "Invalid token format")
+          request:
+            method: POST
+            path: /rest/auth/refresh
+            body:
+              token: invalid-token-without-dot
+          expected:
+            status: 401
+            body:
+              error: Invalid token format
+        - name: refresh_tampered_token
+          description: 令牌 payload 被篡改, base64url 解码后非合法 JSON — 401 (JSON.parse 抛出)
+          request:
+            method: POST
+            path: /rest/auth/refresh
+            body:
+              token: dGFtcGVyZWQ.bad-sig
+          expected:
+            status: 401
+            body:
+              error: <json parse error>
+      responses:
+        200:
+          description: 令牌刷新成功 — 签发新 JWT (payload.exp = 当前时间 + 3600s)
+          schema:
+            type: object
+            required:
+              - token
+            properties:
+              token:
+                type: string
+                description: 新 JWT 访问令牌
+                example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        401:
+          description: |
+            刷新失败 — 令牌无效或被篡改。
+            契约 C-02-03 失败语义: 用户需重新登录。
+            error 值: "Invalid token format" | <json parse error>
+          schema:
+            type: object
+            required:
+              - error
+            properties:
+              error:
+                type: string
+                description: 错误信息 (来自 JwtManager.refreshToken 抛出的 Error.message)
+
+# A non-swagger yaml kept alongside this spec to verify the extractor's
+# fallback: docker-compose-style configs must return None so the default
+# markdown extractor takes over. (This file is a swagger spec, but the
+# sibling docker-compose.yaml fixture exercises that path.)

@@ -34,17 +34,64 @@ _VECTOR_SIMILARITY_BONUS = 5.0
 _FUZZY_MATCH_BONUS = 2.0
 
 
-def _embed_backend_from_env() -> str | None:
-    """Pick the embedding backend from env, mirroring llm.py auto-detect.
+def _load_embed_config_from_graphifyrc() -> dict[str, str]:
+    """Read embedding config keys from ``.graphifyrc`` in the graph dir.
 
-    Priority: ``GRAPHIFY_EMBED_BACKEND`` > same env vars as extraction backends.
-    Returns ``None`` when nothing usable is configured so the HybridScorer can
-    stay ``available=False`` and degrade to pure lexical at query time.
+    graphify already uses ``.graphifyrc`` for viz options; this extends it
+    with four embedding keys so the user can configure the hybrid search
+    embedding backend without environment variables or code changes:
+
+        embed_backend=openai-compatible
+        embed_base_url=http://localhost:8080/v1
+        embed_api_key=sk-...
+        embed_model=text-embedding-3-small
+
+    The file is searched starting from the graph directory (typically
+    ``graphify-out/`` parent = project root) and walking up. Returns an
+    empty dict when no ``.graphifyrc`` is found.
     """
+    # Lazy import to avoid circular dep (hooks imports a lot). This module
+    # is imported by serve.py which is imported at startup.
+    try:
+        from graphify.hooks import _load_graphifyrc
+    except ImportError:
+        return {}
+    from pathlib import Path
+    # The graph dir is the parent of graph.json (i.e. graphify-out/).
+    # Walk up from there to find .graphifyrc at the project root.
+    graph_dir = Path(os.environ.get("GRAPHIFY_OUT_DIR", ".")).resolve()
+    for candidate in [graph_dir, *graph_dir.parents]:
+        rc_path = candidate / ".graphifyrc"
+        if rc_path.is_file():
+            cfg = _load_graphifyrc(candidate)
+            # Extract only the embed_* keys (others like viz_node_limit
+            # are not relevant here).
+            return {k: str(v) for k, v in cfg.items() if k.startswith("embed_")}
+    return {}
+
+
+def _embed_backend_from_env() -> str | None:
+    """Pick the embedding backend from config file or env.
+
+    Priority (later wins):
+    1. Auto-detect from extraction backend env vars (OPENAI_API_KEY etc.)
+    2. ``GRAPHIFY_EMBED_BACKEND`` env var
+    3. ``embed_backend`` key in ``.graphifyrc`` config file (highest)
+
+    Returns ``None`` when nothing usable is configured so the HybridScorer
+    stays ``available=False`` and degrades to pure lexical at query time
+    (the default — hybrid search is opt-in).
+    """
+    rc_cfg = _load_embed_config_from_graphifyrc()
+    # 1. .graphifyrc file (highest priority)
+    rc_backend = rc_cfg.get("embed_backend", "").strip().lower()
+    if rc_backend:
+        return rc_backend
+    # 2. Explicit env var
     explicit = os.environ.get("GRAPHIFY_EMBED_BACKEND", "").strip().lower()
     if explicit:
         return explicit
-    # Reuse whichever extraction backend the user has already configured.
+    # 3. Auto-detect from extraction backend env vars
     for var, backend in (
         ("OPENAI_API_KEY", "openai"),
         ("GEMINI_API_KEY", "gemini"),
@@ -60,7 +107,11 @@ def _embed_backend_from_env() -> str | None:
 
 
 def _embed_model_from_env() -> str | None:
-    """Embedding model override env. Backend-specific defaults apply if unset."""
+    """Embedding model name from ``.graphifyrc`` or env. Backend defaults apply if unset."""
+    rc_cfg = _load_embed_config_from_graphifyrc()
+    rc_model = rc_cfg.get("embed_model", "").strip()
+    if rc_model:
+        return rc_model
     return os.environ.get("GRAPHIFY_EMBED_MODEL", "").strip() or None
 
 
@@ -84,6 +135,14 @@ class HybridScorer:
         self._id_to_row: dict[str, int] | None = None
         self._model: str = ""
         self._query_cache: dict[str, np.ndarray] = {}
+        # Load .graphifyrc config so embed_base_url/embed_api_key land in env
+        # before _resolve_embed_backend_config reads them. This lets the user
+        # configure any OpenAI-compatible endpoint in a file without env vars.
+        rc_cfg = _load_embed_config_from_graphifyrc()
+        if rc_cfg.get("embed_base_url"):
+            os.environ.setdefault("GRAPHIFY_EMBED_BASE_URL", rc_cfg["embed_base_url"])
+        if rc_cfg.get("embed_api_key"):
+            os.environ.setdefault("GRAPHIFY_EMBED_API_KEY", rc_cfg["embed_api_key"])
         self._embed_backend = embed_backend or _embed_backend_from_env()
         self._embed_model = embed_model or _embed_model_from_env()
         if graph_dir is not None:

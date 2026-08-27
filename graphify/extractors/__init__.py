@@ -64,3 +64,67 @@ LANGUAGE_EXTRACTORS: dict[str, Callable[[Path], dict]] = {
     "verilog": extract_verilog,
     "zig": extract_zig,
 }
+
+
+# ---------------------------------------------------------------------------
+# Gap-2: auto-scan graphify/extractors/custom/ for built-in custom extractors.
+# Gap-3: auto-scan .graph/extension/extractors/ for project-level extractors
+#        (prepended to registry so they override built-in same-name extractors).
+#
+# Each module is imported in a try/except — a single failing import prints a
+# warning but does not abort startup. Modules register themselves via the
+# ``@register_doc_extractor`` decorator (priority="append" for built-in,
+# priority="prepend" for project-level so the project wins on name clash).
+# ---------------------------------------------------------------------------
+
+def _scan_builtin_custom_extractors() -> None:
+    """Auto-scan graphify/extractors/custom/ for .py modules, triggering
+    ``@register_doc_extractor``. Each module is independently try/except'd."""
+    import importlib
+    import pkgutil
+    import sys
+
+    _custom_dir = Path(__file__).parent / "custom"
+    if not _custom_dir.is_dir():
+        return
+    for module_info in pkgutil.iter_modules([str(_custom_dir)]):
+        if module_info.name.startswith("_"):
+            continue  # skip __init__ etc.
+        try:
+            importlib.import_module(f"graphify.extractors.custom.{module_info.name}")
+        except Exception as e:
+            print(f"  warning: custom extractor '{module_info.name}' failed to load: {e}", file=sys.stderr)
+
+
+def _scan_project_custom_extractors() -> None:
+    """Auto-scan .graph/extension/extractors/ (relative to CWD) for project-level
+    extractors. Project-level extractors are prepended to the registry so they
+    take priority over built-in same-name extractors."""
+    import importlib
+    import pkgutil
+    import sys
+
+    _project_dir = Path.cwd() / ".graph" / "extension" / "extractors"
+    if not _project_dir.is_dir():
+        return
+    if str(_project_dir) not in sys.path:
+        sys.path.insert(0, str(_project_dir))
+    from graphify.extractors.registry import _REGISTRY
+    for module_info in pkgutil.iter_modules([str(_project_dir)]):
+        if module_info.name.startswith("_"):
+            continue
+        _before = {id(fn) for fn in _REGISTRY}
+        try:
+            importlib.import_module(module_info.name)
+        except Exception as e:
+            print(f"  warning: project extractor '{module_info.name}' failed to load: {e}", file=sys.stderr)
+            continue
+        # Move newly-registered extractors to the front (project-level priority)
+        _new = [fn for fn in _REGISTRY if id(fn) not in _before]
+        for fn in _new:
+            _REGISTRY.remove(fn)
+            _REGISTRY.insert(0, fn)
+
+
+_scan_builtin_custom_extractors()
+_scan_project_custom_extractors()

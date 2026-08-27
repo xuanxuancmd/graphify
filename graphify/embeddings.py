@@ -85,30 +85,60 @@ def _sidecar_paths(graph_dir: Path, model: str) -> dict[str, Path]:
 def _resolve_embed_backend_config(backend: str, model: str | None) -> tuple[str, str, str]:
     """Resolve (base_url, api_key, model) for an embedding backend.
 
-    Reuses the same env-var conventions as ``llm.py`` so a user who already
-    configured ``--backend openai`` for extraction can pass ``--embed-backend
-    openai`` without reconfiguring. Raises ``ValueError`` for unknown
-    backends or missing API keys (the caller surfaces this as a CLI error
-    rather than silently degrading — silent degrade only happens at query
-    time when no sidecar is present).
+    Configuration sources (later wins):
+    1. Hardcoded per-backend defaults below.
+    2. Backend-specific env vars (``OPENAI_BASE_URL`` etc.) — same as llm.py.
+    3. **Unified embedding env vars** ``GRAPHIFY_EMBED_BASE_URL`` and
+       ``GRAPHIFY_EMBED_API_KEY`` — let the user point any OpenAI-compatible
+       endpoint at one place without learning each backend's env var name.
+    4. ``.graphifyrc`` file keys (``embed_backend`` / ``embed_model`` /
+       ``embed_base_url`` / ``embed_api_key``) — read by hybrid_scorer.py
+       before this function is called, so the backend/model args already
+       reflect the file when we get here.
 
-    A ``sentence-transformers`` backend is supported for **test/CI fixtures
-    only**: it does not call any API, so no API key is required and no
+    Raises ``ValueError`` for unknown backends or missing API keys (the
+    caller surfaces this as a CLI error rather than silently degrading —
+    silent degrade only happens at query time when no sidecar is present).
+
+    The ``sentence-transformers`` backend is supported for **test/CI
+    fixtures**: it does not call any API, so no API key is required and no
     network is touched. Production deployments should use ``openai`` /
-    ``gemini`` / ``ollama`` / etc. The build-time path
-    (``generate_embeddings_for_graph``) does NOT support
-    ``sentence-transformers`` because the OpenAI SDK dispatch below has no
-    codepath for it — test fixtures build their sidecars directly via
-    ``sentence_transformers.SentenceTransformer.encode``.
+    ``gemini`` / ``ollama`` / ``openai-compatible`` / etc.
     """
     backend = (backend or "").lower()
     if backend == "sentence-transformers":
-        # Test/CI-only backend: no API, no key. The query-time path
-        # (`embed_query` -> `_embed_batch`) is overridden for this backend
-        # below so it never hits the OpenAI SDK. The model name carries
-        # through to the sidecar so cosine similarity is computed across a
-        # consistent embedding space.
-        return "", "", model or "all-MiniLM-L6-v2"
+        # Test/CI-only backend: no API, no key. The model name carries through
+        # to the sidecar so cosine similarity is computed across a consistent
+        # embedding space. Default is paraphrase-multilingual-MiniLM-L12-v2
+        # (384-dim, 120MB, supports 50+ languages incl. Chinese-English
+        # cross-lingual retrieval). all-MiniLM-L6-v2 is NOT used because it
+        # fails on Chinese-English mixed queries (cosine ≈ 0).
+        return "", "", model or "paraphrase-multilingual-MiniLM-L12-v2"
+    if backend == "openai-compatible":
+        # Generic OpenAI-compatible endpoint (vLLM / LM Studio / llama.cpp /
+        # OpenRouter / any /v1/embeddings shim). The user MUST supply
+        # GRAPHIFY_EMBED_BASE_URL and GRAPHIFY_EMBED_API_KEY (via env var or
+        # .graphifyrc); there are no defaults because there is no canonical
+        # endpoint. This is the recommended backend for self-hosted remote
+        # embedding services that aren't Ollama.
+        base_url = os.environ.get("GRAPHIFY_EMBED_BASE_URL", "")
+        api_key = os.environ.get("GRAPHIFY_EMBED_API_KEY", "")
+        if not base_url:
+            raise ValueError(
+                "openai-compatible backend requires GRAPHIFY_EMBED_BASE_URL "
+                "(or embed_base_url in .graphifyrc). Set it to your /v1 endpoint."
+            )
+        if not api_key:
+            raise ValueError(
+                "openai-compatible backend requires GRAPHIFY_EMBED_API_KEY "
+                "(or embed_api_key in .graphifyrc). Local servers accept any "
+                "non-empty value."
+            )
+        # Model: explicit arg > GRAPHIFY_EMBED_MODEL env > "default" placeholder.
+        # The user must name the model their endpoint serves — there is no
+        # canonical default for a self-hosted endpoint.
+        model = model or os.environ.get("GRAPHIFY_EMBED_MODEL", "") or "default"
+        return base_url, api_key, model
     if backend == "openai":
         base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
         api_key = os.environ.get("OPENAI_API_KEY", "")
@@ -150,14 +180,21 @@ def _resolve_embed_backend_config(backend: str, model: str | None) -> tuple[str,
     else:
         raise ValueError(
             f"Unknown embedding backend {backend!r}. "
-            "Supported: openai/gemini/kimi/deepseek/ollama/azure. "
-            "Anthropic Claude has no embedding API — pass an explicit --embed-backend."
+            "Supported: openai/openai-compatible/gemini/kimi/deepseek/ollama/azure/sentence-transformers. "
+            "Anthropic Claude has no embedding API — use a different backend."
         )
+    # Unified override: GRAPHIFY_EMBED_BASE_URL / GRAPHIFY_EMBED_API_KEY win
+    # over any backend-specific env var. Lets the user repoint e.g. an
+    # `openai` backend at a self-hosted OpenAI-compatible endpoint without
+    # setting OPENAI_BASE_URL (which would also affect extraction backends).
+    base_url = os.environ.get("GRAPHIFY_EMBED_BASE_URL") or base_url
+    api_key = os.environ.get("GRAPHIFY_EMBED_API_KEY") or api_key
     if not api_key and backend not in ("ollama",):
         # Local Ollama accepts any non-empty key; everything else needs a real one.
         raise ValueError(
             f"No API key set for embedding backend {backend!r}. "
-            f"Set the corresponding env var (see GRAPHIFY_EMBED_* / backend env vars)."
+            f"Set GRAPHIFY_EMBED_API_KEY (or the backend-specific env var), "
+            f"or use the .graphifyrc file with embed_api_key=..."
         )
     return base_url, api_key, model
 
@@ -180,8 +217,13 @@ def _embed_batch_sentence_transformers(
     backends (openai/gemini/ollama/etc.) via ``_embed_batch``.
 
     Raises ``ImportError`` if ``sentence_transformers`` isn't installed;
-    falls back to ``all-MiniLM-L6-v2`` (384-dim, ~80MB) when ``model`` is
-    unset, matching the default used by ``_resolve_embed_backend_config``.
+    falls back to ``paraphrase-multilingual-MiniLM-L12-v2`` (384-dim,
+    ~120MB) when ``model`` is unset. This model supports 50+ languages
+    including Chinese-English cross-lingual retrieval — verified on real
+    code-corpus queries (中文 query vs English JSDoc desc = 0.58-0.66
+    cosine, unrelated nodes 0.31, 7/7 retrieval accuracy). The older
+    ``all-MiniLM-L6-v2`` is NOT used because it fails on Chinese-English
+    mixed queries (cosine ≈ 0).
     """
     try:
         from sentence_transformers import SentenceTransformer
@@ -191,7 +233,7 @@ def _embed_batch_sentence_transformers(
             "Install with: pip install sentence-transformers"
         ) from exc
 
-    model_name = model or "all-MiniLM-L6-v2"
+    model_name = model or "paraphrase-multilingual-MiniLM-L12-v2"
     # Cache the loaded model on the function object — SentenceTransformer
     # loading is ~1s and the benchmark loop calls embed_query per question.
     cached = getattr(_embed_batch_sentence_transformers, "_model", None)
