@@ -1,179 +1,185 @@
 # Embedding 配置指南
 
-hybrid 语义检索的 vector tier 需要一个 embedding 模型。本文档说明如何配置和启动 embedding 后端。
+hybrid 语义检索的 vector tier 需要一个 embedding 模型。本文档说明如何配置 embedding 后端。
 
-## 两种部署模式
+## 三种部署模式
 
-| 模式 | 适用场景 | 是否需要服务进程 | 是否需要 API key | 数据是否出机器 |
+| 模式 | 适用场景 | 是否跨进程 | 是否需要 API key | 数据是否出机器 |
 |---|---|---|---|---|
-| **在线模型** | 生产环境 | ❌（调云 API） | ✅ | ✅（数据发到云端） |
-| **本地 Ollama** | 隐私敏感 / 离线 / 免费 | ✅（ollama daemon） | ❌ | ❌（完全本地） |
-| **sentence-transformers**（仅测试/CI） | 测试 / CI | ❌（进程内加载） | ❌ | ❌（完全本地） |
+| **跨进程：Ollama** | 本地开发 / 离线 / 隐私敏感 | ✅（HTTP 服务） | ❌（本地） | ❌ |
+| **跨进程：OpenAI 兼容端点** | 自托管 vLLM/LM Studio/llama.cpp | ✅（HTTP 服务） | 可选 | ❌ |
+| **跨进程：云端 API** | 生产环境 | ✅（HTTPS） | ✅ | ✅ |
+| **同进程：sentence-transformers** | 测试 / CI | ❌（进程内） | ❌ | ❌ |
+
+> **Ollama 本质上也是"远端方案"**——它启动一个 HTTP 服务，graphify 通过 OpenAI SDK 调 `localhost:11434/v1/embeddings`。和调 OpenAI 云端 API 走同一段代码，只是 `base_url` 不同。
+>
+> **真正的"本地方案"只有 sentence-transformers**——PyTorch 进程内直接推理，无 HTTP，无服务进程。但模型文件较大（120MB+），不作为默认方案，仅用于测试/CI。
 
 ---
 
-## 模式 1：本地 Ollama（推荐用于本地开发 / 离线场景）
+## 配置方式（三选一，无需改代码）
 
-### 一键启动
+### 方式 1：配置文件 `.graphifyrc`（推荐，最显式）
+
+在项目根目录创建 `.graphifyrc` 文件：
+
+```ini
+# embedding 后端配置 (无需环境变量, 无需改代码)
+embed_backend=openai-compatible
+embed_base_url=http://my-embedding-server:8080/v1
+embed_api_key=sk-your-key-here
+embed_model=text-embedding-3-small
+```
+
+支持的 4 个 key：
+
+| Key | 说明 | 示例 |
+|---|---|---|
+| `embed_backend` | 后端类型（见下表） | `openai-compatible` |
+| `embed_base_url` | OpenAI 兼容端点 URL | `http://localhost:8080/v1` |
+| `embed_api_key` | API key（本地服务填任意非空值） | `sk-...` |
+| `embed_model` | 模型名（不填用后端默认） | `text-embedding-3-small` |
+
+### 方式 2：环境变量
 
 ```bash
-# 1. 安装 ollama (首次, macOS/Linux/Windows 均可)
-#    macOS:   brew install ollama
-#    Linux:   curl -fsSL https://ollama.com/install.sh | sh
-#    Windows: winget install Ollama.Ollama  (或从 https://ollama.com/download 下载)
+# 统一配置 (适用于任何 backend)
+export GRAPHIFY_EMBED_BACKEND=openai-compatible
+export GRAPHIFY_EMBED_BASE_URL=http://my-embedding-server:8080/v1
+export GRAPHIFY_EMBED_API_KEY=sk-your-key-here
+export GRAPHIFY_EMBED_MODEL=text-embedding-3-small
 
-# 2. 启动 ollama 服务 (后台常驻)
-ollama serve &                           # Linux/macOS
-# Windows PowerShell:
-#   Start-Process ollama -ArgumentList "serve" -WindowStyle Hidden
+# 或按 backend 专用 env (和 extraction 共用)
+export OPENAI_API_KEY=sk-...           # openai backend
+export OLLAMA_BASE_URL=http://localhost:11434  # ollama backend
+```
 
-# 3. 拉取 embedding 模型 (首次, ~270MB)
-ollama pull nomic-embed-text
+### 方式 3：CLI flag（仅 build-time）
 
-# 4. 验证模型可用
-ollama run nomic-embed-text "hello world"   # 应返回向量
+```bash
+graphify extract . --embed-backend openai-compatible --embed-model text-embedding-3-small
+```
 
-# 5. 生成 embedding sidecar (在项目根目录)
-graphify extract . --embed-backend ollama
+> **优先级**：CLI flag > `.graphifyrc` 配置文件 > 环境变量 > 自动检测。
 
-# 6. 查询 (自动加载 sidecar)
+---
+
+## 支持的后端
+
+| Backend | 调用方式 | 需要 `embed_base_url` | 需要 `embed_api_key` | 默认模型 |
+|---|---|---|---|---|
+| `openai-compatible` | HTTPS/HTTP → 任意 OpenAI 兼容端点 | ✅ 必填 | ✅ 必填 | `default`（需填 `embed_model`） |
+| `openai` | HTTPS → api.openai.com | 可选（默认 OpenAI 官方） | ✅ 必填 | `text-embedding-3-small` |
+| `ollama` | HTTP → localhost:11434 | 可选（默认本地） | 可选（填任意值） | `nomic-embed-text` |
+| `gemini` | HTTPS → Google AI | 可选 | ✅ 必填 | `text-embedding-004` |
+| `kimi` | HTTPS → Moonshot | 可选 | ✅ 必填 | `embedding-2` |
+| `deepseek` | HTTPS → DeepSeek | 可选 | ✅ 必填 | `deepseek-embed` |
+| `azure` | HTTPS → Azure OpenAI | ✅ 必填 | ✅ 必填 | `text-embedding-3-small` |
+| `sentence-transformers` | 进程内 PyTorch CPU | ❌ | ❌ | `paraphrase-multilingual-MiniLM-L12-v2` |
+
+> **Anthropic Claude 没有 embedding API**——如果默认 backend 是 claude，必须显式配置其他 backend，否则 query 时自动降级为纯词法。
+
+### `openai-compatible` backend（推荐用于自托管端点）
+
+适用于任何实现了 `/v1/embeddings` 的服务：vLLM、LM Studio、llama.cpp、OpenRouter、自建网关等。
+
+`.graphifyrc` 示例：
+
+```ini
+embed_backend=openai-compatible
+embed_base_url=http://my-server:8080/v1
+embed_api_key=local-no-key-needed
+embed_model=BAAI/bge-m3
+```
+
+---
+
+## 初始化安全性
+
+**`graphify .` 初始化时不影响图谱构建**：
+
+- 不传 `--embed-backend` → embedding 完全跳过，不调任何 API，不报错
+- 没配置 backend → `HybridScorer.available=False` → query 自动退回纯词法
+- 没生成 sidecar → 同上，纯词法降级
+
+embedding 是**完全可选的增强层**，不影响 graph 提取/构建/查询的既有流程。
+
+---
+
+## build-time 生成 sidecar
+
+```bash
+# 用 .graphifyrc 配置 (推荐)
+graphify extract . --embed-backend openai-compatible
+
+# 或用 CLI flag 覆盖
+graphify extract . --embed-backend openai --embed-model text-embedding-3-large
+```
+
+生成产物：
+
+```
+graphify-out/embeddings/
+├── <model_slug>.npy           # numpy 二进制矩阵 (N, D) float32
+├── <model_slug>.index.json    # node_id -> row 映射
+└── <model_slug>.meta.json     # 模型/维度/生成时间
+```
+
+**可以提交到代码仓**——和 `graph.json` 一样是确定性产物（同模型 + 同输入产出相同向量）。
+
+---
+
+## query-time 自动加载
+
+查询时无需显式指定 backend——`HybridScorer` 会：
+1. 读取 `.graphifyrc` / 环境变量确定 backend
+2. 加载 `graphify-out/embeddings/` 下最新的 sidecar
+3. embed query 字符串，算 cosine similarity
+4. 作为 additive bonus 加到词法分数上
+
+```bash
+# 生成 sidecar 后, 查询自动启用 vector tier
 graphify query "how does login work?"
-```
 
-### 环境变量（可选）
-
-```bash
-# 指定 ollama 服务地址 (默认 http://localhost:11434)
-export OLLAMA_BASE_URL=http://localhost:11434
-
-# 指定 embedding 模型 (默认 nomic-embed-text)
-export OLLAMA_MODEL=nomic-embed-text
-
-# 或在 extract 时显式指定
-graphify extract . --embed-backend ollama --embed-model nomic-embed-text
-```
-
-### 一键脚本（Windows PowerShell）
-
-```powershell
-# tests/e2e/resources/user-management/start-ollama.ps1
-# 启动 ollama + 拉模型 + 生成 embedding sidecar
-ollama serve &
-Start-Sleep -Seconds 2
-ollama pull nomic-embed-text
-$env:GRAPHIFY_EMBED_BACKEND = "ollama"
-python -m graphify extract tests/e2e/resources/user-management/src --embed-backend ollama --no-cluster --no-viz --code-only
-```
-
-### 一键脚本（Linux/macOS bash）
-
-```bash
-# tests/e2e/resources/user-management/start-ollama.sh
-#!/usr/bin/env bash
-set -e
-ollama serve &
-sleep 2
-ollama pull nomic-embed-text
-export GRAPHIFY_EMBED_BACKEND=ollama
-python -m graphify extract tests/e2e/resources/user-management/src \
-  --embed-backend ollama --no-cluster --no-viz --code-only
+# 关闭 vector tier (纯词法对照)
+graphify query "how does login work?" --no-semantic
 ```
 
 ---
 
-## 模式 2：在线模型（推荐用于生产 / 召回质量优先）
+## sentence-transformers（仅测试/CI）
 
-### OpenAI
+纯本地 CPU 推理，无需服务进程，无需 API key。**不作为正式方案**，仅用于测试和 CI。
 
-```bash
-# 1. 配置 API key
-export OPENAI_API_KEY=sk-...
-# (可选) 指定兼容端点: export OPENAI_BASE_URL=https://api.openai.com/v1
-
-# 2. 生成 sidecar
-graphify extract . --embed-backend openai
-
-# 3. 查询
-graphify query "how does login work?"
-```
-
-默认模型 `text-embedding-3-small`（384 维）。可用 `--embed-model text-embedding-3-large` 切换。
-
-### Gemini / Kimi / DeepSeek / Azure
+默认模型 `paraphrase-multilingual-MiniLM-L12-v2`（384 维，120MB，支持 50+ 语言含中英跨语言检索）。
 
 ```bash
-# Gemini
-export GEMINI_API_KEY=...
-graphify extract . --embed-backend gemini
-
-# Kimi (Moonshot, 服务器在中国)
-export MOONSHOT_API_KEY=...
-graphify extract . --embed-backend kimi
-
-# Azure OpenAI
-export AZURE_OPENAI_API_KEY=...
-export AZURE_OPENAI_ENDPOINT=https://<your-resource>.openai.azure.com/
-graphify extract . --embed-backend azure
-```
-
-**注意**：Anthropic Claude 没有 embedding API。如果默认 backend 是 claude，必须显式指定 `--embed-backend openai`（或其他 embedding-capable backend），否则 query 时自动降级为纯词法。
-
----
-
-## 模式 3：sentence-transformers（仅测试/CI）
-
-纯本地 CPU 推理，无需 ollama 服务，无需 API key。**仅用于测试**，生产环境请用模式 1 或 2。
-
-```bash
-# 1. 安装
 pip install sentence-transformers
 
-# 2. 生成 sidecar (首次会下载 ~80MB 模型到 ~/.cache/huggingface/)
+# 生成 sidecar (首次会下载 ~120MB 模型到 ~/.cache/huggingface/)
 export GRAPHIFY_EMBED_BACKEND=sentence-transformers
-python -c "
-from graphify.embeddings import generate_embeddings_for_graph
-from pathlib import Path
-generate_embeddings_for_graph(
-    Path('tests/e2e/resources/user-management/src/.graph/graph.json'),
-    backend='sentence-transformers',
-    model='all-MiniLM-L6-v2'
-)
-"
+graphify extract . --embed-backend sentence-transformers
 
-# 3. 查询
+# 查询
 graphify query "how does login work?"
 ```
 
-CPU 性能：`all-MiniLM-L6-v2`（384 维）在普通 CPU 上编码 81 节点 + 10 query ≈ 6 秒。
+CPU 性能（4 核）：81 节点编码 279ms，单 query 10ms。中英跨语言准确率 100%（7/7 测试对）。
 
 ---
 
 ## 持久化文件
 
-无论用哪种模式，生成的 sidecar 文件结构相同：
+所有 backend 产出的 sidecar 格式相同：
 
 ```
-graphify-out/embeddings/       (或 <out_dir>/embeddings/)
+graphify-out/embeddings/
 ├── <model_slug>.npy           # numpy 二进制矩阵 (N, D) float32
 ├── <model_slug>.index.json    # node_id -> row index 映射
 └── <model_slug>.meta.json     # 生成时间 / 维度 / 模型名 / backend
 ```
 
-**可以提交到代码仓**——和 `graph.json` 一样是确定性产物（同模型 + 同输入产出相同向量）。benchmark fixture 已提交：`tests/fixtures/search_benchmark/embeddings/`。
-
----
-
-## 环境变量速查
-
-| 变量 | 用途 | 默认值 |
-|---|---|---|
-| `GRAPHIFY_EMBED_BACKEND` | query 时自动检测的 embedding backend | 自动检测（按 OPENAI→GEMINI→KIMI→...→OLLAMA 优先级） |
-| `GRAPHIFY_EMBED_MODEL` | embedding 模型名覆盖 | 按 backend 自动选 |
-| `OPENAI_API_KEY` + `OPENAI_BASE_URL` | OpenAI / 兼容端点 | — |
-| `GEMINI_API_KEY` 或 `GOOGLE_API_KEY` | Gemini | — |
-| `MOONSHOT_API_KEY` | Kimi | — |
-| `OLLAMA_BASE_URL` + `OLLAMA_MODEL` | Ollama | `http://localhost:11434` / `nomic-embed-text` |
-| `AZURE_OPENAI_API_KEY` + `AZURE_OPENAI_ENDPOINT` | Azure OpenAI | — |
+**可以提交到代码仓**——和 `graph.json` 一样是确定性产物。benchmark fixture 已提交：`tests/fixtures/search_benchmark/embeddings/`。
 
 ---
 
@@ -185,14 +191,32 @@ graphify-out/embeddings/       (或 <out_dir>/embeddings/)
 
 ---
 
-## 当前已验证的端到端结果
+## 环境变量速查
+
+| 变量 | 用途 | 默认值 |
+|---|---|---|
+| `GRAPHIFY_EMBED_BACKEND` | query 时自动检测的 embedding backend | 自动检测 |
+| `GRAPHIFY_EMBED_BASE_URL` | 统一 endpoint URL（覆盖任何 backend 的 base_url） | — |
+| `GRAPHIFY_EMBED_API_KEY` | 统一 API key（覆盖任何 backend 的 key） | — |
+| `GRAPHIFY_EMBED_MODEL` | embedding 模型名覆盖 | 按 backend 自动选 |
+| `OPENAI_API_KEY` + `OPENAI_BASE_URL` | OpenAI / 兼容端点 | — |
+| `GEMINI_API_KEY` 或 `GOOGLE_API_KEY` | Gemini | — |
+| `MOONSHOT_API_KEY` | Kimi | — |
+| `OLLAMA_BASE_URL` + `OLLAMA_MODEL` | Ollama | `http://localhost:11434` / `nomic-embed-text` |
+| `AZURE_OPENAI_API_KEY` + `AZURE_OPENAI_ENDPOINT` | Azure OpenAI | — |
+
+---
+
+## 已验证的端到端结果
 
 用 `tests/e2e/resources/user-management` 真实项目（81 节点，TS 代码）+ `sentence-transformers` 本地模型验证：
 
 | 查询 | 纯词法 | hybrid (vector+fuzzy) | 说明 |
 |---|---|---|---|
-| `login` | `.login()` | `.login()` | 都命中（有词法重叠） |
+| `login` | `.login()` | `.login()` | 都命中 |
 | `how does authentication work` | **No match** | `AuthenticatedRequest`, `.login()`, `AuthController`, `.handleLogin()`, `AuthMiddleware` | vector 救回 5 个节点 |
-| `AuthService` | `AuthService` | `AuthService` | 精确查询不受干扰（AC6） |
+| `AuthService` | `AuthService` | `AuthService` | 精确查询不受干扰 |
 
-benchmark fixture（10 节点小图）：hybrid recall@5 = **100%** vs pure lexical **40%**。
+benchmark fixture（10 节点小图）：hybrid recall@5 = **100%** (10/10) vs pure lexical **40%** (4/10)。
+
+手动验证步骤见 `tests/docs/embedding-manual-test.md`。
