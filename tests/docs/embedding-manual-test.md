@@ -133,7 +133,7 @@ Get-Content "tests\e2e\resources\user-management\src\.graph\graphifyrc"
 ```
 embed_backend=sentence-transformers
 embed_model=paraphrase-multilingual-MiniLM-L12-v2
-```
+```0
 
 > 如果 `.graph/graphifyrc` 不存在（比如首次 build 后 `.graph` 目录被删），需要手动创建：
 > ```powershell

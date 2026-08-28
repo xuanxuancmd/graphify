@@ -55,7 +55,7 @@ other - each is a standalone analysis pass, making the subgraph sparse.
 ## 4. Query Tests (live BFS traversal)
 
 All three queries ran against the real graph.json, returned relevant subgraphs, and were
-saved to `graphify-out/memory/`.
+saved to `.graph/memory/`.
 
 ### Q1: "what does cluster do and how does it connect to build?"
 - BFS from `cluster()` reached 20 nodes (full graph - small corpus)
@@ -83,7 +83,7 @@ Memory files created: 3
   query_..._how_does_score_all...md           1,763 bytes
   query_..._what_does_cluster...md            1,838 bytes
 
-detect() on eval root with graphify-out/memory/ present:
+detect() on eval root with .graph/memory/ present:
   Memory files found by next scan: 3 / 3  ✓
 ```
 

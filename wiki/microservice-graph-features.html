@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>微服务图谱核心特性 · graphify</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   一页 PPT · 1600×900 · 单色调（科技蓝）浅色 · AI 科技感
+   骨架：3 大目标（Q1 教AI读懂业务 / Q2 all in one graph / Q3 赋能全流程）
+   ============================================================ */
+:root{
+  --bg:#F4F6FB; --bg-2:#EAEEF6; --bg-3:#E2E7F2;
+  --surface:#FFFFFF; --surface-2:#F9FAFD; --surface-tint:#F4F6FB;
+  --text:#0B1220; --text-2:#334155; --text-3:#64748B; --text-4:#94A3B8;
+  --border:#DDE3EE; --border-2:#C7D0E0; --border-strong:#A8B4CC;
+  --ink:#1E3A8A;                       /* 单一主色：靛蓝 */
+  --ink-deep:#172F6E;
+  --ink-mid:#3B5BDB;
+  --ink-soft:#E8EDFB;
+  --ink-ghost:#F2F4FC;
+  --ink-line:rgba(30,58,138,.14);
+  --shadow-card:0 1px 2px rgba(15,23,42,.03), 0 4px 14px rgba(30,58,138,.06);
+  --shadow-lift:0 2px 8px rgba(15,23,42,.05), 0 12px 32px rgba(30,58,138,.10);
+  --shadow-soft:0 1px 3px rgba(30,58,138,.05);
+  --font-head:'Space Grotesk',system-ui,sans-serif;
+  --font-body:'IBM Plex Sans',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono','IBM Plex Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:var(--font-body);background:#E7EBF4;color:var(--text);
+  font-size:13px;line-height:1.5;font-weight:400;-webkit-font-smoothing:antialiased;
+  display:flex;align-items:center;justify-content:center;
+}
+.mono{font-family:var(--font-mono)}
+
+/* ===== 固定画布 1600×900 ===== */
+.slide{
+  width:1600px;height:900px;background:var(--bg);position:relative;overflow:hidden;
+  display:grid;grid-template-rows:58px 1fr;
+  box-shadow:0 0 60px rgba(15,23,42,.18);
+}
+/* 背景层：细网格 + 角落淡色块 */
+.slide::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:
+    linear-gradient(var(--ink-line) 1px,transparent 1px),
+    linear-gradient(90deg,var(--ink-line) 1px,transparent 1px);
+  background-size:48px 48px;opacity:.7;
+}
+.slide::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(circle at 8% 10%,rgba(30,58,138,.05),transparent 38%),
+    radial-gradient(circle at 92% 92%,rgba(30,58,138,.05),transparent 38%);
+}
+
+/* ===== 顶栏 ===== */
+.topbar{position:relative;z-index:5;display:flex;align-items:center;justify-content:space-between;padding:0 36px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.7);backdrop-filter:blur(10px)}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--font-head);font-weight:600;font-size:15px;color:var(--text)}
+.brand-dot{width:10px;height:10px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 3px rgba(30,58,138,.14),0 0 12px rgba(30,58,138,.4);animation:pulse 2.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 3px rgba(30,58,138,.14),0 0 12px rgba(30,58,138,.4)}50%{box-shadow:0 0 0 5px rgba(30,58,138,.08),0 0 18px rgba(30,58,138,.6)}}
+.brand small{font-family:var(--font-mono);font-size:10px;color:var(--text-3);font-weight:400;margin-left:4px}
+.top-nav{display:flex;gap:18px;font-family:var(--font-mono);font-size:10px;color:var(--text-3);letter-spacing:.08em}
+.top-nav span b{color:var(--ink);font-weight:600}
+
+/* ===== 主体 ===== */
+.body{position:relative;z-index:2;display:grid;grid-template-rows:auto 1fr auto;gap:12px;padding:12px 28px 10px}
+
+/* ============================================================
+   Hero 标题条
+   ============================================================ */
+.hero-bar{display:grid;grid-template-columns:1fr auto;align-items:center;gap:24px;padding:6px 0 0}
+.hero-title{font-family:var(--font-head);font-size:25px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.hero-title .em{color:var(--ink);position:relative}
+.hero-title .em::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:8px;background:rgba(30,58,138,.12);border-radius:2px;z-index:-1}
+.hero-title .sub{display:block;font-family:var(--font-body);font-size:12px;font-weight:400;color:var(--text-3);margin-top:4px;letter-spacing:0}
+.hero-formula{display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:10px;color:var(--text-3)}
+.hero-formula .pill{padding:4px 10px;border-radius:99px;border:1px solid var(--border-2);background:var(--surface);display:flex;align-items:center;gap:6px}
+.hero-formula .pill .d{width:6px;height:6px;border-radius:50%;background:var(--ink)}
+.hero-formula .x{color:var(--text-4)}
+
+/* ============================================================
+   三大目标主区
+   ============================================================ */
+.goals{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;min-height:0}
+
+/* 目标卡 */
+.goal{
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  display:grid;grid-template-rows:auto auto 1fr auto;
+  overflow:hidden;position:relative;
+  box-shadow:var(--shadow-card);
+  transition:all .2s;
+}
+.goal::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--ink)}
+.goal:hover{border-color:var(--border-strong);box-shadow:var(--shadow-lift);transform:translateY(-2px)}
+
+/* 目标头 */
+.goal-head{padding:13px 15px 10px;display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--border)}
+.goal-num{
+  font-family:var(--font-head);font-size:22px;font-weight:700;line-height:1;
+  width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:none;
+  border:1.5px solid var(--ink);color:var(--ink);background:var(--ink-soft);
+}
+.goal-title{font-family:var(--font-head);font-size:13.5px;font-weight:600;color:var(--text);line-height:1.2}
+.goal-title .en{font-family:var(--font-mono);font-size:9px;color:var(--text-4);font-weight:400;display:block;margin-top:2px}
+
+/* 目标诉求 */
+.goal-aim{padding:8px 15px;font-size:11px;color:var(--text-2);line-height:1.45;border-bottom:1px solid var(--border);background:var(--surface-2)}
+.goal-aim b{color:var(--ink);font-weight:600}
+
+/* 特性列表区 */
+.goal-feats{padding:9px 13px;display:flex;flex-direction:column;gap:5px;overflow:hidden}
+
+/* 特性条 */
+.feat{
+  display:grid;grid-template-columns:22px 1fr auto;gap:9px;align-items:center;
+  padding:6px 8px;border:1px solid var(--border);border-radius:7px;
+  background:var(--surface-2);transition:all .15s;
+}
+.feat:hover{border-color:var(--ink);background:var(--surface);box-shadow:var(--shadow-soft);transform:translateX(2px)}
+.feat-ic{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;flex:none;background:var(--ink-soft);color:var(--ink)}
+.feat-ic svg{width:13px;height:13px}
+.feat-body{min-width:0}
+.feat-name{font-family:var(--font-head);font-size:10.5px;font-weight:600;color:var(--text);line-height:1.2;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.feat-name .en{font-family:var(--font-mono);font-size:8.5px;color:var(--text-4);font-weight:400}
+.feat-desc{font-size:9.5px;color:var(--text-3);line-height:1.35;margin-top:1px}
+.feat-desc b{color:var(--text-2);font-weight:600}
+.feat-desc .mono{font-family:var(--font-mono);font-size:8.5px;color:var(--ink)}
+.feat-tag{font-family:var(--font-mono);font-size:8px;color:var(--text-4);background:var(--bg-3);border:1px solid var(--border);padding:2px 5px;border-radius:3px;white-space:nowrap;flex:none}
+.feat.ext .feat-tag{color:var(--ink);border-color:var(--border-2);background:var(--ink-soft)}
+.feat.ext .feat-name::after{content:"ext";font-family:var(--font-mono);font-size:7px;font-weight:600;color:var(--ink);background:var(--ink-soft);border:1px solid var(--border-2);padding:1px 4px;border-radius:3px;margin-left:2px}
+
+/* 目标落脚 */
+.goal-foot{padding:8px 13px;border-top:1px solid var(--border);background:var(--surface-2);font-size:10px;color:var(--text-3);line-height:1.4;display:flex;align-items:center;gap:7px}
+.goal-foot .gf-ic{flex:none;width:16px;height:16px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:9px;font-weight:700;background:var(--ink-soft);color:var(--ink)}
+.goal-foot b{color:var(--text-2);font-weight:600}
+
+/* ============================================================
+   底部：流程应用带 + 靠后特性
+   ============================================================ */
+.bottom{display:grid;grid-template-columns:1.4fr 1fr;gap:12px;padding:0 28px 12px;position:relative;z-index:2}
+
+/* 流程应用带 */
+.flow-strip{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-card);overflow:hidden;display:grid;grid-template-rows:28px 1fr}
+.fs-head{display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-bottom:1px solid var(--border);background:var(--surface-2)}
+.fs-head .ft{font-family:var(--font-head);font-size:10px;font-weight:600;color:var(--text-2)}
+.fs-head .ft .mono{font-family:var(--font-mono);font-size:9px;color:var(--text-4);font-weight:400;margin-left:4px}
+.fs-head .legend{display:flex;gap:8px;font-family:var(--font-mono);font-size:8px;color:var(--text-4)}
+.fs-head .legend .lg{display:flex;align-items:center;gap:3px}
+.fs-head .legend .sw{width:7px;height:7px;border-radius:50%;background:var(--ink)}
+
+.fs-body{display:grid;grid-template-columns:1fr 1fr 1fr;padding:7px 10px;gap:10px;align-items:start}
+.fs-stage{display:flex;flex-direction:column;gap:4px}
+.fs-stage-head{display:flex;align-items:center;gap:5px;margin-bottom:2px}
+.fs-stage .ss-d{width:6px;height:6px;border-radius:50%;flex:none;background:var(--ink)}
+.fs-stage .ss-n{font-family:var(--font-head);font-size:10px;font-weight:600;color:var(--text)}
+.fs-stage .ss-en{font-family:var(--font-mono);font-size:8px;color:var(--text-4)}
+.fs-pt{display:flex;align-items:flex-start;gap:5px;font-size:8.5px;color:var(--text-3);line-height:1.3}
+.fs-pt .pp{font-family:var(--font-mono);font-size:7px;color:var(--text-4);flex:none;margin-top:2px}
+.fs-pt b{color:var(--text-2);font-weight:600}
+.fs-pt .pcmd{font-family:var(--font-mono);font-size:7px;color:var(--ink);background:var(--ink-soft);padding:0 3px;border-radius:2px;white-space:nowrap}
+
+/* 靠后特性卡 */
+.aux{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 13px;box-shadow:var(--shadow-card)}
+.aux-head{display:flex;align-items:center;gap:8px;margin-bottom:7px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.aux-head .ah-ic{width:18px;height:18px;border-radius:4px;background:var(--ink-soft);color:var(--ink);display:flex;align-items:center;justify-content:center;flex:none}
+.aux-head .ah-ic svg{width:11px;height:11px}
+.aux-head .ah-t{font-family:var(--font-head);font-size:10.5px;font-weight:600;color:var(--text-2)}
+.aux-head .ah-sub{font-family:var(--font-mono);font-size:9px;color:var(--text-4);margin-left:4px}
+.aux-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.aux-item{display:flex;align-items:center;gap:6px;padding:5px 7px;border:1px solid var(--border);border-radius:6px;background:var(--surface-2)}
+.aux-item .ai-ic{width:16px;height:16px;border-radius:3px;background:var(--bg-3);color:var(--text-3);display:flex;align-items:center;justify-content:center;flex:none}
+.aux-item .ai-ic svg{width:10px;height:10px}
+.aux-item .ai-name{font-family:var(--font-head);font-size:9.5px;font-weight:600;color:var(--text-2);line-height:1.2}
+.aux-item .ai-desc{font-size:8px;color:var(--text-4);line-height:1.3}
+.aux-item .ai-tag{font-family:var(--font-mono);font-size:7px;color:var(--text-4);background:var(--bg-3);padding:1px 4px;border-radius:3px;flex:none}
+
+/* 脚注 */
+.foot{position:absolute;bottom:5px;left:36px;right:36px;display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:8px;color:var(--text-4);z-index:3}
+.foot a{color:var(--ink)}
+</style>
+</head>
+<body>
+
+<div class="slide">
+
+  <!-- ===== 顶栏 ===== -->
+  <div class="topbar">
+    <div class="brand"><span class="brand-dot"></span>graphify <small>// 微服务知识图谱</small></div>
+    <div class="top-nav">
+      <span>目标 <b>Q1</b> 教 AI 读懂业务</span>
+      <span>·</span>
+      <span>目标 <b>Q2</b> all in one graph</span>
+      <span>·</span>
+      <span>目标 <b>Q3</b> 赋能全流程</span>
+    </div>
+  </div>
+
+  <div class="body">
+
+    <!-- ===== Hero 标题 ===== -->
+    <div class="hero-bar">
+      <div class="hero-title">
+        用一张<span class="em">知识图谱</span>，把微服务变成 AI 和人都能读懂的系统
+        <span class="sub">业务知识 ↔ 代码双向映射 · 查询替代 grep · 路径替代人脑追链 · 解释替代通读全文</span>
+      </div>
+      <div class="hero-formula">
+        <span class="pill"><span class="d"></span>Q1 上下文工程</span>
+        <span class="x">×</span>
+        <span class="pill"><span class="d"></span>Q2 单图统管</span>
+        <span class="x">×</span>
+        <span class="pill"><span class="d"></span>Q3 全流程赋能</span>
+      </div>
+    </div>
+
+    <!-- ===== 三大目标主区 ===== -->
+    <div class="goals">
+
+      <!-- ===== Q1 教 AI 读懂业务 ===== -->
+      <div class="goal">
+        <div class="goal-head">
+          <div class="goal-num">Q1</div>
+          <div class="goal-title">教 AI 读懂业务<span class="en">// context engineering · deterministic</span></div>
+        </div>
+        <div class="goal-aim">用<b>确定性图谱</b>给 AI 注入业务上下文，而非让它"自信猜测"——查询替代 grep，scoped 子图替代全量塞入。</div>
+        <div class="goal-feats">
+
+          <div class="feat">
+            <div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div>
+            <div class="feat-body"><div class="feat-name">查询·路径·解释 <span class="en">query/path/explain</span></div><div class="feat-desc">问一句返回 <b>scoped 子图</b>，追最短路径，解释单概念全部连接</div></div>
+            <span class="feat-tag">替代 grep</span>
+          </div>
+
+          <div class="feat">
+            <div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2 4 5v6c0 5 3 9 8 10 5-1 8-5 8-10V5l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg></div>
+            <div class="feat-body"><div class="feat-name">置信标签 <span class="en">EXTRACTED/INFERRED</span></div><div class="feat-desc"><b>区分事实与推测</b>，AI 知道哪些关系可全信、哪些需复核</div></div>
+            <span class="feat-tag">每边标注</span>
+          </div>
+
+          <div class="feat ext">
+            <div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="12" r="2.5"/><circle cx="19" cy="12" r="2.5"/><circle cx="12" cy="19" r="2.5"/><circle cx="12" cy="12" r="3"/><path d="M12 7.5v1.5M9.5 12H7M16.5 12H14M12 16.5v-1.5"/></svg></div>
+            <div class="feat-body"><div class="feat-name">DDD 领域建模入图 <span class="en">domain-driven</span></div><div class="feat-desc">聚合根/事件/上下文映射成<b>一等节点</b>，告诉 AI 边界在哪</div></div>
+            <span class="feat-tag">重塑世界观</span>
+          </div>
+
+          <div class="feat">
+            <div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1v.2h6v-.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2Z"/></svg></div>
+            <div class="feat-body"><div class="feat-name">意图与文档引用 <span class="en">rationale</span></div><div class="feat-desc"><span class="mono"># WHY/ADR</span> 成一等节点，AI 拿到"<b>为什么</b>"而非仅符号名</div></div>
+            <span class="feat-tag">意图不丢</span>
+          </div>
+
+          <div class="feat">
+            <div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg></div>
+            <div class="feat-body"><div class="feat-name">本地优先 <span class="en">local-first</span></div><div class="feat-desc"><b>不调 LLM 不外传</b>，tree-sitter AST 确定性解析</div></div>
+            <span class="feat-tag">--code-only</span>
+          </div>
+
+        </div>
+        <div class="goal-foot"><span class="gf-ic">→</span><span>同时<b>教给人读取代码仓</b>：基于 dashboard 交互式浏览，人也能像 AI 一样"查图读码"</span></div>
+      </div>
+
+      <!-- ===== Q2 all in one graph ===== -->
+      <div class="goal">
+        <div class="goal-head">
+          <div class="goal-num">Q2</div>
+          <div class="goal-title">业务与代码不再孤岛<span class="en">// all in one graph</span></div>
+        </div>
+        <div class="goal-aim">把 doc / wiki / 代码 / 设计稿 / 运维经验<b>收敛进同一张可遍历的图</b>，业务知识与代码符号双向映射、可追溯。</div>
+        <div class="goal-feats">
+
+          <div class="feat ext">
+            <div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><path d="M10 6.5h4M6.5 10v4M17.5 10v4M10 17.5h4"/></svg></div>
+            <div class="feat-body"><div class="feat-name">设计仓/代码仓双图谱 <span class="en">DesignBase+CodeBase</span></div><div class="feat-desc"><b>业务↔代码双向锚定</b>，all in one graph 工程落地</div></div>
+            <span class="feat-tag">双轨分工</span>
+          </div>
+
+          <div class="feat">
+            <div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 7 4 10l3 3M17 7l3 3-3 3M14 5l-4 14"/></svg></div>
+            <div class="feat-body"><div class="feat-name">跨文件链接 <span class="en">cross-file edges</span></div><div class="feat-desc"><span class="mono">calls/imports/inherits</span> 跨 40+ 语言，<b>调用链无需人脑维护</b></div></div>
+            <span class="feat-tag">tree-sitter</span>
+          </div>
+
+          <div class="feat">
+            <div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>
+            <div class="feat-body"><div class="feat-name">超越代码 <span class="en">beyond code</span></div><div class="feat-desc">doc/PDF/图像/视频 <b>同图查询</b>，业务文档与代码互通</div></div>
+            <span class="feat-tag">.md .pdf .mp4</span>
+          </div>
+
+          <div class="feat">
+            <div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="5" r="2"/><circle cx="12" cy="19" r="2"/><circle cx="5" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><path d="M12 7v2M12 15v2M7 12h2M15 12h2"/></svg></div>
+            <div class="feat-body"><div class="feat-name">God 节点 <span class="en">god nodes</span></div><div class="feat-desc">连接度最高的中枢概念，<b>一眼看出业务核心</b>在哪</div></div>
+            <span class="feat-tag">degree 排序</span>
+          </div>
+
+          <div class="feat">
+            <div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="18" r="2.5"/><circle cx="12" cy="12" r="2.5"/><path d="M8.5 6h7M8.5 18h7M6 8.5v7M18 8.5v7"/></svg></div>
+            <div class="feat-body"><div class="feat-name">社区检测 <span class="en">leiden</span></div><div class="feat-desc"><b>服务边界天然浮现</b>，一个社区 ≈ 一个服务/子域</div></div>
+            <span class="feat-tag">--resolution</span>
+          </div>
+
+        </div>
+        <div class="goal-foot"><span class="gf-ic">→</span><span>从"满仓读文件"到"<b>一图统管</b>"：业务侧与代码侧共享同一真相源，改一侧即查影响</span></div>
+      </div>
+
+      <!-- ===== Q3 赋能全流程 ===== -->
+      <div class="goal">
+        <div class="goal-head">
+          <div class="goal-num">Q3</div>
+          <div class="goal-title">赋能设计·编码·检视·运维<span class="en">// empower the whole pipeline</span></div>
+        </div>
+        <div class="goal-aim">图谱不是孤立工具，是<b>贯穿研发链路的基础设施</b>——每个环节都挂载图谱应用点。</div>
+        <div class="goal-feats">
+
+          <div class="feat ext">
+            <div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div>
+            <div class="feat-body"><div class="feat-name">流程嵌入应用点 <span class="en">workflow integration</span></div><div class="feat-desc"><b>贯穿 Design/Coding/Review/Ops</b>，每环节都有具体命令</div></div>
+            <span class="feat-tag">全程挂载</span>
+          </div>
+
+          <div class="feat ext">
+            <div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg></div>
+            <div class="feat-body"><div class="feat-name">运维经验图谱化 <span class="en">ops knowledge</span></div><div class="feat-desc">定位/踩坑/修复模式作<b>代码邻居</b>，故障沿图追溯</div></div>
+            <span class="feat-tag">explain 邻接</span>
+          </div>
+
+          <div class="feat">
+            <div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 8h20M6 12h4M6 16h7"/></svg></div>
+            <div class="feat-body"><div class="feat-name">MCP 服务 + 多平台 <span class="en">mcp · 20+ assistants</span></div><div class="feat-desc"><b>团队共享一图</b>，always-on 引导助手查图替代读文件</div></div>
+            <span class="feat-tag">stdio/http</span>
+          </div>
+
+          <div class="feat">
+            <div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3v18M18 3v18M6 12h12"/><circle cx="6" cy="6" r="1.5"/><circle cx="18" cy="18" r="1.5"/></svg></div>
+            <div class="feat-body"><div class="feat-name">PR 影响分析 <span class="en">pr impact · triage</span></div><div class="feat-desc">按社区识别<b>合并顺序风险</b>，AI 排序 review 队列</div></div>
+            <span class="feat-tag">--conflicts</span>
+          </div>
+
+          <div class="feat">
+            <div class="feat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3h6M10 3v6.5L5.5 17a2 2 0 0 0 1.8 3h9.4a2 2 0 0 0 1.8-3L14 9.5V3"/></svg></div>
+            <div class="feat-body"><div class="feat-name">可视化 dashboard <span class="en">graph.html</span></div><div class="feat-desc">力导向图<b>可点可滤可搜</b>，人也能像 AI 一样查图读码</div></div>
+            <span class="feat-tag">浏览器</span>
+          </div>
+
+        </div>
+        <div class="goal-foot"><span class="gf-ic">→</span><span>每环节都有<b>具体 graphify 命令</b>：见下方流程带，图谱即基础设施</span></div>
+      </div>
+
+    </div><!-- /goals -->
+
+  </div><!-- /body -->
+
+  <!-- ===== 底部：流程应用带 + 靠后特性 ===== -->
+  <div class="bottom">
+
+    <!-- 流程应用带 -->
+    <div class="flow-strip">
+      <div class="fs-head">
+        <div class="ft">图谱贯穿研发全流程 <span class="mono">// 各环节图谱使用点</span></div>
+        <div class="legend">
+          <div class="lg"><span class="sw"></span>Design</div>
+          <div class="lg"><span class="sw"></span>Coding</div>
+          <div class="lg"><span class="sw"></span>Ops</div>
+        </div>
+      </div>
+      <div class="fs-body">
+
+        <div class="fs-stage">
+          <div class="fs-stage-head"><span class="ss-d"></span><span class="ss-n">Design</span><span class="ss-en">// 重塑世界观</span></div>
+          <div class="fs-pt"><span class="pp">01</span><span><b>DDD 建模入图</b>，告诉 AI 边界在哪</span></div>
+          <div class="fs-pt"><span class="pp">02</span><span><b>query</b> 查 DesignBase 既有业务上下文 <span class="pcmd">query</span></span></div>
+          <div class="fs-pt"><span class="pp">03</span><span><b>callers</b> 查影响面，测试建 references 边 <span class="pcmd">callers</span></span></div>
+        </div>
+
+        <div class="fs-stage">
+          <div class="fs-stage-head"><span class="ss-d"></span><span class="ss-n">Coding · Review</span><span class="ss-en">// 质量门控自闭环</span></div>
+          <div class="fs-pt"><span class="pp">01</span><span>图谱提供 <b>Why 上下文</b>，比对设计 vs 代码 <span class="pcmd">query</span></span></div>
+          <div class="fs-pt"><span class="pp">02</span><span><b>path</b> 追原型→实现，路径断裂即不一致 <span class="pcmd">path</span></span></div>
+          <div class="fs-pt"><span class="pp">03</span><span>多 Agent <b>共享图谱</b>，测试/需求/代码三角验证</span></div>
+        </div>
+
+        <div class="fs-stage">
+          <div class="fs-stage-head"><span class="ss-d"></span><span class="ss-n">Ops</span><span class="ss-en">// 自动化定位修复</span></div>
+          <div class="fs-pt"><span class="pp">01</span><span><b>explain+callers</b> 追故障上下游社区 <span class="pcmd">explain</span></span></div>
+          <div class="fs-pt"><span class="pp">02</span><span><b>path</b> 找根因路径，运维经验沿图就位 <span class="pcmd">path</span></span></div>
+          <div class="fs-pt"><span class="pp">03</span><span><b>社区裁剪回归集</b>，修复模式入图复用</span></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 靠后特性 -->
+    <div class="aux">
+      <div class="aux-head">
+        <div class="ah-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg></div>
+        <div><div class="ah-t">工程化能力</div></div>
+        <div class="ah-sub">// 目标无关 · 靠后</div>
+      </div>
+      <div class="aux-grid">
+        <div class="aux-item">
+          <div class="ai-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h10M4 17h16"/><circle cx="18" cy="12" r="2"/></svg></div>
+          <div><div class="ai-name">Wiki 生成</div><div class="ai-desc">--wiki 自动生成可爬 wiki</div></div>
+          <span class="ai-tag">--wiki</span>
+        </div>
+        <div class="aux-item">
+          <div class="ai-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v4h-4"/></svg></div>
+          <div><div class="ai-name">Obsidian 导出</div><div class="ai-desc">--obsidian 生成 vault</div></div>
+          <span class="ai-tag">--obsidian</span>
+        </div>
+        <div class="aux-item">
+          <div class="ai-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2 4 5v6c0 5 3 9 8 10 5-1 8-5 8-10V5l-8-3Z"/></svg></div>
+          <div><div class="ai-name">多图谱合并</div><div class="ai-desc">merge-graphs 跨仓联合</div></div>
+          <span class="ai-tag">merge</span>
+        </div>
+        <div class="aux-item">
+          <div class="ai-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12l4-4v3h6v2H7v3z"/></svg></div>
+          <div><div class="ai-name">Neo4j/FalkorDB</div><div class="ai-desc">--neo4j-push 推送图数据库</div></div>
+          <span class="ai-tag">--neo4j</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="foot">
+    <span>graphify · 微服务知识图谱 · all in one graph</span>
+    <span>基于 <a href="https://github.com/Graphify-Labs/graphify">graphify</a> · 本项目扩展应用 · 2026</span>
+  </div>
+
+</div><!-- /slide -->
+
+</body>
+</html>

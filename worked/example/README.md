@@ -53,4 +53,4 @@ Ask questions from your AI coding assistant:
 - "which module has the most connections?"
 - "what does the architecture doc say about the storage design?"
 
-The graph lives in `graphify-out/` and persists across sessions.
+The graph lives in `.graph/` and persists across sessions.

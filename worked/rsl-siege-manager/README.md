@@ -46,17 +46,17 @@ Watch terminal output. graphify uses tree-sitter for code (free, fast) and LLM A
 Check the cost summary when it finishes:
 
 ```powershell
-Get-Content .\graphify-out\cost.json
+Get-Content .\.graph\cost.json
 ```
 
 ### 4. Inspect
 
 ```powershell
 # The headline summary an assistant would read
-code .\graphify-out\GRAPH_REPORT.md
+code .\.graph\GRAPH_REPORT.md
 
 # The interactive graph
-Start-Process .\graphify-out\graph.html
+Start-Process .\.graph\graph.html
 ```
 
 ## What's in this directory
@@ -70,7 +70,7 @@ Start-Process .\graphify-out\graph.html
 | `graph.json` | Underlying graph data used by `graphify query` |
 | `manifest.json` | Per-file extraction record |
 
-The AST cache (`graphify-out/cache/`) is regenerable and not committed.
+The AST cache (`.graph/cache/`) is regenerable and not committed.
 
 ## Why this corpus
 

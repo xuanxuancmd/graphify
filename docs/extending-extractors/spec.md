@@ -90,7 +90,7 @@ def try_external_extractors(path, *, root, code_index=None) -> ExtractionResult 
   - `merge`: 外部结果 + 默认 `extract_markdown` 合并,边按 `(source, target, relation)` 去重
   - `replace` / `supplement_only`: 只用外部结果
 - `suppress_llm=True` 的文件加入 `suppress_llm_files` 集合,cli.py 构造 `semantic_files` 时排除
-- `unmatched` 写入 `graphify-out/ddd-unmatched.json` sidecar
+- `unmatched` 写入 `.graph/ddd-unmatched.json` sidecar
 - `pending_edges` 透传给 `per_file`,后续做跨文件全局二次解析
 - 返回值含 `"suppress_llm_files": suppress_llm_files`(`extract.py:7216`)
 

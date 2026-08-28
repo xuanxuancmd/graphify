@@ -1,6 +1,6 @@
 ```powershell
 # Detect Python with graphify — uv/pipx-aware (fixes #831)
-New-Item -ItemType Directory -Force -Path graphify-out | Out-Null
+New-Item -ItemType Directory -Force -Path .graph | Out-Null
 $GRAPHIFY_PYTHON = $null
 
 function Find-GraphifyPython {
@@ -56,11 +56,11 @@ if (-not $GRAPHIFY_PYTHON) {
 # rebuild fails with WinError 123 (#3028). WriteAllText with an explicit BOM-less
 # encoding writes the bytes POSIX writes, and adds no trailing newline.
 $Utf8NoBom = New-Object System.Text.UTF8Encoding $false
-[System.IO.File]::WriteAllText((Join-Path $PWD 'graphify-out\.graphify_python'), [string]$GRAPHIFY_PYTHON, $Utf8NoBom)
+[System.IO.File]::WriteAllText((Join-Path $PWD '.graph\.graphify_python'), [string]$GRAPHIFY_PYTHON, $Utf8NoBom)
 # Save scan root so `graphify update` (no args) knows where to look next time
-[System.IO.File]::WriteAllText((Join-Path $PWD 'graphify-out\.graphify_root'), (Resolve-Path INPUT_PATH).Path, $Utf8NoBom)
+[System.IO.File]::WriteAllText((Join-Path $PWD '.graph\.graphify_root'), (Resolve-Path INPUT_PATH).Path, $Utf8NoBom)
 ```
 
 If the import succeeds, print nothing and move straight to Step 2.
 
-**In every subsequent block, run Python through the saved interpreter — `& (Get-Content graphify-out\.graphify_python)` in place of a bare `python3` — so every step uses the interpreter that actually has graphify.**
+**In every subsequent block, run Python through the saved interpreter — `& (Get-Content .graph\.graphify_python)` in place of a bare `python3` — so every step uses the interpreter that actually has graphify.**

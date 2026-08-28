@@ -110,7 +110,7 @@ graphify extract . --embed-backend openai-compatible --embed-model text-embeddin
 生成产物：
 
 ```
-graphify-out/embeddings/
+.graph/embeddings/
 ├── <model_slug>.npy           # numpy 二进制矩阵 (N, D) float32
 ├── <model_slug>.index.json    # node_id -> row 映射
 └── <model_slug>.meta.json     # 模型/维度/生成时间
@@ -124,7 +124,7 @@ graphify-out/embeddings/
 
 查询时无需显式指定 backend——`HybridScorer` 会：
 1. 读取 `.graph/graphifyrc` 配置文件确定 backend
-2. 加载 `graphify-out/embeddings/` 下最新的 sidecar
+2. 加载 `.graph/embeddings/` 下最新的 sidecar
 3. embed query 字符串，算 cosine similarity
 4. 作为 additive bonus 加到词法分数上
 
@@ -170,7 +170,7 @@ CPU 性能（4 核）：81 节点编码 279ms，单 query 10ms。中英跨语言
 所有 backend 产出的 sidecar 格式相同：
 
 ```
-graphify-out/embeddings/
+.graph/embeddings/
 ├── <model_slug>.npy           # numpy 二进制矩阵 (N, D) float32
 ├── <model_slug>.index.json    # node_id -> row index 映射
 └── <model_slug>.meta.json     # 生成时间 / 维度 / 模型名 / backend

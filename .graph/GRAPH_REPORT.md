@@ -2077,7 +2077,7 @@ Nodes (20): Clean up a semantic extraction fragment in-place. Operations: 1. Rem
 
 ### Community 243 - "test_query_names_its_graph.py"
 Cohesion: 0.17
-Nodes (19): _display_graph_path(), Render a graph path for the query header. Relative to the CWD when it sits…, _graph(), _header(), A query answer must say which graph it came from. `graphify-out/` resolves…, A display helper must not be the reason a query fails., The end-to-end point: the parent and the subproject must not look alike., The case the issue is about: the answer came from somewhere else. (+11 more)
+Nodes (19): _display_graph_path(), Render a graph path for the query header. Relative to the CWD when it sits…, _graph(), _header(), A query answer must say which graph it came from. `.graph/` resolves…, A display helper must not be the reason a query fails., The end-to-end point: the parent and the subproject must not look alike., The case the issue is about: the answer came from somewhere else. (+11 more)
 
 ### Community 244 - "UserService"
 Cohesion: 0.09
@@ -2105,7 +2105,7 @@ Nodes (19): _label_edges(), _node_by_id(), Path, test_java_ambiguous_implements_
 
 ### Community 250 - "_run"
 Cohesion: 0.10
-Nodes (20): CompletedProcess, argparse `choices` rejects an unknown outcome before save_query_result runs., --answer-file lets callers pass a long/multiline answer via a file instead of a…, Neither --answer nor --answer-file -> clean argparse error, not a crash., First run with no graphify-out/memory/ still succeeds and writes a valid doc., With a real graph.json present, reflect auto-detects it and groups lessons…, Through reflect()/CLI with a real graph.json: a cited node that isn't in the…, `reflect --if-stale` skips the rebuild when LESSONS.md is already current, and… (+12 more)
+Nodes (20): CompletedProcess, argparse `choices` rejects an unknown outcome before save_query_result runs., --answer-file lets callers pass a long/multiline answer via a file instead of a…, Neither --answer nor --answer-file -> clean argparse error, not a crash., First run with no .graph/memory/ still succeeds and writes a valid doc., With a real graph.json present, reflect auto-detects it and groups lessons…, Through reflect()/CLI with a real graph.json: a cited node that isn't in the…, `reflect --if-stale` skips the rebuild when LESSONS.md is already current, and… (+12 more)
 
 ### Community 251 - "extract_swagger"
 Cohesion: 0.18
@@ -3345,7 +3345,7 @@ Nodes (4): Verify the three-phase pipeline (code+manifests → config JSON → d
 
 ### Community 567 - "test_extract_codeonly_succeeds_without_api_key"
 Cohesion: 0.33
-Nodes (6): _code_only_corpus(), A corpus with only code — no docs/papers/images., A code-only corpus must run with no LLM API key. Regression: graphify extract…, `extract --out DIR` routes every artifact to DIR/graphify-out/ and the scanned…, test_extract_codeonly_succeeds_without_api_key(), test_extract_out_keeps_project_root_clean()
+Nodes (6): _code_only_corpus(), A corpus with only code — no docs/papers/images., A code-only corpus must run with no LLM API key. Regression: graphify extract…, `extract --out DIR` routes every artifact to DIR/.graph/ and the scanned…, test_extract_codeonly_succeeds_without_api_key(), test_extract_out_keeps_project_root_clean()
 
 ### Community 568 - "test_maybe_reload_detects_graph_change"
 Cohesion: 0.33

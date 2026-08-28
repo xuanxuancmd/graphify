@@ -160,7 +160,7 @@ def _strip_quotes(s: str) -> str:
 """Embedding generation and storage for hybrid semantic search.
 
 Build-time: generates per-node embeddings from `desc` (fallback `label`),
-stores as binary sidecar under graphify-out/embeddings/.
+stores as binary sidecar under .graph/embeddings/.
 Query-time: loads sidecar + embeds query string for cosine similarity.
 
 Decoupled from extract.py / llm.py — called as a post-build step.
@@ -793,10 +793,10 @@ parser.add_argument("--embed-model", default=None,
 # cli.py — extract 命令处理末尾：
 if args.embed_backend:
     from graphify.embeddings import generate_embeddings_for_graph
-    graph_path = Path("graphify-out/graph.json")
+    graph_path = Path(".graph/graph.json")
     if graph_path.is_file():
         generate_embeddings_for_graph(graph_path, backend=args.embed_backend, model=args.embed_model)
-        print(f"embeddings generated at graphify-out/embeddings/", file=sys.stderr)
+        print(f"embeddings generated at .graph/embeddings/", file=sys.stderr)
 ```
 
 ---

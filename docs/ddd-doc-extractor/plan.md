@@ -1070,7 +1070,7 @@ def extract(paths, *, root=None, code_index: dict | None = None) -> dict:
 def _write_ddd_unmatched(root: Path, unmatched: list[dict]) -> None:
     """Write unmatched DDD code anchors to sidecar JSON for manual review."""
     import json
-    out_dir = root / "graphify-out" if (root / "graphify-out").is_dir() else root
+    out_dir = root / ".graph" if (root / ".graph").is_dir() else root
     out_path = out_dir / "ddd-unmatched.json"
     existing = []
     if out_path.is_file():
@@ -1340,7 +1340,7 @@ uv run pytest tests/test_ddd_extractor.py -q
 uv run graphify extract tests/fixtures/ddd/
 uv run python -c "
 import json
-g = json.load(open('graphify-out/graph.json'))
+g = json.load(open('.graph/graph.json'))
 doc_anchors = [n for n in g['nodes'] if n.get('node_kind') == 'doc-anchor']
 pages = [n for n in g['nodes'] if n.get('node_kind') == 'page']
 print(f'doc-anchor nodes: {len(doc_anchors)} (DDD script)')

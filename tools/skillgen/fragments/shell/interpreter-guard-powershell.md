@@ -1,5 +1,5 @@
 ```powershell
-if (-not (Test-Path graphify-out\.graphify_python)) {
+if (-not (Test-Path .graph\.graphify_python)) {
     $GRAPHIFY_PYTHON = $null
     $graphifyCmd = Get-Command graphify -ErrorAction SilentlyContinue
     if ($graphifyCmd) {
@@ -9,7 +9,7 @@ if (-not (Test-Path graphify-out\.graphify_python)) {
         if (Test-Path $py) { $GRAPHIFY_PYTHON = $py }
     }
     if (-not $GRAPHIFY_PYTHON) { $GRAPHIFY_PYTHON = "python" }
-    New-Item -ItemType Directory -Force -Path graphify-out | Out-Null
-    & $GRAPHIFY_PYTHON -c "import sys; open('graphify-out/.graphify_python', 'w', encoding='utf-8').write(sys.executable)"
+    New-Item -ItemType Directory -Force -Path .graph | Out-Null
+    & $GRAPHIFY_PYTHON -c "import sys; open('.graph/.graphify_python', 'w', encoding='utf-8').write(sys.executable)"
 }
 ```

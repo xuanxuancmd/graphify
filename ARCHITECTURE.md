@@ -8,7 +8,7 @@ graphify is a Claude Code skill backed by a Python library. The skill orchestrat
 detect()  →  extract()  →  build()  →  cluster()  →  analyze helpers  →  report.generate()  →  export.to_*()
 ```
 
-Each stage lives in its own module and they communicate through plain Python dicts and NetworkX graphs - no shared state, no side effects outside `graphify-out/`. Most stages are a single function; `analyze.py` and `export.py` are sets of sibling functions rather than one entry point.
+Each stage lives in its own module and they communicate through plain Python dicts and NetworkX graphs - no shared state, no side effects outside `.graph/`. Most stages are a single function; `analyze.py` and `export.py` are sets of sibling functions rather than one entry point.
 
 ## Module responsibilities
 
@@ -24,7 +24,7 @@ Signatures below are the real ones - `tests/test_architecture_doc.py` imports ev
 | `report.py` | `generate(G, communities, cohesion_scores, community_labels, ...)` | graph + analysis → GRAPH_REPORT.md string |
 | `export.py` | `to_json`, `to_html`, `to_obsidian`, `to_svg`, `to_graphml`, `to_canvas`, `to_cypher` | graph → graph.json, graph.html, Obsidian vault, graph.svg, … one function per format |
 | `wiki.py` | `to_wiki(G, communities, output_dir, ...)` | graph → one markdown article per community + `index.md` |
-| `callflow_html.py` | `write_callflow_html(...)` | graphify-out files → Mermaid architecture/call-flow HTML |
+| `callflow_html.py` | `write_callflow_html(...)` | .graph files → Mermaid architecture/call-flow HTML |
 | `ingest.py` | `ingest(url, target_dir, ...)` | URL → file saved to corpus dir |
 | `cache.py` | `check_semantic_cache(files, root)`, `save_semantic_cache(nodes, edges, ...)` | files → cached nodes / edges / hyperedges + the list of files still needing extraction |
 | `security.py` | `validate_url`, `safe_fetch`, `validate_graph_path`, `sanitize_label` | URL / path / label → validated value, or raises |
@@ -86,7 +86,7 @@ All external input passes through `graphify/security.py` before use:
 
 - URLs → `validate_url()` (http/https only) + `_NoFileRedirectHandler` (blocks file:// redirects)
 - Fetched content → `safe_fetch()` / `safe_fetch_text()` (size cap, timeout)
-- Graph file paths → `validate_graph_path()` (must resolve inside `graphify-out/`)
+- Graph file paths → `validate_graph_path()` (must resolve inside `.graph/`)
 - Node labels → `sanitize_label()` (strips control chars, caps 256 chars, HTML-escapes)
 
 See `SECURITY.md` for the full threat model.

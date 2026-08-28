@@ -80,7 +80,7 @@ uv run graphify extract tests/fixtures/yaml/sample.yaml
 # 验证 graph.json 含 YAML 解析器产出的节点
 uv run python -c "
 import json
-g = json.load(open('graphify-out/graph.json'))
+g = json.load(open('.graph/graph.json'))
 yaml_nodes = [n for n in g['nodes'] if 'yaml_config' in n.get('tags', [])]
 assert len(yaml_nodes) > 0, 'YAML parser nodes missing'
 print(f'OK: {len(yaml_nodes)} YAML nodes')
@@ -1094,7 +1094,7 @@ def test_url_no_match_returns_empty():
 
 ### conftest.py force-rebuild 支持
 
-`tests/e2e/conftest.py:56` 只在 `GRAPH_JSON.exists()` 为 False 时跑提取。实现 Gap 后跑 E2E,如果不手动删 `graphify-out/`,E2E 跑的是**旧 graph**。改进:
+`tests/e2e/conftest.py:56` 只在 `GRAPH_JSON.exists()` 为 False 时跑提取。实现 Gap 后跑 E2E,如果不手动删 `.graph/`,E2E 跑的是**旧 graph**。改进:
 
 ```python
 # tests/e2e/conftest.py — 加 force-rebuild 支持

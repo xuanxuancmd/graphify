@@ -151,7 +151,7 @@ DDD 文档的 `<anchor:code>` 列填代码锚点字符串（`类名` / `类名.�
 - `nameIndex`：node label → GraphNode[]
 - `endpointIndex`：endpoint 节点 path → GraphNode
 
-**匹配失败处理**：记录到 `unmatched` 列表，不阻塞解析，输出到 `graphify-out/ddd-unmatched.json` 供人工排查。
+**匹配失败处理**：记录到 `unmatched` 列表，不阻塞解析，输出到 `.graph/ddd-unmatched.json` 供人工排查。
 
 ### 4.4 全局边解析（concept_id 索引）
 
@@ -386,7 +386,7 @@ graphify 默认的 `_EXTRACTION_SYSTEM` prompt 是**通用的**（"extract named
 | AC1 | 白名单 7 类 DDD 文档被 DDD 解析器处理，非白名单 `.md` 走默认 `extract_markdown` | 跑 `graphify extract ./ddd-docs/`，检查 `graph.json` 中白名单文件的节点 `node_kind=="doc-anchor"`，非白名单的仍为 `"page"`/`"heading"` |
 | AC2 | DDD 节点携带 `desc`/`concept_id`/`tags` 属性，存于 `graph.json` | 用 MCP `get_node` 工具或直接读 `graph.json` 验证字段存在 |
 | AC3 | `<anchor:code>` 列匹配到真实 code 节点时，产出 `references` 边（doc-anchor → code） | `graphify query "OrderService"` 返回子图含 doc-anchor 节点 + code 节点 + 连接边 |
-| AC4 | 未匹配的代码锚点记录到 `graphify-out/ddd-unmatched.json` | 文件存在，含 docPath/conceptId/anchor/reason |
+| AC4 | 未匹配的代码锚点记录到 `.graph/ddd-unmatched.json` | 文件存在，含 docPath/conceptId/anchor/reason |
 | AC5 | 代码 AST 先于 doc 提取完成，DDD 解析器能引用 code_index | 单元测试 mock code_index，验证 DDD 解析器拿到非空索引 |
 | AC6 | 外部解析器返回 None 时，回退到默认 `extract_markdown` | 单元测试：注册一个永远返回 None 的解析器，验证 fallback |
 | AC7 | `merge_mode="merge"` 时，doc-anchor + page/heading 节点都存在 | 跑 DDD fixture，graph.json 含两类 node_kind |

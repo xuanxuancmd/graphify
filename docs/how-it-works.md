@@ -16,7 +16,7 @@ Video and audio files are transcribed with faster-whisper. To focus the transcri
 Claude runs in parallel over markdown, PDFs, images, and transcripts. Each subagent reads a batch of files and outputs a JSON fragment: nodes, edges, and any group relationships. The fragments are merged into a single graph.
 
 Before Pass 3, optional converters turn supported pointer/binary formats into
-Markdown sidecars under `graphify-out/converted/`. Office files (`.docx`,
+Markdown sidecars under `.graph/converted/`. Office files (`.docx`,
 `.xlsx`) use the `[office]` extra. Google Workspace shortcuts (`.gdoc`,
 `.gsheet`, `.gslides`) are opt-in with `--google-workspace` or
 `GRAPHIFY_GOOGLE_WORKSPACE=1` and require an authenticated `gws` CLI.
@@ -76,7 +76,7 @@ Code files are extracted in parallel using `ProcessPoolExecutor` — bypasses Py
 
 ## SHA256 cache
 
-Every extracted file is fingerprinted by content hash. Re-runs skip unchanged files entirely — only new or modified files go through extraction again. The cache lives in `graphify-out/cache/`.
+Every extracted file is fingerprinted by content hash. Re-runs skip unchanged files entirely — only new or modified files go through extraction again. The cache lives in `.graph/cache/`.
 
 ---
 

@@ -1,5 +1,5 @@
 ```bash
-if [ ! -f graphify-out/.graphify_python ]; then
+if [ ! -f .graph/.graphify_python ]; then
     GRAPHIFY_BIN=$(which graphify 2>/dev/null)
     if [ -n "$GRAPHIFY_BIN" ]; then
         PYTHON=$(head -1 "$GRAPHIFY_BIN" | tr -d '#!')
@@ -7,7 +7,7 @@ if [ ! -f graphify-out/.graphify_python ]; then
     else
         PYTHON="python3"
     fi
-    mkdir -p graphify-out
-    "$PYTHON" -c "import sys; open('graphify-out/.graphify_python', 'w', encoding='utf-8').write(sys.executable)"
+    mkdir -p .graph
+    "$PYTHON" -c "import sys; open('.graph/.graphify_python', 'w', encoding='utf-8').write(sys.executable)"
 fi
 ```

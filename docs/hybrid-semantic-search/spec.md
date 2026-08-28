@@ -160,7 +160,7 @@ def _node_embed_text(node: dict) -> str:
 ### 5.4 存储格式：二进制 sidecar
 
 ```
-graphify-out/
+.graph/
 ├── graph.json                  # 既有
 ├── embeddings/
 │   ├── {model_slug}.npy        # np.ndarray((N, D), dtype=np.float32)
@@ -293,7 +293,7 @@ def _score_query(
 |---|---|---|
 | AC1 | `semantic=true`（默认）时，"login" 能匹配到 `AuthService`（若 embedding 判断语义相关） | `graphify query "login" --top-k 5` 返回 AuthService |
 | AC2 | `semantic=false` 时，行为与当前完全一致（纯词法） | `graphify query "login" --no-semantic` 不返回 AuthService（若无词法重叠） |
-| AC3 | embedding sidecar 不存在时，自动降级为纯词法，不报错 | 删 `graphify-out/embeddings/`，`graphify query "login"` 仍工作 |
+| AC3 | embedding sidecar 不存在时，自动降级为纯词法，不报错 | 删 `.graph/embeddings/`，`graphify query "login"` 仍工作 |
 | AC4 | embedding sidecar 存在时，build-time 生成成功 | `graphify extract . --embed-backend openai` 产出 `embeddings/*.npy` |
 | AC5 | 混合模式召回率高于纯词法 | 用 fixture 跑 benchmark：10 个 NL 问题，混合模式召回 ≥ 纯词法 |
 | AC6 | 精确查询不受语义干扰 | `graphify query "UserService"` 的 top-1 仍是 `UserService` 节点（EXACT x1000 主导） |
