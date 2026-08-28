@@ -983,9 +983,15 @@ def _resolve_pending_edges(all_nodes: list[dict], pending_edges: list[dict]) -> 
 def extract_ddd(
     path: Path, *, root: Path, nodes: list[dict] | None = None
 ) -> ExtractionResult | None:
-    """Extract DDD concepts from a whitelist .md file. Returns None for non-whitelist."""
-    rel_path = path.resolve().relative_to(root.resolve()).as_posix().lower()
-    if not any(kw in rel_path for kw in DDD_DOC_KEYWORDS):
+    """Extract DDD concepts from a whitelist .md file. Returns None for non-whitelist.
+
+    Whitelist match is filename-exact: ``path.name.lower()`` must equal
+    ``f"{kw}.md"`` for some keyword in ``DDD_DOC_KEYWORDS``. Directory names
+    never participate in the match, so a file under ``api/contracts/`` is not
+    pulled in merely because the path contains ``contracts``.
+    """
+    filename = path.name.lower()
+    if filename not in {f"{kw}.md" for kw in DDD_DOC_KEYWORDS}:
         return None
 
     # Build code indices from the nodes passed in by extract() (AST-first, G3).

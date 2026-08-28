@@ -114,15 +114,15 @@ def test_whitelist_match_all_seven_keywords(tmp_path: Path):
 
         ("technical-constraints", "technical-constraints.md"),
 
-        ("business-flow", "order-business-flow.md"),
+        ("business-flow", "business-flow.md"),
 
-        ("invariants", "order-invariants.md"),
+        ("invariants", "invariants.md"),
 
-        ("contracts", "order-contracts.md"),
+        ("contracts", "contracts.md"),
 
-        ("domain-events", "order-domain-events.md"),
+        ("domain-events", "domain-events.md"),
 
-        ("domain-model", "order-domain-model.md"),
+        ("domain-model", "domain-model.md"),
 
     ]:
 
@@ -571,12 +571,16 @@ def test_cross_file_related_edge_resolves(tmp_path: Path):
     )
 
     # File 2: another domain-model file defining AG-01 and AG-02 as concept_ids.
+    # Placed in a subdirectory so the filename still matches the whitelist
+    # exactly (filename-exact match does not consider the directory).
 
     # Both rows live in ONE table (no `|---|` between data rows ??that would
 
     # be parsed as an empty data row, not a new table).
 
-    (tmp_path / "domain-model-refs.md").write_text(
+    refs_dir = tmp_path / "refs"
+    refs_dir.mkdir()
+    (refs_dir / "domain-model.md").write_text(
 
         "| 聚合根<anchor:ddd> | ID | 代码锚点<anchor:code> | 描述<anchor:desc> |\n"
 
@@ -592,7 +596,7 @@ def test_cross_file_related_edge_resolves(tmp_path: Path):
 
     r1 = extract_ddd(tmp_path / "domain-model.md", root=tmp_path)
 
-    r2 = extract_ddd(tmp_path / "domain-model-refs.md", root=tmp_path)
+    r2 = extract_ddd(refs_dir / "domain-model.md", root=tmp_path)
 
     assert r1 is not None and r2 is not None
 
@@ -1050,7 +1054,7 @@ def test_fixture_technical_constraints():
 
 def test_fixture_domain_model_with_code_anchors():
 
-    """The fixture order-domain-model.md yields aggregate nodes + describes edges."""
+    """The fixture domain-model.md yields aggregate nodes + describes edges."""
 
     code_nodes = [
 
@@ -1070,7 +1074,7 @@ def test_fixture_domain_model_with_code_anchors():
 
     result = extract_ddd(
 
-        FIXTURES / "order-domain-model.md",
+        FIXTURES / "domain-model.md",
 
         root=FIXTURES.parent.parent.parent,
 
@@ -1096,7 +1100,7 @@ def test_fixture_domain_model_with_code_anchors():
 
 def test_fixture_business_flow_related_edges():
 
-    """The fixture order-business-flow.md yields related edges between aggregates.
+    """The fixture business-flow.md yields related edges between aggregates.
 
     The ??????????? columns reference BC names (???/???/???) that are defined
 
@@ -1106,7 +1110,7 @@ def test_fixture_business_flow_related_edges():
 
     bf_result = extract_ddd(
 
-        FIXTURES / "order-business-flow.md",
+        FIXTURES / "business-flow.md",
 
         root=root_for_fixtures,
 
@@ -1146,7 +1150,7 @@ def test_fixture_business_flow_related_edges():
 
     parsed = _parse_tagged_file(
 
-        FIXTURES / "order-business-flow.md", root_for_fixtures,
+        FIXTURES / "business-flow.md", root_for_fixtures,
 
         _build_code_indices([]),
 
