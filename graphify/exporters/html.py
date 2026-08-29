@@ -14,6 +14,19 @@ from graphify.security import sanitize_label
 MAX_NODES_FOR_VIZ = 5_000
 _HTML_STALE_MARKER = ".graph.html.stale"
 
+# Tag normalization — merge duplicate tag variants produced by different
+# DDD fixture sets (e.g. "domain-events" vs "domain_event") into one
+# canonical form for display and filtering.
+_TAG_NORMALIZE: dict[str, str] = {
+    "domain-events": "domain_event",
+    "invariants": "invariant",
+    "technical-constraints": "tech_constraint",
+    "contracts": "contract",
+}
+
+def _normalize_tag(t: str) -> str:
+    return _TAG_NORMALIZE.get(t, t)
+
 def _viz_node_limit() -> int:
     """Return the effective viz node limit, honoring GRAPHIFY_VIZ_NODE_LIMIT env var.
 
@@ -67,6 +80,29 @@ def _html_styles() -> str:
   .legend-cb:checked::after, #select-all-cb:checked::after { content: ''; position: absolute; left: 3.5px; top: 1px; width: 4px; height: 7px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
   #select-all-cb:indeterminate { background: #4E79A7; border-color: #4E79A7; }
   #select-all-cb:indeterminate::after { content: ''; position: absolute; left: 2px; top: 5px; width: 8px; height: 2px; background: #fff; border: none; transform: none; }
+  /* Type/Tag filter panels */
+  #type-filter-wrap, #tag-filter-wrap { border-bottom: 1px solid #2a2a4e; }
+  .filter-section-header { display: flex; align-items: center; gap: 6px; padding: 10px 14px; cursor: pointer; user-select: none; }
+  .filter-section-header:hover { background: #1e1e36; }
+  .filter-section-header h3 { font-size: 13px; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; flex: 1; }
+  .filter-chevron { color: #666; font-size: 10px; transition: transform 0.15s; display: inline-block; }
+  .filter-wrap.collapsed .filter-chevron { transform: rotate(-90deg); }
+  .filter-wrap.collapsed .filter-body { display: none; }
+  .filter-body { max-height: 200px; overflow-y: auto; padding: 4px 12px 8px; }
+  .filter-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; border-radius: 4px; font-size: 12px; }
+  .filter-item:hover { background: #2a2a4e; padding-left: 4px; }
+  .filter-cb { appearance: none; -webkit-appearance: none; width: 14px; height: 14px; border: 1.5px solid #3a3a5e; border-radius: 3px; background: #0f0f1a; cursor: pointer; position: relative; flex-shrink: 0; }
+  .filter-cb:checked { background: #4E79A7; border-color: #4E79A7; }
+  .filter-cb:checked::after { content: ''; position: absolute; left: 3.5px; top: 1px; width: 4px; height: 7px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  .filter-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .filter-count { color: #666; font-size: 11px; }
+  .filter-empty { padding: 8px 0; font-size: 12px; color: #555; font-style: italic; text-align: center; }
+  #only-tagged-wrap { padding: 4px 12px 8px; }
+  #only-tagged-wrap label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 11px; color: #aaa; user-select: none; }
+  #only-tagged-wrap label:hover { color: #e0e0e0; }
+  #only-tagged-wrap input { appearance: none; -webkit-appearance: none; width: 14px; height: 14px; border: 1.5px solid #3a3a5e; border-radius: 3px; background: #0f0f1a; cursor: pointer; position: relative; flex-shrink: 0; }
+  #only-tagged-wrap input:checked { background: #4E79A7; border-color: #4E79A7; }
+  #only-tagged-wrap input:checked::after { content: ''; position: absolute; left: 3.5px; top: 1px; width: 4px; height: 7px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
   /* Review Queue panel */
   #review-wrap { border-bottom: 1px solid #2a2a4e; }
   #review-header { display: flex; align-items: center; gap: 6px; padding: 10px 14px; cursor: pointer; user-select: none; }
@@ -311,11 +347,13 @@ renderReviewList();
 </script>"""
 
 
-def _html_script(nodes_json: str, edges_json: str, legend_json: str) -> str:
+def _html_script(nodes_json: str, edges_json: str, legend_json: str, type_index_json: str, tag_index_json: str) -> str:
     return f"""<script>
 const RAW_NODES = {nodes_json};
 const RAW_EDGES = {edges_json};
 const LEGEND = {legend_json};
+const TYPE_INDEX = {type_index_json};
+const TAG_INDEX = {tag_index_json};
 
 // HTML-escape helper — prevents XSS when injecting graph data into innerHTML
 function esc(s) {{
@@ -328,6 +366,7 @@ const nodesDS = new vis.DataSet(RAW_NODES.map(n => ({{
   font: n.font, title: n.title,
   _community: n.community, _community_name: n.community_name,
   _source_file: n.source_file, _file_type: n.file_type, _degree: n.degree,
+  _tags: n.tags || [], _node_kind: n.node_kind || '',
 }})));
 
 const edgesDS = new vis.DataSet(RAW_EDGES.map((e, i) => ({{
@@ -379,9 +418,14 @@ function showInfo(nodeId) {{
     const color = nb ? nb.color.background : '#555';
     return `<span class="neighbor-link" style="border-left-color:${{esc(color)}}" data-nid="${{esc(nid)}}">${{esc(nb ? nb.label : nid)}}</span>`;
   }}).join('');
+  const tagsHtml = (n._tags && n._tags.length)
+    ? `<div class="field">标签: ${{esc(n._tags.join(', '))}}</div>` : '';
+  const kindHtml = n._node_kind ? `<div class="field">节点种类: ${{esc(n._node_kind)}}</div>` : '';
   document.getElementById('info-content').innerHTML = `
     <div class="field"><b>${{esc(n.label)}}</b></div>
     <div class="field">类型: ${{esc(n._file_type || '未知')}}</div>
+    ${{kindHtml}}
+    ${{tagsHtml}}
     <div class="field">社区: ${{esc(n._community_name)}}</div>
     <div class="field">来源: ${{esc(n._source_file || '-')}}</div>
     <div class="field">连接数: ${{n._degree}}</div>
@@ -462,8 +506,112 @@ document.addEventListener('click', e => {{
     searchResults.style.display = 'none';
 }});
 
+// ── Unified filter system ──────────────────────────────────────────
+// Three filter dimensions (file_type, tags, community) intersect: a node
+// is visible only if it passes ALL three. Each works as exclusion
+// (uncheck = hide). Additionally, "仅显示带标签节点" hides all
+// tagless nodes so tagged subsets (ddd, swagger) are isolatable.
 const hiddenCommunities = new Set();
+const TYPE_ACTIVE = {{}};   // file_type -> bool
+const TAG_ACTIVE = {{}};      // tag -> bool
+let tagOnlyTagged = false;
 
+TYPE_INDEX.forEach(t => {{ TYPE_ACTIVE[t.type] = true; }});
+TAG_INDEX.forEach(t => {{ TAG_ACTIVE[t.tag] = true; }});
+
+function isNodeHidden(n) {{
+  if (!TYPE_ACTIVE[n.file_type]) return true;
+  if (hiddenCommunities.has(n.community)) return true;
+  const tags = n.tags || [];
+  if (tagOnlyTagged && tags.length === 0) return true;
+  if (tags.length > 0 && tags.some(t => !TAG_ACTIVE[t])) return true;
+  return false;
+}}
+
+function applyFilters() {{
+  const updates = RAW_NODES.map(n => ({{ id: n.id, hidden: isNodeHidden(n) }}));
+  nodesDS.update(updates);
+  updateStats();
+}}
+
+function updateStats() {{
+  const visible = RAW_NODES.filter(n => !isNodeHidden(n)).length;
+  const el = document.getElementById('stats');
+  if (el) el.textContent = visible + ' / ' + RAW_NODES.length
+    + ' 节点 &middot; ' + RAW_EDGES.length + ' 条边 &middot; '
+    + LEGEND.length + ' 个社区';
+}}
+
+// ── Type filter panel ──
+function renderTypePanel() {{
+  const container = document.getElementById('type-filter');
+  if (!container) return;
+  container.innerHTML = '';
+  TYPE_INDEX.forEach(t => {{
+    const item = document.createElement('div');
+    item.className = 'filter-item';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'filter-cb';
+    cb.checked = TYPE_ACTIVE[t.type];
+    cb.addEventListener('change', (e) => {{
+      e.stopPropagation();
+      TYPE_ACTIVE[t.type] = cb.checked;
+      applyFilters();
+    }});
+    item.innerHTML = `<span class="filter-label">${{t.type}}</span><span class="filter-count">${{t.count}}</span>`;
+    item.prepend(cb);
+    item.onclick = (e) => {{
+      if (e.target === cb) return;
+      cb.checked = !cb.checked;
+      cb.dispatchEvent(new Event('change'));
+    }};
+    container.appendChild(item);
+  }});
+}}
+
+// ── Tag filter panel ──
+function renderTagPanel() {{
+  const container = document.getElementById('tag-filter');
+  if (!container) return;
+  container.innerHTML = '';
+  if (TAG_INDEX.length === 0) {{
+    container.innerHTML = '<div class="filter-empty">暂无标签</div>';
+    return;
+  }}
+  TAG_INDEX.forEach(t => {{
+    const item = document.createElement('div');
+    item.className = 'filter-item';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'filter-cb';
+    cb.checked = TAG_ACTIVE[t.tag];
+    cb.addEventListener('change', (e) => {{
+      e.stopPropagation();
+      TAG_ACTIVE[t.tag] = cb.checked;
+      applyFilters();
+    }});
+    item.innerHTML = `<span class="filter-label">${{t.tag}}</span><span class="filter-count">${{t.count}}</span>`;
+    item.prepend(cb);
+    item.onclick = (e) => {{
+      if (e.target === cb) return;
+      cb.checked = !cb.checked;
+      cb.dispatchEvent(new Event('change'));
+    }};
+    container.appendChild(item);
+  }});
+}}
+
+// ── "Only tagged nodes" toggle ──
+const onlyTaggedCb = document.getElementById('only-tagged-cb');
+if (onlyTaggedCb) {{
+  onlyTaggedCb.addEventListener('change', () => {{
+    tagOnlyTagged = onlyTaggedCb.checked;
+    applyFilters();
+  }});
+}}
+
+// ── Community filter (refactored to use applyFilters) ──
 const selectAllCb = document.getElementById('select-all-cb');
 
 function updateSelectAllState() {{
@@ -483,8 +631,7 @@ function toggleAllCommunities(hide) {{
   LEGEND.forEach(c => {{
     if (hide) hiddenCommunities.add(c.cid); else hiddenCommunities.delete(c.cid);
   }});
-  const updates = RAW_NODES.map(n => ({{ id: n.id, hidden: hide }}));
-  nodesDS.update(updates);
+  applyFilters();
   updateSelectAllState();
 }}
 
@@ -505,10 +652,7 @@ LEGEND.forEach(c => {{
       hiddenCommunities.add(c.cid);
       item.classList.add('dimmed');
     }}
-    const updates = RAW_NODES
-      .filter(n => n.community === c.cid)
-      .map(n => ({{ id: n.id, hidden: !cb.checked }}));
-    nodesDS.update(updates);
+    applyFilters();
     updateSelectAllState();
   }});
   item.innerHTML = `<div class="legend-dot" style="background:${{c.color}}"></div>
@@ -522,6 +666,11 @@ LEGEND.forEach(c => {{
   }};
   legendEl.appendChild(item);
 }});
+
+// ── Initialize panels ──
+renderTypePanel();
+renderTagPanel();
+updateStats();
 </script>"""
 
 
@@ -607,9 +756,29 @@ def to_html(
             import networkx as _nx
             print(f"Graph has {G.number_of_nodes()} nodes (above {limit} limit). Building aggregated community view...")
             node_to_community = {nid: cid for cid, members in communities.items() for nid in members}
+            # Compute dominant file_type and aggregated tags per community so
+            # the meta-graph nodes carry type/tag attributes for the filter
+            # panels (dominant type = most common among members; tags = union).
+            ft_by_comm: dict[int, _Counter] = {}
+            tags_by_comm: dict[int, set[str]] = {}
+            for nid, cid in node_to_community.items():
+                ndata = G.nodes[nid]
+                ft = ndata.get("file_type", "")
+                if ft:
+                    ft_by_comm.setdefault(cid, _Counter())[ft] += 1
+                node_tags = ndata.get("tags")
+                if node_tags:
+                    tags_by_comm.setdefault(cid, set()).update(node_tags)
             meta = _nx.Graph()
             for cid, members in communities.items():
-                meta.add_node(str(cid), label=(community_labels or {}).get(cid, f"Community {cid}"))
+                ft_counts = ft_by_comm.get(cid)
+                dom_ft = ft_counts.most_common(1)[0][0] if ft_counts else ""
+                agg_tags = sorted(tags_by_comm.get(cid, set()))
+                meta.add_node(str(cid),
+                    label=(community_labels or {}).get(cid, f"Community {cid}"),
+                    file_type=dom_ft,
+                    tags=agg_tags,
+                )
             edge_counts = _Counter()
             for u, v in G.edges():
                 cu, cv = node_to_community.get(u), node_to_community.get(v)
@@ -706,6 +875,8 @@ def to_html(
             "community_name": sanitize_label((community_labels or {}).get(cid, f"Community {cid}")),
             "source_file": sanitize_label(str(data.get("source_file") or "")),
             "file_type": data.get("file_type", ""),
+            "tags": [_normalize_tag(t) for t in (data.get("tags") or [])],
+            "node_kind": data.get("node_kind", ""),
             "degree": deg,
         }
         # Conditional learning fields — only present for annotated nodes, so
@@ -739,6 +910,20 @@ def to_html(
                 lesson += " [code changed — re-verify]"
             node["title"] = _html.escape(label) + "\n" + _html.escape(sanitize_label(lesson))
         vis_nodes.append(node)
+
+    # Pre-aggregate type and tag indices for the filter panels. Done here
+    # (server-side) so the frontend doesn't scan all nodes on load.
+    from collections import Counter as _Cnt
+    _ft_counts: _Cnt = _Cnt()
+    _tag_counts: _Cnt = _Cnt()
+    for _vn in vis_nodes:
+        _ft = _vn.get("file_type", "")
+        if _ft:
+            _ft_counts[_ft] += 1
+        for _t in _vn.get("tags", []):
+            _tag_counts[_t] += 1
+    type_index = [{"type": ft, "count": c} for ft, c in _ft_counts.most_common()]
+    tag_index = [{"tag": t, "count": c} for t, c in _tag_counts.most_common()]
 
     # Build edges list. Restore original edge direction from _src/_tgt
     # (stashed by build.py for exactly this reason): undirected NetworkX
@@ -826,6 +1011,27 @@ def to_html(
     <h3>节点信息</h3>
     <div id="info-content"><span class="empty">点击节点查看详情</span></div>
   </div>
+  <div id="type-filter-wrap" class="filter-wrap">
+    <div class="filter-section-header" onclick="document.getElementById('type-filter-wrap').classList.toggle('collapsed')">
+      <span class="filter-chevron">&#9660;</span>
+      <h3>数据类型</h3>
+    </div>
+    <div class="filter-body">
+      <div id="type-filter"></div>
+    </div>
+  </div>
+  <div id="tag-filter-wrap" class="filter-wrap">
+    <div class="filter-section-header" onclick="document.getElementById('tag-filter-wrap').classList.toggle('collapsed')">
+      <span class="filter-chevron">&#9660;</span>
+      <h3>标签</h3>
+    </div>
+    <div class="filter-body">
+      <div id="only-tagged-wrap">
+        <label><input type="checkbox" id="only-tagged-cb">仅显示带标签节点</label>
+      </div>
+      <div id="tag-filter"></div>
+    </div>
+  </div>
   <div id="review-wrap">
     <div id="review-header" onclick="toggleReview()">
       <span class="review-chevron">&#9660;</span>
@@ -849,7 +1055,7 @@ def to_html(
   </div>
   <div id="stats">{stats}</div>
 </div>
-{_html_script(nodes_json, edges_json, legend_json)}
+{_html_script(nodes_json, edges_json, legend_json, _js_safe(type_index), _js_safe(tag_index))}
 {_review_queue_script(review_json)}
 {_hyperedge_script(hyperedges_json)}
 </body>
