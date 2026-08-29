@@ -955,6 +955,375 @@ def _load_review_queue(out_dir: Path) -> list[dict]:
     return items
 
 
+# ---------------------------------------------------------------------------
+# Active project registry + unified check
+# ---------------------------------------------------------------------------
+
+_ACTIVE_PROJECTS = Path.home() / ".graphify" / "active-projects.json"
+_ACTIVE_MAX_AGE_DAYS = 30  # entries older than this are pruned on load
+
+
+def _load_active_projects() -> list[Path]:
+    """Load the list of recently-active project dirs.
+
+    Each entry is ``{"path": <abs_path>, "last_seen": <ISO timestamp>}``.
+    Entries whose ``last_seen`` is older than ``_ACTIVE_MAX_AGE_DAYS`` days
+    or whose path no longer exists are pruned.
+    """
+    if not _ACTIVE_PROJECTS.exists():
+        return []
+    try:
+        data = json.loads(_ACTIVE_PROJECTS.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    import datetime as _dt
+    now = _dt.datetime.now(_dt.timezone.utc)
+    cutoff = now - _dt.timedelta(days=_ACTIVE_MAX_AGE_DAYS)
+    result: list[Path] = []
+    pruned: list[dict] = []
+    for entry in data.get("projects", []):
+        if not isinstance(entry, dict):
+            continue
+        p = entry.get("path", "")
+        ts = entry.get("last_seen", "")
+        if not p or not Path(p).exists():
+            continue
+        try:
+            seen = _dt.datetime.fromisoformat(ts)
+        except Exception:
+            seen = cutoff  # malformed → treat as stale
+        if seen < cutoff:
+            continue
+        pruned.append(entry)
+        result.append(Path(p))
+    # Write back the pruned list (best-effort).
+    if len(pruned) != len(data.get("projects", [])):
+        try:
+            _ACTIVE_PROJECTS.write_text(
+                json.dumps({"projects": pruned}, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+        except Exception:
+            pass
+    return result
+
+
+def _touch_active_project(project_dir: Path) -> None:
+    """Record that ``project_dir`` was just seen active (SessionStart hook).
+
+    Updates ``last_seen`` timestamp or adds a new entry. Idempotent and
+    best-effort — never fails the session.
+    """
+    project_dir = project_dir.resolve()
+    p_str = str(project_dir)
+    import datetime as _dt
+    now_iso = _dt.datetime.now(_dt.timezone.utc).isoformat()
+    try:
+        data = {"projects": []}
+        if _ACTIVE_PROJECTS.exists():
+            data = json.loads(_ACTIVE_PROJECTS.read_text(encoding="utf-8"))
+        found = False
+        for entry in data.get("projects", []):
+            if isinstance(entry, dict) and entry.get("path") == p_str:
+                entry["last_seen"] = now_iso
+                found = True
+                break
+        if not found:
+            data.setdefault("projects", []).append({"path": p_str, "last_seen": now_iso})
+        _ACTIVE_PROJECTS.parent.mkdir(parents=True, exist_ok=True)
+        _ACTIVE_PROJECTS.write_text(
+            json.dumps(data, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+    except Exception:
+        pass  # best-effort — never block session
+
+
+def _check_single_project(
+    graph_path: Path, *, no_check: bool = False, detach: bool = True,
+    full: bool = False,
+) -> None:
+    """Check one project's embedding staleness and refresh if stale.
+
+    - ``no_check=True``: skip detection, just refresh (internal detach child).
+    - ``full=True``: force full rebuild (weekly scheduled task, after check).
+    - ``detach=True``: refresh runs in background (SessionStart hook path).
+    - ``detach=False``: refresh runs synchronously (weekly --all path).
+    """
+    graph_dir = graph_path.parent
+
+    from graphify.hybrid_scorer import _load_embed_config_from_graphifyrc
+    rc_cfg = _load_embed_config_from_graphifyrc(graph_dir)
+    if not rc_cfg.get("embed_backend", "").strip():
+        return  # no backend → skip
+
+    if no_check:
+        _do_embedding_refresh(str(graph_path), full=full)
+        return
+
+    meta_path = graph_dir / "embeddings" / "embedding.meta.json"
+    npy_path = graph_dir / "embeddings" / "embedding.npy"
+    index_path = graph_dir / "embeddings" / "embedding.index.json"
+
+    # Fast path 1: no sidecar → needs generation.
+    if not meta_path.exists() or not npy_path.exists() or not index_path.exists():
+        print("[graphify] Embedding sidecar missing. Refreshing...")
+        if detach:
+            _launch_embedding_refresh(graph_dir)
+        else:
+            _do_embedding_refresh(str(graph_path), full=full)
+        return
+
+    # Fast path 2: mtime pre-check. If meta is newer than graph, embedding is
+    # almost certainly fresh. This covers the common case (no changes since last
+    # build) in <1ms. The reverse (graph newer) does NOT immediately mean stale
+    # — a git pull can reset mtimes without content change. Fall through to the
+    # commit comparison, which is the authoritative staleness signal.
+    graph_is_newer = False
+    try:
+        graph_mtime = graph_path.stat().st_mtime
+        meta_mtime = meta_path.stat().st_mtime
+        if meta_mtime >= graph_mtime:
+            return  # fresh
+        graph_is_newer = True
+    except OSError:
+        pass
+
+    # Slow path: commit comparison.
+    try:
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        graph_data = json.loads(graph_path.read_text(encoding="utf-8"))
+    except Exception:
+        return
+
+    meta_commit = meta.get("graph_commit", "")
+    graph_commit = graph_data.get("built_at_commit", "")
+    graph_node_count = len(graph_data.get("nodes", []))
+    meta_node_count = meta.get("node_count", -1)
+
+    # Staleness detection:
+    # 1. Commit mismatch (different commits) → stale. Covers: new commit, git pull.
+    # 2. graph.json is newer than meta AND commit is the same → stale. Covers:
+    #    the case where graph.json was rebuilt at the same commit (e.g. after
+    #    `graphify update` or a failed embedding refresh) but the embedding
+    #    sidecar was not regenerated (API failure / skip). The mtime delta is
+    #    the only signal here — the commit is identical so commit comparison
+    #    alone would miss it.
+    # 3. Non-git project (empty commit on both sides): fall back to node-count
+    #    comparison. Covers: node added/removed. Misses desc-only changes (same
+    #    count), but the graph_is_newer flag from the mtime check catches this.
+    stale = (
+        (meta_commit and graph_commit and meta_commit != graph_commit)
+        or (graph_is_newer and meta_commit == graph_commit)
+        or (not meta_commit and not graph_commit and meta_node_count != graph_node_count)
+        or (graph_is_newer and not meta_commit and not graph_commit)
+    )
+    if stale:
+        if full:
+            print("[graphify] Embedding is stale. Full rebuild...")
+        else:
+            print("[graphify] Embedding is stale. Refreshing...")
+        if detach:
+            _launch_embedding_refresh(graph_dir)
+        else:
+            _do_embedding_refresh(str(graph_path), full=full)
+
+
+def _do_embedding_refresh(graph_path: str, *, full: bool = False) -> None:
+    """Execute the embedding refresh synchronously.
+
+    Called by ``graphify check`` when staleness is detected. When invoked from
+    the SessionStart hook, the caller has already detached this process via
+    ``_launch_embedding_refresh`` so the session is not blocked.
+    """
+    from graphify.embeddings import generate_embeddings_incremental
+    try:
+        result = generate_embeddings_incremental(Path(graph_path), full=full)
+        if result is not None:
+            _mode = "full" if full else "incremental"
+            print(f"[graphify] Embedding refreshed ({_mode}): {result}")
+        else:
+            print("[graphify] Embedding backend not configured — skipped.")
+    except Exception as exc:
+        print(f"[graphify] Embedding refresh failed: {exc}", file=sys.stderr)
+
+
+def _launch_embedding_refresh(graph_dir: Path) -> None:
+    """Launch a detached background ``graphify check --no-check`` process.
+
+    Mirrors hooks._detached_launch: the session must not block on embedding
+    generation (which may take seconds to minutes depending on how many
+    nodes changed). The child writes its output to
+    ``~/.cache/graphify-embedding-refresh.log``.
+    """
+    import os as _os
+    import subprocess as _sp
+    import sys as _sys
+
+    # Resolve the graphify exe so the detached child can find itself even
+    # when PATH is minimal (GUI clients, CI runners).
+    from graphify.install import _resolve_graphify_exe
+    exe = _resolve_graphify_exe()
+    if not exe:
+        # Fallback to the bare launcher name.
+        exe = "graphify"
+
+    log_path = Path.home() / ".cache" / "graphify-embedding-refresh.log"
+    try:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        log_fd = open(log_path, "a", buffering=1, encoding="utf-8", errors="replace")
+    except OSError:
+        log_fd = _sp.DEVNULL  # type: ignore[assignment]
+
+    env = dict(_os.environ)
+    # Pass GRAPHIFY_OUT as-is (the child's cwd is set to graph_dir.parent,
+    # so a relative GRAPHIFY_OUT resolves correctly against that cwd).
+    # Don't try to relativize — is_relative_to fails for relative-vs-absolute
+    # comparisons, and the child already has the right cwd.
+    from graphify.paths import GRAPHIFY_OUT as _DEFAULT_OUT
+    env["GRAPHIFY_OUT"] = _os.environ.get("GRAPHIFY_OUT", _DEFAULT_OUT)
+
+    cmd_list = [exe, "check", "--no-check"]
+    try:
+        if _os.name == "nt":
+            _flags = 0x08000000 | 0x00000200  # CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP
+            try:
+                _sp.Popen(cmd_list, creationflags=_flags | 0x01000000,
+                           stdout=log_fd, stderr=_sp.STDOUT, stdin=_sp.DEVNULL,
+                           cwd=str(graph_dir.parent), env=env, close_fds=True)
+            except OSError:
+                _sp.Popen(cmd_list, creationflags=_flags,
+                           stdout=log_fd, stderr=_sp.STDOUT, stdin=_sp.DEVNULL,
+                           cwd=str(graph_dir.parent), env=env, close_fds=True)
+        else:
+            _sp.Popen(cmd_list, start_new_session=True,
+                       stdout=log_fd, stderr=_sp.STDOUT, stdin=_sp.DEVNULL,
+                       cwd=str(graph_dir.parent), env=env, close_fds=True)
+    except Exception:
+        # Detached launch failed — the session continues; the next check
+        # will retry. Do not crash the session.
+        pass
+
+
+# ---------------------------------------------------------------------------
+# Scheduled weekly task (Windows Task Scheduler / cron)
+# ---------------------------------------------------------------------------
+
+_SCHEDULE_TASK_NAME = "graphify-daily"
+_SCHEDULE_CRON_MARKER = "# graphify-daily"
+
+
+def _is_wsl() -> bool:
+    """True if running inside WSL."""
+    try:
+        with open("/proc/version", encoding="utf-8") as f:
+            return "microsoft" in f.read().lower()
+    except Exception:
+        return False
+
+
+def _random_daily_time() -> tuple[str, str]:
+    """Pick a random time daily between 0:00 and 5:59.
+
+    Spreads load so team members hitting the same embedding API don't
+    all fire at once. Returns (hour, minute) as zero-padded strings.
+    """
+    import random as _r
+    import time as _t
+    _r.seed(int(_t.time()))
+    hour = _r.randint(0, 5)
+    minute = _r.randint(0, 59)
+    return f"{hour:02d}", f"{minute:02d}"
+
+
+def _schedule_register(exe: str) -> None:
+    """Register a DAILY scheduled task at a random 0:00~5:59 time.
+
+    The task runs ``graphify check --all`` which iterates the active-projects
+    list and does a full rebuild for any stale project. Only ONE global task
+    is registered. Windows uses schtasks; WSL/POSIX uses cron.
+    """
+    import subprocess as _sp
+    hour, minute = _random_daily_time()
+    cmd_str = f'"{exe}" check --all'
+
+    if os.name == "nt":
+        # Windows Task Scheduler: /sc daily
+        log_path = str(Path.home() / ".cache" / "graphify-daily.log")
+        tr = f'{cmd_str} >> "{log_path}" 2>&1'
+        try:
+            _sp.run(
+                ["schtasks", "/create", "/tn", _SCHEDULE_TASK_NAME,
+                 "/tr", f'cmd /c "{tr}"',
+                 "/sc", "daily", "/st", f"{hour}:{minute}", "/f"],
+                check=True, capture_output=True, text=True,
+            )
+            print(f"  Daily task registered: every day at {hour}:{minute}")
+            print(f"  Command: {cmd_str}")
+            print(f"  Log: {log_path}")
+        except Exception as exc:
+            print(f"  Warning: could not register scheduled task: {exc}", file=sys.stderr)
+    else:
+        # cron: minute hour * * *
+        cron_line = f"{minute} {hour} * * * {cmd_str} >> ~/.cache/graphify-daily.log 2>&1"
+        try:
+            existing = _sp.run(["crontab", "-l"], capture_output=True, text=True).stdout
+        except Exception:
+            existing = ""
+        lines = [
+            l for l in existing.splitlines()
+            if _SCHEDULE_CRON_MARKER not in l and "graphify check --all" not in l
+        ]
+        lines.append(f"{cron_line}  {_SCHEDULE_CRON_MARKER}")
+        _sp.run(["crontab", "-"], input="\n".join(lines) + "\n", text=True, check=True)
+        print(f"  Daily cron task registered: every day at {hour}:{minute}")
+        print(f"  Command: {cmd_str}")
+
+
+def _schedule_unregister() -> None:
+    """Remove the scheduled task."""
+    import subprocess as _sp
+    if os.name == "nt":
+        try:
+            _sp.run(["schtasks", "/delete", "/tn", _SCHEDULE_TASK_NAME, "/f"],
+                    capture_output=True, text=True)
+            print(f"  Scheduled task '{_SCHEDULE_TASK_NAME}' removed.")
+        except Exception:
+            print("  No scheduled task found.")
+    else:
+        try:
+            existing = _sp.run(["crontab", "-l"], capture_output=True, text=True).stdout
+        except Exception:
+            existing = ""
+        lines = [
+            l for l in existing.splitlines()
+            if _SCHEDULE_CRON_MARKER not in l and "graphify check --all" not in l
+        ]
+        _sp.run(["crontab", "-"], input="\n".join(lines) + "\n", text=True)
+        print("  Cron task removed.")
+
+
+def _schedule_status(exe: str) -> None:
+    """Check if the scheduled task is registered."""
+    import subprocess as _sp
+    if os.name == "nt":
+        r = _sp.run(["schtasks", "/query", "/tn", _SCHEDULE_TASK_NAME],
+                     capture_output=True, text=True)
+        if r.returncode == 0:
+            print(f"  Scheduled task '{_SCHEDULE_TASK_NAME}' is registered.")
+        else:
+            print(f"  Scheduled task '{_SCHEDULE_TASK_NAME}' is NOT registered.")
+    else:
+        try:
+            existing = _sp.run(["crontab", "-l"], capture_output=True, text=True).stdout
+        except Exception:
+            existing = ""
+        if _SCHEDULE_CRON_MARKER in existing or "graphify check --all" in existing:
+            print("  Cron task is registered.")
+        else:
+            print("  Cron task is NOT registered.")
+
+
 def dispatch_command(cmd: str) -> None:
     if cmd == "provider":
         from graphify.llm import _custom_providers_path, BACKENDS
@@ -2382,6 +2751,61 @@ def dispatch_command(cmd: str) -> None:
                 file=sys.stderr,
             )
             sys.exit(1)
+
+    elif cmd == "check":
+        # Single unified command. Same detection logic everywhere.
+        #
+        # Modes (internal):
+        #   graphify check            — SessionStart hook: detect + refresh (incremental, detach)
+        #   graphify check --all      — weekly scheduled task: iterate active projects, full rebuild if stale
+        #   graphify check --no-check — internal detach child: skip detection, just refresh
+        _all = "--all" in sys.argv[2:]
+        _no_check = "--no-check" in sys.argv[2:]
+
+        if _all:
+            # Weekly scheduled task: iterate all active projects.
+            # For each: check staleness, if stale do a FULL rebuild (兜底对齐).
+            projects = _load_active_projects()
+            for proj_dir in projects:
+                proj_graph = proj_dir / _GRAPHIFY_OUT / "graph.json"
+                if not proj_graph.exists():
+                    continue
+                print(f"[graphify] Weekly check: {proj_dir}")
+                _check_single_project(proj_graph, detach=False, full=True)
+            sys.exit(0)
+
+        graph_path = _default_graph_path()
+        if not graph_path.exists():
+            sys.exit(0)
+
+        # SessionStart hook: record this project as active (< 1ms).
+        _touch_active_project(Path.cwd())
+
+        _check_single_project(Path(graph_path), no_check=_no_check, detach=True)
+        sys.exit(0)
+
+    elif cmd == "schedule":
+        # Register / unregister / check a WEEKLY scheduled task that runs
+        # `graphify check --all` on Monday at a random time between 0:00~5:59.
+        # This is a full-rebuild 兜底 for any incremental miss during the week.
+        # Only ONE global task is registered; it iterates the active-projects
+        # list maintained by the SessionStart hook.
+        #
+        # Auto-registered during `graphify install` / `graphify codeagent install`.
+        subcmd = sys.argv[2] if len(sys.argv) > 2 else "register"
+
+        from graphify.install import _resolve_graphify_exe
+        exe = _resolve_graphify_exe() or "graphify"
+
+        if subcmd == "status":
+            _schedule_status(exe)
+            sys.exit(0)
+        elif subcmd == "unregister":
+            _schedule_unregister()
+            sys.exit(0)
+        else:  # register
+            _schedule_register(exe)
+            sys.exit(0)
 
     elif cmd == "hook-check":
         # Codex Desktop rejects hookSpecificOutput.additionalContext on PreToolUse.
@@ -3955,11 +4379,8 @@ def dispatch_command(cmd: str) -> None:
 
                 # Minimal progress callback so the CLI is no longer silent
                 # during long local-inference runs (issue #792 addendum).
-                # Also track per-chunk success so we can fail loudly when
-                # every chunk errors (e.g. missing backend SDK package).
-                _chunk_stats = {"total": 0, "succeeded": 0}
+                _chunk_stats = {"succeeded": 0}
                 def _progress(idx: int, total: int, _result: dict) -> None:
-                    _chunk_stats["total"] = total
                     _chunk_stats["succeeded"] += 1
                     print(
                         f"[graphify extract] chunk {idx + 1}/{total} done",
@@ -3967,11 +4388,112 @@ def dispatch_command(cmd: str) -> None:
                     )
                 corpus_kwargs["on_chunk_done"] = _progress
 
+                # --- Gap-4: prompt registry — group uncached files by custom
+                # prompt spec. Each group forms its own LLM chunk(s) with its
+                # system prompt. Unmatched files go to the default group (None
+                # spec → _EXTRACTION_SYSTEM). mode=merge runs the custom prompt
+                # then the default prompt, doubling LLM cost but complementing
+                # domain-specific extraction with general-purpose semantics.
+                from graphify.prompt_registry import (
+                    load_all_prompts as _load_prompts,
+                    group_by_prompt as _group_by_prompt,
+                )
+                from graphify.llm import (
+                    _partial_source_files as _partial_sf,
+                    _strip_partial_markers as _strip_partial,
+                )
+                from graphify.validate import validate_prompt_schema as _validate_schema
+                # Load built-in prompts (graphify/prompts/) + project-level
+                # (.graph/extension/prompts/). Project-level specs are prepended
+                # so first-match-wins favours the project's override.
+                _prompt_specs = _load_prompts()
+                _uncached_files = [Path(p) for p in uncached_paths]
+                _prompt_groups = _group_by_prompt(
+                    _uncached_files, target, _prompt_specs
+                )
+
+                fresh: dict = {
+                    "nodes": [], "edges": [], "hyperedges": [],
+                    "input_tokens": 0, "output_tokens": 0,
+                }
+                _total_failed_chunks = 0
                 try:
-                    fresh = _extract_corpus_parallel(
-                        [Path(p) for p in uncached_paths],
-                        **corpus_kwargs,
-                    )
+                    for _spec, _group_files in _prompt_groups.items():
+                        _sys_prompt = _spec.prompt if _spec is not None else None
+                        if _spec is not None:
+                            print(
+                                f"[graphify extract] {len(_group_files)} file(s) "
+                                f"matched prompt '{_spec.name}' (mode={_spec.mode})",
+                                file=sys.stderr,
+                            )
+                        _group_result = _extract_corpus_parallel(
+                            _group_files,
+                            **corpus_kwargs,
+                            system_prompt=_sys_prompt,
+                        )
+                        _total_failed_chunks += _group_result.get("failed_chunks", 0)
+
+                        # mode=merge: also run the default prompt on the same files
+                        if _spec is not None and _spec.mode == "merge":
+                            _default_result = _extract_corpus_parallel(
+                                _group_files,
+                                **corpus_kwargs,
+                                system_prompt=None,
+                            )
+                            _total_failed_chunks += _default_result.get("failed_chunks", 0)
+                            for _k in ("nodes", "edges", "hyperedges"):
+                                _group_result[_k].extend(_default_result.get(_k, []))
+                            _group_result["input_tokens"] += _default_result.get("input_tokens", 0)
+                            _group_result["output_tokens"] += _default_result.get("output_tokens", 0)
+
+                        # Gap-4: validate against spec's output_schema if present
+                        if _spec is not None and _spec.output_schema:
+                            _schema_errors = _validate_schema(_group_result, _spec.output_schema)
+                            if _schema_errors:
+                                print(
+                                    f"[graphify extract] prompt '{_spec.name}' "
+                                    f"produced {len(_schema_errors)} schema violation(s): "
+                                    f"{'; '.join(_schema_errors[:3])}{'...' if len(_schema_errors) > 3 else ''}",
+                                    file=sys.stderr,
+                                )
+
+                        # BUG 3 fix: write cache per-group with the correct
+                        # prompt fingerprint so editing a custom prompt
+                        # invalidates its matched files' cache entries (#1939).
+                        _group_prompt_for_cache = (
+                            _sys_prompt if _sys_prompt is not None else sem_prompt
+                        )
+                        _group_paths_str = [str(p) for p in _group_files]
+                        _dropped_files, _dropped_items = _scope_semantic_result(
+                            _group_result, target, _group_paths_str,
+                        )
+                        if _dropped_files:
+                            print(
+                                f"[graphify extract] dropped {_dropped_items} out-of-scope "
+                                f"item(s) attributed to {len(_dropped_files)} file(s) not "
+                                f"dispatched this run: {', '.join(sorted(_dropped_files))}"
+                            )
+                        _group_partial = set(_partial_sf(_group_result)) or None
+                        try:
+                            _save_semantic_cache(
+                                _group_result.get("nodes", []),
+                                _group_result.get("edges", []),
+                                _group_result.get("hyperedges", []),
+                                root=target,
+                                cache_root=out_root,
+                                allowed_source_files=_group_paths_str,
+                                mode=sem_cache_mode,
+                                prompt=_group_prompt_for_cache,
+                                partial_source_files=_group_partial,
+                            )
+                        except Exception as exc:
+                            print(f"[graphify extract] warning: could not write semantic cache: {exc}", file=sys.stderr)
+
+                        _strip_partial(_group_result)
+                        for _k in ("nodes", "edges", "hyperedges"):
+                            fresh[_k].extend(_group_result.get(_k, []))
+                        fresh["input_tokens"] += _group_result.get("input_tokens", 0)
+                        fresh["output_tokens"] += _group_result.get("output_tokens", 0)
                 except ImportError as exc:
                     print(f"error: {exc}", file=sys.stderr)
                     sys.exit(1)
@@ -4025,55 +4547,12 @@ def dispatch_command(cmd: str) -> None:
                             file=sys.stderr,
                         )
                         sys.exit(1)
-                # Some (but not all) chunks failed — the graph is missing nodes
-                # from the failed chunks, so it must not clobber a larger complete
-                # graph without an explicit --allow-partial override.
-                if _chunk_stats["total"] and _chunk_stats["succeeded"] < _chunk_stats["total"]:
+                # BUG 2 fix: use failed_chunks accumulator (summed across all
+                # groups) instead of _chunk_stats["total"] which was overwritten
+                # per-group. Any failed chunk means the graph is incomplete.
+                if _total_failed_chunks > 0:
                     _extraction_incomplete = True
-                # #2926: scope the fresh result to the files actually dispatched,
-                # mirroring the allowed_source_files guard the cache write below
-                # applies. A model can attribute stray nodes/edges to a corpus
-                # file that was not dispatched this run; build_merge() derives
-                # its replace-set from the source_files present in new chunks,
-                # so such a fragment would REPLACE that file's entire prior
-                # contribution in graph.json while its manifest entry still says
-                # unchanged — no later incremental run re-dispatches it and the
-                # loss is permanent until a full rebuild.
-                _dropped_files, _dropped_items = _scope_semantic_result(
-                    fresh, target, uncached_paths,
-                )
-                if _dropped_files:
-                    print(
-                        f"[graphify extract] dropped {_dropped_items} out-of-scope "
-                        f"item(s) attributed to {len(_dropped_files)} file(s) not "
-                        f"dispatched this run: {', '.join(sorted(_dropped_files))}"
-                    )
-                # Which files truncated this run (item markers + the empty-parse
-                # _partial_files set). Computed BEFORE the save so it can be passed
-                # as partial_source_files: without it, a file whose only truncated
-                # chunk parsed empty (so it has no item markers here) would be
-                # written as a complete cache entry, re-promoting it (#1950).
-                from graphify.llm import (
-                    _partial_source_files as _partial_sf,
-                    _strip_partial_markers as _strip_partial,
-                )
                 _partial_semantic_files = set(_partial_sf(fresh))
-                try:
-                    _save_semantic_cache(
-                        fresh.get("nodes", []),
-                        fresh.get("edges", []),
-                        fresh.get("hyperedges", []),
-                        root=target,
-                        cache_root=out_root,
-                        allowed_source_files=uncached_paths,
-                        mode=sem_cache_mode,
-                        prompt=sem_prompt,
-                        partial_source_files=_partial_semantic_files or None,
-                    )
-                except Exception as exc:
-                    print(f"[graphify extract] warning: could not write semantic cache: {exc}", file=sys.stderr)
-                # Strip the markers before the corpus feeds the graph so the
-                # internal flag never leaks into graph.json.
                 _strip_partial(fresh)
                 sem_result["nodes"].extend(fresh.get("nodes", []))
                 sem_result["edges"].extend(fresh.get("edges", []))

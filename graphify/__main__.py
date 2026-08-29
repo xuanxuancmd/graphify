@@ -87,6 +87,8 @@ from graphify.install import (  # noqa: E402,F401
     _uninstall_opencode_plugin,
     claude_install,
     claude_uninstall,
+    codeagent_install,
+    codeagent_uninstall,
     codebuddy_install,
     codebuddy_uninstall,
     gemini_install,
@@ -490,7 +492,7 @@ def _run_cli() -> None:
     # Skip during install/uninstall (hook writes trigger a fresh check anyway).
     # Skip during hook-check — it runs on every editor tool use and must be silent.
     # Deduplicate paths so platforms sharing the same install dir don't warn twice.
-    _silent_cmds = {"install", "uninstall", "hook-check", "hook-guard"}
+    _silent_cmds = {"install", "uninstall", "hook-check", "hook-guard", "check", "schedule"}
     if not any(arg in _silent_cmds for arg in sys.argv):
         # Resolve each platform's real user-scope destination so per-platform
         # overrides (gemini, opencode, devin, antigravity, amp) check the dir
@@ -506,7 +508,7 @@ def _run_cli() -> None:
         print("Usage: graphify <command>")
         print()
         print("Commands:")
-        print("  install [--platform P]  copy skill to platform config dir (claude|windows|codebuddy|codex|opencode|aider|amp|agents|claw|droid|trae|trae-cn|gemini|cursor|antigravity|hermes|kiro|pi|devin)")
+        print("  install [--platform P]  copy skill to platform config dir (claude|windows|codeagent|codebuddy|codex|opencode|aider|amp|agents|claw|droid|trae|trae-cn|gemini|cursor|antigravity|hermes|kiro|pi|devin)")
         print("  uninstall               remove graphify from all detected platforms in one shot")
         print("    --purge                 also delete .graph/ directory")
         print("  path \"A\" \"B\"            shortest path between two nodes in graph.json")
@@ -538,6 +540,10 @@ def _run_cli() -> None:
         print("    --force                 overwrite graph.json even if the rebuild has fewer nodes")
         print("                            (also: GRAPHIFY_FORCE=1 env var; use after refactors that delete code)")
         print("    --no-cluster            skip clustering, write raw extraction only")
+        print("  check                   [SessionStart hook] detect staleness, refresh in background if stale")
+        print("  schedule                register/unregister/status daily task (0:00~5:59 random)")
+        print("    --unregister           remove the scheduled task")
+        print("    --status              check if task is registered")
         print("  cluster-only <path>     rerun clustering on an existing graph.json and regenerate report")
         print("    --no-viz                skip graph.html generation (useful for >5000 node graphs / CI)")
         print("    --graph <path>          path to graph.json (default <path>/.graph/graph.json)")
@@ -637,6 +643,8 @@ def _run_cli() -> None:
         print("  claude uninstall        remove graphify section from CLAUDE.md + PreToolUse hook")
         print("  codebuddy install       write graphify section to CODEBUDDY.md + PreToolUse hook (CodeBuddy)")
         print("  codebuddy uninstall     remove graphify section from CODEBUDDY.md + PreToolUse hook")
+        print("  codeagent install       write graphify section to CLAUDE.md + PreToolUse + SessionStart hook (.cac)")
+        print("  codeagent uninstall     remove graphify section + hooks from .cac")
         print("  codex install           write graphify section to AGENTS.md (Codex)")
         print("  codex uninstall         remove graphify section from AGENTS.md")
         print(

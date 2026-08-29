@@ -1,14 +1,17 @@
 """Embedding generation and storage for hybrid semantic search.
 
-Build-time: generates per-node embeddings from ``desc`` (fallback ``label``),
-stored as a binary sidecar under ``.graph/embeddings/``. Query-time:
-loads the sidecar and embeds the query string for cosine similarity.
+Build-time: generates per-node embeddings from ``desc`` (fallback
+``rationale``), stored as a binary sidecar under ``.graph/embeddings/``.
+Query-time: loads the sidecar and embeds the query string for cosine
+similarity.
 
 Decoupled from extract.py / llm.py — called as a post-build step (CLI
-``--embed-backend``) and from serve.py at graph-load time. Text source: ONLY
-the ``desc`` field. ``norm_label`` / ``nid`` / ``source_file`` are NOT
-embedded — they stay in the lexical tier to avoid path-noise polluting the
-cosine similarity.
+``--embed-backend``) and from serve.py at graph-load time. Text source: the
+``desc`` field (docstring / first paragraph), falling back to ``rationale``
+(semantic design intent). When both are empty the node is skipped — it is
+still reachable at query time via the lexical / fuzzy tiers.
+``norm_label`` / ``nid`` / ``source_file`` are NOT embedded — they stay in
+the lexical tier to avoid path-noise polluting the cosine similarity.
 
 Backends supported (all via the OpenAI SDK's ``embeddings.create``):
     openai / gemini / kimi / deepseek / ollama / azure
@@ -27,8 +30,10 @@ from typing import Any
 
 import numpy as np
 
+from graphify.desc import _DESC_MAX_CHARS
+
 # ---------------------------------------------------------------------------
-# Node embed text: desc only (fallback to label)
+# Node embed text: desc → rationale → empty (skip)
 # ---------------------------------------------------------------------------
 
 
@@ -36,10 +41,15 @@ def _node_embed_text(node: dict) -> str:
     """The sole embedding text source.
 
     ``desc`` carries the semantic content (docstring for code, first paragraph
-    for docs). When desc is empty the label is used so every node still gets a
-    vector — a label-only vector is a weak signal (code identifiers are
-    camelCase symbols the embedding model does not split into words) but it
-    keeps the matrix rectangular.
+    for docs). When desc is empty, ``rationale`` (design intent extracted by the
+    Tier-2 LLM pass) is used instead — this gives semantic nodes (concept /
+    paper / image) a meaningful embedding rather than falling back to a short
+    label that produces a weak, high-false-positive vector.
+
+    When both desc and rationale are empty, returns ``""``. The caller filters
+    out empty-text nodes so they are not sent to the embedding API; at query
+    time those nodes are absent from the sidecar and are reached only via the
+    lexical / fuzzy tiers of ``_score_query`` (multi-route recall).
 
     ``norm_label`` / ``nid`` / ``source_file`` are deliberately excluded:
     path fragments pollute cosine similarity with directory-structure
@@ -49,7 +59,13 @@ def _node_embed_text(node: dict) -> str:
     desc = node.get("desc", "")
     if desc:
         return desc
-    return node.get("label", "")
+    rationale = node.get("rationale", "")
+    if rationale:
+        # Cap at the same limit as desc so rationale does not exceed the
+        # embedding model's token budget. _clean_desc is not reused because
+        # rationale is already prose (no comment markers to strip).
+        return rationale[:_DESC_MAX_CHARS]
+    return ""
 
 
 # ---------------------------------------------------------------------------
@@ -352,7 +368,9 @@ def generate_embeddings_for_graph(
 ) -> Path | None:
     """Generate embeddings for all nodes in ``graph.json``. Writes sidecar files.
 
-    Text source: ONLY ``desc`` (fallback ``label``). See ``_node_embed_text``.
+    Text source: ``desc`` (fallback ``rationale``); nodes with neither are
+    skipped (not embedded, not in the index — reachable at query time via
+    lexical / fuzzy tiers only). See ``_node_embed_text``.
     Returns the path to the written ``.npy`` file, or ``None`` when no embedding
     backend is configured (default + project config + env all empty = skip).
 
@@ -392,7 +410,29 @@ def generate_embeddings_for_graph(
     if not nodes:
         raise ValueError("graph has no nodes to embed")
 
-    texts = [_node_embed_text(n) for n in nodes]
+    # Build (node_id, text) pairs, skipping nodes with no desc/rationale.
+    # Empty-text nodes are not sent to the API (saves calls) and are absent
+    # from the sidecar index — at query time they are reached via lexical /
+    # fuzzy tiers only (multi-route recall).
+    embeddable: list[tuple[str, str]] = []
+    for n in nodes:
+        text = _node_embed_text(n)
+        if not text:
+            continue
+        nid = n["id"]
+        embeddable.append((nid, text))
+
+    if not embeddable:
+        # No node has desc/rationale — nothing to embed. Write an empty
+        # sidecar so check knows a build was attempted.
+        paths = _sidecar_paths(graph_dir, model or "unknown")
+        paths["npy"].parent.mkdir(parents=True, exist_ok=True)
+        np.save(paths["npy"], np.zeros((0, 1), dtype=np.float32))
+        _write_sidecar_meta(paths, graph_json_path, data, [], model or "unknown",
+                            backend, dim=1)
+        return paths["npy"]
+
+    texts = [text for _, text in embeddable]
     embeddings, actual_model = _embed_batch(texts, backend=backend, model=model,
                                             graph_dir=graph_json_path.parent)
 
@@ -402,12 +442,12 @@ def generate_embeddings_for_graph(
     # Save .npy (float32, shape (N, D))
     np.save(paths["npy"], embeddings)
 
-    # Save .index.json (node_id -> row index)
-    index = {n["id"]: i for i, n in enumerate(nodes)}
+    # Save .index.json (node_ids in row order)
+    node_ids = [nid for nid, _ in embeddable]
     paths["index"].write_text(
         json.dumps(
             {
-                "node_ids": list(index.keys()),
+                "node_ids": node_ids,
                 "model": actual_model,
                 "dim": int(embeddings.shape[1]),
             },
@@ -416,21 +456,42 @@ def generate_embeddings_for_graph(
         encoding="utf-8",
     )
 
-    # Save .meta.json
+    _write_sidecar_meta(paths, graph_json_path, data, node_ids, actual_model, backend,
+                        int(embeddings.shape[1]))
+    return paths["npy"]
+
+
+def _write_sidecar_meta(
+    paths: dict[str, Path],
+    graph_json_path: Path,
+    graph_data: dict,
+    node_ids: list[str],
+    actual_model: str,
+    backend: str | None,
+    dim: int,
+) -> None:
+    """Write .meta.json with graph provenance for staleness detection.
+
+    ``graph_commit`` records the ``built_at_commit`` of the graph.json the
+    embeddings were generated from, so ``graphify check`` can detect staleness
+    by comparing it to the current graph.json's commit.
+    """
+    from graphify.export import _git_head
+    graph_commit = graph_data.get("built_at_commit") or _git_head(graph_json_path.parent) or ""
     paths["meta"].write_text(
         json.dumps(
             {
                 "generated_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
-                "node_count": len(nodes),
-                "dim": int(embeddings.shape[1]),
+                "node_count": len(node_ids),
+                "dim": dim,
                 "model": actual_model,
                 "backend": backend,
+                "graph_commit": graph_commit,
             },
             ensure_ascii=False,
         ),
         encoding="utf-8",
     )
-    return paths["npy"]
 
 
 def generate_embedding_sidecar(
@@ -461,14 +522,20 @@ def generate_embedding_sidecar(
     which path produced the sidecar (e.g. ``[graphify extract]`` vs
     ``[graphify watch]``).
 
-    Reads every node's `desc` field (fallback `label`) and writes
-    ``<graph_dir>/embeddings/<model_slug>.{npy,index.json,meta.json}``.
+    Uses ``generate_embeddings_incremental`` when a sidecar already exists
+    (only re-embeds new / changed nodes), falling back to a full rebuild
+    when the sidecar is missing, corrupt, or the model changed. This keeps
+    the post-commit hook fast: a one-file change re-embeds only that file's
+    nodes instead of the whole graph.
+
+    Reads every node's ``desc`` (fallback ``rationale``) and writes
+    ``<graph_dir>/embeddings/embedding.{npy,index.json,meta.json}``.
     A failure here is a warning, not fatal — the graph is the primary
     artifact.
     """
     import sys
     try:
-        _emb_path = generate_embeddings_for_graph(
+        _emb_path = generate_embeddings_incremental(
             graph_json_path, backend=embed_backend, model=embed_model
         )
         if _emb_path is not None:
@@ -484,6 +551,305 @@ def generate_embedding_sidecar(
             f"(queries will run in pure-lexical mode until fixed): {exc}",
             file=sys.stderr,
         )
+
+
+# ---------------------------------------------------------------------------
+# Incremental update: re-embed only new / changed nodes
+# ---------------------------------------------------------------------------
+
+
+def generate_embeddings_incremental(
+    graph_json_path: Path, *, backend: str | None = None, model: str | None = None,
+    full: bool = False,
+) -> Path | None:
+    """Incrementally update the embedding sidecar using git diff on graph.json.
+
+    Runs ``git diff <old_commit>..HEAD -- graph.json`` to find which node ids
+    changed, then re-embeds only those whose ``desc`` / ``rationale`` actually
+    differs. Unchanged nodes keep their existing vectors; deleted nodes are
+    dropped from the index.
+
+    When ``full=True`` (e.g. the scheduled nightly task), a complete rebuild
+    is performed regardless of diff results.
+
+    Falls back to a full rebuild when:
+      - no sidecar exists, or it is corrupt / unreadable
+      - the model changed (dimensions may differ)
+      - graph.json is not tracked by git (no history to diff)
+      - the git diff touches more than 50% of nodes
+      - ``full=True`` was passed
+    """
+    if full:
+        return generate_embeddings_for_graph(graph_json_path, backend=backend, model=model)
+
+    # Auto-resolve backend / model (same chain as the full builder).
+    if backend is None:
+        from graphify.hybrid_scorer import _load_embed_config_from_graphifyrc
+        rc_cfg = _load_embed_config_from_graphifyrc(graph_json_path.parent)
+        backend = rc_cfg.get("embed_backend", "").strip().lower() or None
+        if backend is None:
+            return None
+        if model is None:
+            model = rc_cfg.get("embed_model", "").strip() or None
+
+    graph_dir = graph_json_path.parent
+    data = json.loads(graph_json_path.read_text(encoding="utf-8"))
+    nodes = data.get("nodes", [])
+    if not nodes:
+        raise ValueError("graph has no nodes to embed")
+
+    # Load existing sidecar.
+    emb_dir = graph_dir / "embeddings"
+    npy_path = emb_dir / "embedding.npy"
+    index_path = emb_dir / "embedding.index.json"
+    meta_path = emb_dir / "embedding.meta.json"
+    if not npy_path.is_file() or not index_path.is_file() or not meta_path.is_file():
+        return generate_embeddings_for_graph(graph_json_path, backend=backend, model=model)
+
+    try:
+        matrix = np.load(npy_path)
+        if matrix.ndim != 2 or matrix.shape[0] == 0:
+            raise ValueError("malformed matrix")
+        index_data = json.loads(index_path.read_text(encoding="utf-8"))
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    except Exception:
+        return generate_embeddings_for_graph(graph_json_path, backend=backend, model=model)
+
+    existing_ids: list[str] = index_data.get("node_ids", [])
+    existing_dim = index_data.get("dim", matrix.shape[1] if matrix.ndim == 2 else 0)
+    existing_model = index_data.get("model", "")
+    old_commit = meta.get("graph_commit", "")
+
+    # Model changed → dimensions may differ → full rebuild.
+    if model and existing_model and model != existing_model:
+        return generate_embeddings_for_graph(graph_json_path, backend=backend, model=model)
+    if matrix.shape[1] != existing_dim:
+        return generate_embeddings_for_graph(graph_json_path, backend=backend, model=model)
+
+    # Build current embeddable set: node_id → embed_text.
+    current_texts: dict[str, str] = {}
+    for n in nodes:
+        nid = n.get("id")
+        if not nid:
+            continue
+        text = _node_embed_text(n)
+        if text:
+            current_texts[nid] = text
+
+    current_ids = set(current_texts.keys())
+    id_to_row: dict[str, int] = {nid: i for i, nid in enumerate(existing_ids)}
+
+    # Use git diff on graph.json to find changed node_ids.
+    changed_ids = _git_diff_changed_node_ids(graph_json_path, old_commit)
+
+    if changed_ids is None:
+        # git diff not available → fallback: compare id sets (new/deleted only).
+        to_embed: list[tuple[str, str]] = [
+            (nid, current_texts[nid]) for nid in current_ids if nid not in id_to_row
+        ]
+    else:
+        # git diff succeeded: only re-embed nodes whose desc actually changed.
+        to_embed = []
+        for nid in changed_ids:
+            if nid not in current_texts:
+                continue  # node deleted or has no desc/rationale now
+            old_text = _extract_embed_text_from_git_version(graph_json_path, old_commit, nid)
+            if old_text != current_texts[nid]:
+                to_embed.append((nid, current_texts[nid]))
+            elif nid not in id_to_row:
+                to_embed.append((nid, current_texts[nid]))  # new to index
+    deleted_ids = set(id_to_row.keys()) - current_ids
+
+    # Large-change threshold: if >50% of nodes changed, full rebuild is faster.
+    if len(to_embed) > len(current_texts) * 0.5:
+        return generate_embeddings_for_graph(graph_json_path, backend=backend, model=model)
+
+    if not to_embed and not deleted_ids:
+        # Nothing changed — refresh meta graph_commit so check stops flagging.
+        actual_model = existing_model or model or "unknown"
+        paths = _sidecar_paths(graph_dir, actual_model)
+        _write_sidecar_meta(paths, graph_json_path, data, list(current_texts.keys()),
+                            actual_model, backend, int(existing_dim))
+        return paths["npy"]
+
+    if not to_embed and deleted_ids:
+        # Only deletions — no API call needed, just rebuild the index/matrix
+        # without the deleted nodes.
+        actual_model = existing_model or model or "unknown"
+        new_node_ids = [nid for nid in current_texts if nid in id_to_row and nid not in deleted_ids]
+        new_rows = [matrix[id_to_row[nid]] for nid in new_node_ids]
+        if new_rows:
+            new_matrix = np.vstack(new_rows).astype(np.float32, copy=False)
+        else:
+            new_matrix = np.zeros((0, existing_dim), dtype=np.float32)
+        paths = _sidecar_paths(graph_dir, actual_model)
+        paths["npy"].parent.mkdir(parents=True, exist_ok=True)
+        np.save(paths["npy"], new_matrix)
+        paths["index"].write_text(
+            json.dumps({"node_ids": new_node_ids, "model": actual_model, "dim": int(existing_dim)},
+                       ensure_ascii=False),
+            encoding="utf-8",
+        )
+        _write_sidecar_meta(paths, graph_json_path, data, new_node_ids, actual_model,
+                            backend, int(existing_dim))
+        return paths["npy"]
+
+    # Embed only the changed / new nodes.
+    texts = [text for _, text in to_embed]
+    embeddings, actual_model = _embed_batch(texts, backend=backend, model=model,
+                                            graph_dir=graph_json_path.parent)
+
+    if embeddings.shape[1] != existing_dim:
+        return generate_embeddings_for_graph(graph_json_path, backend=backend, model=model)
+
+    # Build the new dense matrix in current node order.
+    new_node_ids: list[str] = []
+    new_rows: list[np.ndarray] = []
+    old_row_cache: dict[str, np.ndarray] = {
+        nid: matrix[id_to_row[nid]] for nid in id_to_row
+        if nid in id_to_row and nid not in deleted_ids
+    }
+    embed_map: dict[str, np.ndarray] = {}
+    for (nid, _), vec in zip(to_embed, embeddings):
+        embed_map[nid] = vec
+
+    for nid in current_texts:
+        if nid in embed_map:
+            new_rows.append(embed_map[nid])
+        elif nid in old_row_cache:
+            new_rows.append(old_row_cache[nid])
+        else:
+            continue
+        new_node_ids.append(nid)
+
+    if not new_rows:
+        return generate_embeddings_for_graph(graph_json_path, backend=backend, model=model)
+
+    new_matrix = np.vstack(new_rows).astype(np.float32, copy=False)
+    paths = _sidecar_paths(graph_dir, actual_model)
+    paths["npy"].parent.mkdir(parents=True, exist_ok=True)
+    np.save(paths["npy"], new_matrix)
+
+    paths["index"].write_text(
+        json.dumps(
+            {
+                "node_ids": new_node_ids,
+                "model": actual_model,
+                "dim": int(new_matrix.shape[1]),
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    _write_sidecar_meta(paths, graph_json_path, data, new_node_ids, actual_model,
+                        backend, int(new_matrix.shape[1]))
+    return paths["npy"]
+
+
+def _git_rel_path(graph_json_path: Path) -> str:
+    """Return the git-repo-relative path for ``graph_json_path``.
+
+    ``git show <commit>:<path>`` and ``git diff`` both require a path
+    relative to the repo root (``git show`` rejects absolute paths with
+    "path exists on disk, but not in '<commit>'"). We resolve the repo
+    root via ``git rev-parse --show-toplevel`` and make the path relative.
+    Falls back to the bare path string if git is unavailable.
+    """
+    import subprocess as _sp
+    try:
+        r = _sp.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True, text=True, timeout=5,
+            cwd=str(graph_json_path.parent.parent),
+        )
+        if r.returncode == 0:
+            root = Path(r.stdout.strip())
+            try:
+                return str(graph_json_path.resolve().relative_to(root)).replace("\\", "/")
+            except ValueError:
+                pass
+    except Exception:
+        pass
+    # Fallback: use the path as-is (works when cwd is the repo root)
+    return str(graph_json_path).replace("\\", "/")
+
+
+def _git_diff_changed_node_ids(graph_json_path: Path, old_commit: str) -> "set[str] | None":
+    """Return the set of node_ids whose lines changed in graph.json between
+    ``old_commit`` and HEAD.
+
+    Uses ``git diff`` with a generous context window (``--unified=30``) so
+    that even though graph.json is indent=2 JSON (each node spans ~10-15
+    lines), the ``"id"`` field of the changed node is included in the diff
+    context. Without context (``--unified=0``) only the single changed line
+    (e.g. ``"desc"``) is emitted, which does not contain the ``"id"`` field
+    and the node would be missed.
+
+    The caller then does a precise desc comparison via
+    ``_extract_embed_text_from_git_version`` to filter out nodes whose other
+    fields (community, source_file) changed but desc did not.
+
+    Returns ``None`` when git is unavailable, the file is not tracked, or
+    ``old_commit`` is empty — the caller falls back to set-comparison.
+    """
+    if not old_commit:
+        return None
+    import subprocess as _sp
+    rel_path = _git_rel_path(graph_json_path)
+    try:
+        r = _sp.run(
+            ["git", "diff", "--unified=30", f"{old_commit}..HEAD", "--", rel_path],
+            capture_output=True, text=True, timeout=15,
+            cwd=str(graph_json_path.parent.parent),
+        )
+        if r.returncode != 0:
+            return None
+        if not r.stdout.strip():
+            return set()  # no changes
+    except Exception:
+        return None
+
+    import re
+    id_pattern = re.compile(r'"id"\s*:\s*"([^"]+)"')
+    changed: set[str] = set()
+    # Scan ALL lines in the diff output — not just +/- lines. With --unified=30,
+    # the "id" field of a changed node appears in context lines (no +/- prefix)
+    # which are essential for mapping a desc-only change back to its node id.
+    # A node whose only changed field is "desc" produces a +/- pair on the desc
+    # line, but the "id" line is a context line above it.
+    for line in r.stdout.splitlines():
+        if line.startswith("+++") or line.startswith("---"):
+            continue
+        m = id_pattern.search(line)
+        if m:
+            changed.add(m.group(1))
+    return changed
+
+
+def _extract_embed_text_from_git_version(
+    graph_json_path: Path, old_commit: str, node_id: str
+) -> str:
+    """Extract embed text (desc → rationale → "") for a single node_id from
+    the graph.json at ``old_commit`` via ``git show``.
+    """
+    import subprocess as _sp
+    rel_path = _git_rel_path(graph_json_path)
+    try:
+        r = _sp.run(
+            ["git", "show", f"{old_commit}:{rel_path}"],
+            capture_output=True, text=True, timeout=10,
+            cwd=str(graph_json_path.parent.parent),
+        )
+        if r.returncode != 0:
+            return ""
+        old_data = json.loads(r.stdout)
+    except Exception:
+        return ""
+    for n in old_data.get("nodes", []):
+        if n.get("id") == node_id:
+            return _node_embed_text(n)
+    return ""
 
 
 # ---------------------------------------------------------------------------

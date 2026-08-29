@@ -460,6 +460,14 @@ _PLATFORM_CONFIG: dict[str, dict] = {
         "skill_dst": Path(".config") / "devin" / "skills" / "graphify" / "SKILL.md",
         "claude_md": False,
     },
+    "codeagent": {
+        # Private tool: same usage as Claude Code, only the directory name differs
+        # (.cac instead of .claude). Reuses claude's split bundle (shares skill.md).
+        "skill_file": "skill.md",
+        "skill_dst": Path(".cac") / "skills" / "graphify" / "SKILL.md",
+        "claude_md": True,
+        "skill_refs": "claude",
+    },
 }
 # CLI-only platform aliases, resolved to a real _PLATFORM_CONFIG key before
 # dispatch. `skills` is the friendly alias for the generic `agents` platform
@@ -667,6 +675,17 @@ def install(platform: str = "claude", *, project: bool = False, project_dir: Pat
 
     if platform == "opencode":
         _install_opencode_plugin(project_dir if project else Path("."))
+
+    # Auto-register the weekly scheduled task (global, one per machine).
+    # Runs ``graphify check --all`` every Monday at a random 0:00~5:59 time,
+    # iterating the active-projects list maintained by the SessionStart hook.
+    # Best-effort: a failure here does not block installation.
+    try:
+        exe = _resolve_graphify_exe() or "graphify"
+        from graphify.cli import _schedule_register
+        _schedule_register(exe)
+    except Exception:
+        pass  # scheduling is best-effort, not a hard requirement
 
     if project:
         _print_project_git_add_hint([_project_scope_root(skill_dst, project_dir)])
@@ -1789,6 +1808,7 @@ def uninstall_all(project_dir: Path | None = None, purge: bool = False) -> None:
     # historical `graphify uninstall` behavior: global skill delete plus md/hook
     # cleanup at the project dir (#2215).
     claude_uninstall(pd, remove_user_skill=True)
+    codeagent_uninstall(pd, remove_user_skill=True)
     codebuddy_uninstall(pd, remove_user_skill=True)
     gemini_uninstall(pd, remove_user_skill=True)
     vscode_uninstall(pd)
@@ -1990,6 +2010,158 @@ def codebuddy_uninstall(project_dir: Path | None = None, *, project: bool = Fals
     _uninstall_codebuddy_hook(project_dir or Path("."))
 
 
+# ── codeagent (private tool, same as Claude Code but .cac directory) ──────────
+
+def _install_codeagent_hook(project_dir: Path, strict: bool = False) -> None:
+    """Add graphify PreToolUse + SessionStart hooks to .cac/settings.json.
+
+    Mirrors _install_claude_hook but targets the .cac directory. The SessionStart
+    hook runs ``graphify check`` to detect stale embeddings and
+    regenerate them in the background without blocking the session.
+    """
+    settings_path = project_dir / ".cac" / "settings.json"
+    settings_path.parent.mkdir(parents=True, exist_ok=True)
+
+    settings = _read_settings_for_merge(settings_path)
+
+    hooks = settings.setdefault("hooks", {})
+    if not isinstance(hooks, dict):
+        _refuse_to_modify(settings_path)
+    pre_tool = hooks.setdefault("PreToolUse", [])
+    if not isinstance(pre_tool, list):
+        _refuse_to_modify(settings_path)
+
+    hooks["PreToolUse"] = [h for h in pre_tool if not (isinstance(h, dict) and h.get("matcher") in ("Glob|Grep", "Bash", "Bash|Grep", "Read|Glob") and "graphify" in str(h))]
+    hooks["PreToolUse"].extend(_claude_pretooluse_hooks(strict=strict))
+
+    # SessionStart hook: detect stale embedding and refresh in background.
+    # Reuses the same graphify exe resolution as PreToolUse hooks.
+    exe = _resolve_graphify_exe()
+    if " " in exe and not exe.startswith('"'):
+        exe = f'"{exe}"'
+    session_start = hooks.setdefault("SessionStart", [])
+    if not isinstance(session_start, list):
+        _refuse_to_modify(settings_path)
+    # Replace any prior graphify SessionStart entry to stay idempotent.
+    session_start[:] = [
+        g for g in session_start
+        if not (
+            isinstance(g, dict)
+            and any(
+                isinstance(h, dict) and "graphify check" in str(h.get("command", ""))
+                for h in (g.get("hooks") or [])
+            )
+        )
+    ]
+    session_start.append({
+        "hooks": [{"type": "command", "command": f"{exe} check"}],
+    })
+    hooks["SessionStart"] = session_start
+
+    _write_settings_with_backup(settings_path, settings)
+    _mode = " (strict)" if strict else ""
+    print(f"  .cac/settings.json  ->  PreToolUse + SessionStart hooks registered{_mode}")
+
+
+def _uninstall_codeagent_hook(project_dir: Path) -> None:
+    """Remove graphify PreToolUse + SessionStart hooks from .cac/settings.json."""
+    settings_path = project_dir / ".cac" / "settings.json"
+    if not settings_path.exists():
+        return
+    try:
+        settings = json.loads(settings_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return
+    hooks = settings.get("hooks", {})
+    changed = False
+    # PreToolUse: same filter as claude
+    pre_tool = hooks.get("PreToolUse", [])
+    filtered_pre = [h for h in pre_tool if not (h.get("matcher") in ("Glob|Grep", "Bash", "Bash|Grep", "Read|Glob") and "graphify" in str(h))]
+    if len(filtered_pre) != len(pre_tool):
+        hooks["PreToolUse"] = filtered_pre
+        changed = True
+    # SessionStart: remove entries whose command contains "graphify check"
+    session_start = hooks.get("SessionStart", [])
+    filtered_ss = []
+    for g in session_start:
+        if isinstance(g, dict):
+            inner = g.get("hooks") or []
+            if any(isinstance(h, dict) and "graphify check" in str(h.get("command", "")) for h in inner):
+                continue  # drop this group
+        filtered_ss.append(g)
+    if len(filtered_ss) != len(session_start):
+        if filtered_ss:
+            hooks["SessionStart"] = filtered_ss
+        else:
+            hooks.pop("SessionStart", None)
+        changed = True
+    if changed:
+        settings_path.write_text(json.dumps(settings, indent=2), encoding="utf-8")
+        print(f"  .cac/settings.json  ->  hooks removed")
+
+
+def codeagent_install(project_dir: Path | None = None, strict: bool = False) -> None:
+    """Install graphify for codeagent (same as Claude Code, but .cac directory).
+
+    Writes the graphify section to CLAUDE.md, installs the skill to
+    ~/.cac/skills/graphify/, and registers PreToolUse + SessionStart hooks
+    in .cac/settings.json.
+    """
+    _copy_skill_file("codeagent", project=bool(project_dir), project_dir=project_dir)
+    target = (project_dir or Path(".")) / "CLAUDE.md"
+
+    if target.exists():
+        content = target.read_text(encoding="utf-8")
+        new_content = _replace_or_append_section(
+            content, _CLAUDE_MD_MARKER, _always_on("claude-md")
+        )
+    else:
+        new_content = _always_on("claude-md")
+
+    if target.exists() and new_content == target.read_text(encoding="utf-8"):
+        print(f"graphify already configured in {target.resolve()} (no change)")
+    else:
+        target.write_text(new_content, encoding="utf-8")
+        print(f"graphify section written to {target.resolve()}")
+
+    _install_codeagent_hook(project_dir or Path("."), strict=strict)
+
+    print()
+    print("codeagent will now check the knowledge graph before answering")
+    print("codebase questions and rebuild it after code changes.")
+    if strict:
+        print("Strict mode: the first raw file read per session is blocked until")
+        print("one `graphify query` runs (toggle with GRAPHIFY_HOOK_STRICT=0).")
+
+
+def codeagent_uninstall(project_dir: Path | None = None, *, project: bool = False, remove_user_skill: bool | None = None) -> None:
+    """Remove graphify skill, CLAUDE.md section, and hooks from codeagent (.cac)."""
+    explicit_dir = project_dir is not None
+    project_dir = project_dir or Path(".")
+    if remove_user_skill is None:
+        remove_user_skill = not project and not explicit_dir
+    if project or (explicit_dir and not remove_user_skill):
+        _remove_skill_file("codeagent", project=True, project_dir=project_dir)
+    if remove_user_skill:
+        _remove_skill_file("codeagent", project=False)
+
+    md_targets = [
+        project_dir / "CLAUDE.md",
+        project_dir / "CLAUDE.local.md",
+    ]
+    existing = [t for t in md_targets if t.exists()]
+    removed_any = False
+    for target in existing:
+        if _strip_graphify_md_section(target):
+            removed_any = True
+    if not existing:
+        print("No CLAUDE.md found in current directory - nothing to do")
+    elif not removed_any:
+        print("graphify section not found in CLAUDE.md - nothing to do")
+
+    _uninstall_codeagent_hook(project_dir)
+
+
 _CLI_INSTALL_COMMANDS = frozenset({
     "agents",
     "aider",
@@ -1997,6 +2169,7 @@ _CLI_INSTALL_COMMANDS = frozenset({
     "antigravity",
     "claude",
     "claw",
+    "codeagent",
     "codebuddy",
     "codex",
     "copilot",
@@ -2138,6 +2311,22 @@ def dispatch_install_cli(cmd: str) -> bool:
             codebuddy_uninstall()
         else:
             print("Usage: graphify codebuddy [install|uninstall]", file=sys.stderr)
+            sys.exit(1)
+    elif cmd == "codeagent":
+        subcmd = sys.argv[2] if len(sys.argv) > 2 else ""
+        if subcmd == "install":
+            _strict = "--strict" in sys.argv[3:]
+            if "--project" in sys.argv[3:]:
+                _project_install("codeagent", Path("."), strict=_strict)
+            else:
+                codeagent_install(strict=_strict)
+        elif subcmd == "uninstall":
+            if "--project" in sys.argv[3:]:
+                _project_uninstall("codeagent", Path("."))
+            else:
+                codeagent_uninstall()
+        else:
+            print("Usage: graphify codeagent [install|uninstall]", file=sys.stderr)
             sys.exit(1)
     elif cmd == "gemini":
         subcmd = sys.argv[2] if len(sys.argv) > 2 else ""

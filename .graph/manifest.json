@@ -6,9 +6,9 @@
     "semantic_hash": ""
   },
   "graphify/__main__.py": {
-    "mtime": 1787839747.968819,
-    "seen": 1787881633.9139729,
-    "ast_hash": "3398fe0e4a8cd25bc45625405aed8b81",
+    "mtime": 1787986252.3154023,
+    "seen": 1787986929.250364,
+    "ast_hash": "8ba8aae6319aa875436fa0c75536e872",
     "semantic_hash": ""
   },
   "graphify/_minhash.py": {
@@ -60,9 +60,9 @@
     "semantic_hash": ""
   },
   "graphify/cli.py": {
-    "mtime": 1787839747.9492419,
-    "seen": 1787881633.9145532,
-    "ast_hash": "c80de7b797cb69b4a86af304d3524795",
+    "mtime": 1787986499.9590425,
+    "seen": 1787986929.2518513,
+    "ast_hash": "93031706e5410839bdf8d71bd94ebe37",
     "semantic_hash": ""
   },
   "graphify/cluster.py": {
@@ -108,9 +108,9 @@
     "semantic_hash": ""
   },
   "graphify/embeddings.py": {
-    "mtime": 1787911618.2525082,
-    "seen": 1787911788.703154,
-    "ast_hash": "0f90c41bc92a862889cbbf465dad160a",
+    "mtime": 1787986273.6858459,
+    "seen": 1787986929.2528594,
+    "ast_hash": "306fa4072883a0e1368fefcf5b0f6a31",
     "semantic_hash": ""
   },
   "graphify/export.py": {
@@ -402,15 +402,15 @@
     "semantic_hash": ""
   },
   "graphify/install.py": {
-    "mtime": 1787839747.968819,
-    "seen": 1787881633.9193738,
-    "ast_hash": "362f352fa8799c904fdb2ff9a4cb7ac0",
+    "mtime": 1787986219.6138394,
+    "seen": 1787986929.2584605,
+    "ast_hash": "6bb084c049c1cbb3068ef260366a74d8",
     "semantic_hash": ""
   },
   "graphify/llm.py": {
-    "mtime": 1787839747.968819,
-    "seen": 1787881633.919376,
-    "ast_hash": "c12463459528d0fd813715c02f2dda8e",
+    "mtime": 1787984485.5549564,
+    "seen": 1787984563.0182931,
+    "ast_hash": "2d88b8f93517d43ccda9efb301de8ad1",
     "semantic_hash": ""
   },
   "graphify/manifest.py": {
@@ -534,9 +534,9 @@
     "semantic_hash": ""
   },
   "graphify/validate.py": {
-    "mtime": 1787733086.343925,
-    "seen": 1787811849.42336,
-    "ast_hash": "3d69e75e9f62a9d70ba42974fb2612a2",
+    "mtime": 1787984485.5549564,
+    "seen": 1787984563.020524,
+    "ast_hash": "0beb505e768512b9facd0a4233b14fa4",
     "semantic_hash": ""
   },
   "graphify/watch.py": {
@@ -1842,9 +1842,9 @@
     "semantic_hash": ""
   },
   "tests/test_hybrid_search.py": {
-    "mtime": 1787753278.232934,
-    "seen": 1787811849.4235947,
-    "ast_hash": "ed401c5b859d0182adf6c2ec77a9ebdc",
+    "mtime": 1787984485.574154,
+    "seen": 1787984563.0471475,
+    "ast_hash": "b36798dcbaa0ed60aae908e949109fe3",
     "semantic_hash": ""
   },
   "tests/test_hyperedge_member_shapes.py": {
@@ -2952,9 +2952,9 @@
     "semantic_hash": ""
   },
   "docs/extending-extractors/spec.md": {
-    "mtime": 1787909002.611552,
-    "seen": 1787911788.757875,
-    "ast_hash": "e2ce348d5b7893f2326001a44f406893",
+    "mtime": 1787986696.505021,
+    "seen": 1787986929.3113232,
+    "ast_hash": "dd3c11e067d4e57200197d540f933e06",
     "semantic_hash": ""
   },
   "docs/how-it-works.md": {
@@ -4947,6 +4947,24 @@
     "mtime": 1787908654.3029613,
     "seen": 1787911788.7790194,
     "ast_hash": "863c7a2fb40212d7dc4bf1cadf094a69",
+    "semantic_hash": ""
+  },
+  "docs/extending-extractors/plan-gap.md": {
+    "mtime": 1787975927.624795,
+    "seen": 1787975991.8654952,
+    "ast_hash": "0bf22ae5344e8155c5a0e5becd7ea858",
+    "semantic_hash": ""
+  },
+  "graphify/prompt_registry.py": {
+    "mtime": 1787986474.9820023,
+    "seen": 1787986929.2595417,
+    "ast_hash": "e094b25461c0cd968ebef2a6c7659b42",
+    "semantic_hash": ""
+  },
+  "tests/test_prompt_registry.py": {
+    "mtime": 1787986832.8804731,
+    "seen": 1787986929.2970629,
+    "ast_hash": "3eeb5d0a40f936990ced4591a1adaa4e",
     "semantic_hash": ""
   }
 }

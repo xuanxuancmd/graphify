@@ -93,3 +93,52 @@ def assert_valid(data: dict) -> None:
     if errors:
         msg = f"Extraction JSON has {len(errors)} error(s):\n" + "\n".join(f"  • {e}" for e in errors)
         raise ValueError(msg)
+
+
+def validate_prompt_schema(data: dict, output_schema: dict | None) -> list[str]:
+    """Validate extraction JSON against a prompt spec's ``output_schema``.
+
+    Runs AFTER :func:`validate_extraction`. Returns additional errors for
+    fields that violate the spec's stricter constraints
+    (``valid_file_types``, ``valid_relations``, ``valid_confidences``).
+    If *output_schema* is ``None``, returns ``[]`` (no extra checks).
+    """
+    if output_schema is None:
+        return []
+
+    errors: list[str] = []
+
+    valid_file_types = set(output_schema.get("valid_file_types", []))
+    valid_relations = set(output_schema.get("valid_relations", []))
+    valid_confidences = set(output_schema.get("valid_confidences", []))
+
+    if valid_file_types:
+        for i, node in enumerate(data.get("nodes", [])):
+            if isinstance(node, dict) and "file_type" in node:
+                if node["file_type"] not in valid_file_types:
+                    errors.append(
+                        f"Node {i} (id={node.get('id', '?')!r}) has file_type "
+                        f"'{node['file_type']}' not in spec's valid_file_types "
+                        f"{sorted(valid_file_types)}"
+                    )
+
+    if valid_relations or valid_confidences:
+        edge_list = data.get("edges") if "edges" in data else data.get("links")
+        if isinstance(edge_list, list):
+            for i, edge in enumerate(edge_list):
+                if not isinstance(edge, dict):
+                    continue
+                if valid_relations and "relation" in edge:
+                    if edge["relation"] not in valid_relations:
+                        errors.append(
+                            f"Edge {i} has relation '{edge['relation']}' not in "
+                            f"spec's valid_relations {sorted(valid_relations)}"
+                        )
+                if valid_confidences and "confidence" in edge:
+                    if edge["confidence"] not in valid_confidences:
+                        errors.append(
+                            f"Edge {i} has confidence '{edge['confidence']}' not in "
+                            f"spec's valid_confidences {sorted(valid_confidences)}"
+                        )
+
+    return errors

@@ -104,13 +104,13 @@ class TestNodeEmbedText:
         node = {"label": "AuthService", "desc": "Manages user authentication."}
         assert _node_embed_text(node) == "Manages user authentication."
 
-    def test_falls_back_to_label_when_desc_empty(self) -> None:
-        node = {"label": "AuthService", "desc": ""}
-        assert _node_embed_text(node) == "AuthService"
+    def test_falls_back_to_rationale_when_desc_empty(self) -> None:
+        node = {"label": "AuthService", "desc": "", "rationale": "Handles auth tokens."}
+        assert _node_embed_text(node) == "Handles auth tokens."
 
-    def test_falls_back_to_label_when_desc_missing(self) -> None:
+    def test_returns_empty_when_desc_and_rationale_missing(self) -> None:
         node = {"label": "AuthService"}
-        assert _node_embed_text(node) == "AuthService"
+        assert _node_embed_text(node) == ""
 
     def test_does_not_use_norm_label_or_nid(self) -> None:
         # Per spec §5.2: norm_label / nid / source_file are NOT embedded
