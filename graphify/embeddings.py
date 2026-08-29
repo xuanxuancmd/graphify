@@ -97,6 +97,12 @@ def _resolve_embed_backend_config(
       embed_api_key  — API key for the backend
       embed_model    — model name override
 
+    The ``enable_embedding_proxy`` key (default false) is NOT read here — it
+    is consumed directly in ``_embed_batch`` to decide whether the OpenAI
+    SDK client bypasses system/env proxies (``trust_env=False``, the default)
+    or uses the SDK default (``trust_env=True``) when the embedding endpoint
+    requires a proxy.
+
     ``graph_dir`` is the directory containing graph.json — pass it so the
     config lookup finds the right project's ``.graph/graphifyrc``. When
     None, falls back to CWD (less reliable — prefer passing graph_dir).
@@ -230,6 +236,43 @@ def _embed_batch_sentence_transformers(
     return np.asarray(embeddings, dtype=np.float32), model_name
 
 
+def _build_embed_http_client():
+    """Build an httpx client with ``trust_env=False`` (direct connect, no proxy).
+
+    This is the default for embedding requests. ``trust_env=False`` makes
+    httpx ignore BOTH environment-variable proxies (``HTTP_PROXY`` etc.) AND
+    the Windows system proxy registry (``ProxyEnable``/``ProxyServer``). This
+    is necessary because httpx silently drops the Windows bypass list
+    (``ProxyOverride`` — the "不代理"/"代码黑名单" entries) due to a
+    CPython + httpx interaction: ``getproxies_registry()`` does not reliably
+    expose ``ProxyOverride`` as the ``no`` key (cpython#149136), and httpx
+    never calls ``proxy_bypass()`` per-host (httpx#1536). The result is that
+    embedding requests to a directly-reachable endpoint get routed through
+    a proxy that cannot reach it, causing spurious connection failures on
+    Windows. The same fix applies to WSL, where env-var proxies
+    (``HTTPS_PROXY`` pointing at the Windows host's Clash/V2Ray) cause the
+    same misrouting.
+
+    Set ``enable_embedding_proxy = true`` in ``.graph/graphifyrc`` to restore
+    the OpenAI SDK default (``trust_env=True``) when the embedding endpoint
+    genuinely requires a proxy.
+
+    Uses the SDK's ``DefaultHttpxClient`` (preserves default timeout/limits/
+    follow_redirects) when available, falling back to ``DefaultHttpx2Client``
+    (newer SDK that aliases httpx as httpx2), and finally to a plain
+    ``httpx.Client`` on SDK versions without either wrapper.
+    """
+    try:
+        from openai import DefaultHttpxClient
+    except ImportError:
+        try:
+            from openai import DefaultHttpx2Client as DefaultHttpxClient
+        except ImportError:
+            import httpx
+            return httpx.Client(trust_env=False)
+    return DefaultHttpxClient(trust_env=False)
+
+
 def _embed_batch(
     texts: list[str], *, backend: str, model: str | None = None,
     graph_dir: "str | Path | None" = None,
@@ -266,7 +309,22 @@ def _embed_batch(
         ) from exc
 
     base_url, api_key, actual_model = _resolve_embed_backend_config(backend, model, graph_dir)
-    client = OpenAI(api_key=api_key, base_url=base_url)
+
+    # Proxy control. Default: OFF — embedding requests connect directly to
+    # embed_base_url, bypassing both env-var proxies (HTTP_PROXY etc.) and
+    # the Windows system proxy. See _build_embed_http_client for the full
+    # rationale (Windows ProxyOverride bypass-list bug, WSL env-var proxies).
+    # Set ``enable_embedding_proxy = true`` in .graph/graphifyrc to restore
+    # the SDK default (trust_env=True) when the endpoint requires a proxy.
+    from graphify.hybrid_scorer import _load_embed_config_from_graphifyrc
+    rc_cfg = _load_embed_config_from_graphifyrc(graph_dir)
+    enable_proxy = (
+        rc_cfg.get("enable_embedding_proxy", "").strip().lower()
+        in ("true", "1", "yes", "on")
+    )
+    http_client = None if enable_proxy else _build_embed_http_client()
+
+    client = OpenAI(api_key=api_key, base_url=base_url, http_client=http_client)
 
     # Sanitize: empty strings would 400 from most providers.
     sanitized = [(t or " ").strip() or " " for t in texts]

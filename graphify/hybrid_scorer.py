@@ -77,9 +77,16 @@ def _load_embed_config_from_graphifyrc(graph_dir: "str | Path | None" = None) ->
         direct_rc = Path(graph_dir) / "graphifyrc"
         if direct_rc.is_file():
             cfg.update(_parse_graphifyrc_file(direct_rc))
-    # Extract only the embed_* keys (others like viz_node_limit are not
-    # relevant here).
-    return {k: str(v) for k, v in cfg.items() if k.startswith("embed_")}
+    # Extract embed-related keys. ``embed_*`` are the core embedding config
+    # (backend/base_url/api_key/model). ``enable_embedding_proxy`` is the
+    # proxy bypass switch (default false = direct connect, see embeddings.py
+    # _build_embed_http_client). Other keys like viz_node_limit are not
+    # relevant here.
+    return {
+        k: str(v)
+        for k, v in cfg.items()
+        if k.startswith("embed_") or k == "enable_embedding_proxy"
+    }
 
 
 def _embed_backend_from_env() -> str | None:

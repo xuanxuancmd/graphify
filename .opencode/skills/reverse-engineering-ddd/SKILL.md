@@ -129,7 +129,7 @@ docs/
 | 层级 | 何时读 | 读什么 | 目的 |
 |------|--------|--------|------|
 | **L0 会话级预加载** | 每次会话开始 | `context-map.md` + 全局 `technical-constraints.md` | 业务地图 + 全局技术约束。图谱无法替代，模型需要它才知道"该查什么" |
-| **L1 退化/按需加载** | 图谱检索不准或需要完整业务语境时 | 按下表 BC 级产物清单选载（含 BC 级 `technical-constraints.md`） | 图谱的退化方案，或图谱 doc-anchor `filePath` 指向的详情 |
+| **L1 按需加载** | graphify query 返回 doc-anchor 时按其 `filePath` 加载；或 query 无相关结果时由 AI 自主判断是否需要 | 按下表 BC 级产物清单选载（含 BC 级 `technical-constraints.md`） | 获取图谱无法提供的完整业务语境（WHY/RULES/REASONS） |
 
 > 跨 BC 依赖不靠共享文件，靠 BC 自身的 `contracts.md` 记录指向对端 BC。查全局依赖看 `context-map.md` 关系表。BC 的 `features/<bc>/api/` 子目录承载该 BC 对外暴露 API 的 Karate 测试 feature（由 `harness-karate-design` 生成），与业务约束产物同层但用 `api/` 子目录隔离。
 
@@ -298,32 +298,28 @@ skill 闭环时自动在项目根目录的 `AGENTS.md` 中追加知识库指引�
 
 {微服务简介}
 
-### 必读：业务地图
+### 必读（会话级预加载）
 
-**每次会话开始时，读取 `docs/context-map.md`。这是项目的业务地图——限界上下文（BC）边界、BC 之间的关系、统一语言术语表。**
+每次会话开始时直接读取以下两个文件，建立业务心智模型——graphify 图谱无法提供：
 
-**任何业务、代码知识的问题，都应优先按照"knowledge graph"章节指导完成查询，并按需读取如下的“BC 级产物”**
+- `docs/context-map.md` — 业务地图：限界上下文（BC）边界、BC 关系、统一语言术语表
+- `docs/technical-constraints.md` — 全局技术约束：跨所有 BC 适用的技术选型理由 + 编码规范 + 合规约束
 
-### BC 级产物清单（根据图谱指引 或 索引退化失效时 按需渐进加载文档）
+### BC 级产物清单（解释性，按需加载）
 
-当 knowledge graph检索未返回相关结果，或你需要完整业务语境时，按以下清单直接读取对应 `.md` 文件：
+下表说明各 BC 级 `.md` 文件承载什么内容。是否读取、读取哪个，由 AI 在 graphify query 返回结果后自主判断——本清单不做触发式加载条件，不作为图谱退化时的强制 fallback。
 
-| 工件 | 承载什么 | 加载时机 |
-|------|---------|---------|
-| `docs/technical-constraints.md` | 全局技术选型理由 + 编码规范 + 合规约束 | 每次编码前读 |
-| `docs/features/<bc>/technical-constraints.md` | 该 BC 特有的技术选型理由 + 编码规范 | 开发该 BC 时读 |
-| `docs/features/<bc>/business-flow.md` | 关键业务用例时序编排（含周期任务/外部触发入口）+ 失败/补偿矩阵 + 入口点 | 业务流程、失败补偿、定位入口 |
-| `docs/features/<bc>/invariants.md` | 业务不变式（违反即非法） | 判断什么必须永远为真 |
-| `docs/features/<bc>/contracts.md` | 接口业务承诺 + 跨 BC 契约定位符 | 理解接口语义、查端点归属 |
-| `docs/features/<bc>/domain-events.md` | 业务状态变更事件 | 理解状态转换 |
-| `docs/features/<bc>/domain-model.md` | 聚合协作 + 边界 + 状态机 + 行为归属 | 理解聚合协作、行为归属 |
-| `docs/features/<bc>/apis/*.feature` | 基于karate语法描述的对外用例（可选；需安装 harness-karate-design） | 质量门禁 |
+| 文件 | 承载内容 | 典型适用场景（供 AI 判断是否需要读） |
+|------|---------|-----------------------------------|
+| `docs/features/<bc>/technical-constraints.md` | 该 BC 特有的技术选型理由 + 编码规范 | 改动该 BC 内代码、需理解该 BC 特有约束 |
+| `docs/features/<bc>/business-flow.md` | 关键业务用例时序编排（含周期任务/外部触发入口）+ 失败/补偿矩阵 | 理解业务流程编排、失败补偿策略、定位入口点 |
+| `docs/features/<bc>/invariants.md` | 业务不变式（违反即业务状态非法） | 判断什么必须永远为真、修改聚合根时 |
+| `docs/features/<bc>/contracts.md` | 接口业务承诺（前置/后置/失败语义）+ 跨 BC 契约定位符 | 理解接口语义、查端点归属 |
+| `docs/features/<bc>/domain-events.md` | 业务状态变更事件 | 理解业务状态转换 |
+| `docs/features/<bc>/domain-model.md` | 聚合协作视图 + 边界 + 状态机 + 行为归属 | 理解聚合协作、判断行为归属 |
+| `docs/features/<bc>/apis/*.feature` | 基于 karate 语法的对外用例（可选；需安装 harness-karate-design） | 质量门禁、对外用例 |
 
-### 与图谱的配合
-
-+ knowledge graph是主检索入口。当图谱返回 `doc-anchor` 节点时，其 `filePath` 指向上表中的 `.md` 文件——直接读取该文件获取完整业务语境（WHY/RULES/REASONS）
-
-+ 代码结构细节（类型、字段、方法、调用关系）使用图谱查询。
+> graphify query 返回 `doc-anchor` 节点时，其 `filePath` 会指向上表中的文件——这是 AI 判断是否需要进一步读取以获取完整业务语境（WHY/RULES/REASONS）的信号之一，非强制。
 
 ---
 

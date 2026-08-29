@@ -43,3 +43,16 @@
 # sentence-transformers (test/CI only, in-process PyTorch CPU, no API):
 # embed_backend = sentence-transformers
 # embed_model = paraphrase-multilingual-MiniLM-L12-v2
+
+# --- Embedding Proxy Control ------------------------------------------------
+# Embedding requests default to DIRECT CONNECT (bypass system/env proxies).
+# This avoids a Windows + httpx bug where the system proxy bypass list
+# ("不代理"/"代码黑名单") is silently dropped, routing directly-reachable
+# embedding endpoints through a proxy that can't reach them.
+#
+# Set to true ONLY when your embedding endpoint requires a proxy:
+#   enable_embedding_proxy = true
+#
+# Default (unset / false): embedding requests connect directly to
+# embed_base_url, ignoring HTTP_PROXY/HTTPS_PROXY env vars and the Windows
+# system proxy registry.
