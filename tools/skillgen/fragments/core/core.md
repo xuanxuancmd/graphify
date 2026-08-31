@@ -591,7 +591,7 @@ The graph is the map. Your job after the pipeline is to be the guide.
 
 ---
 
-## Interpreter guard for subcommands
+@@ALWAYS_ON_INJECT@@## Interpreter guard for subcommands
 
 Before running any subcommand below (`--update`, `--cluster-only`, `query`, `path`, `explain`, `add`), check that `.graphify_python` exists. If it's missing (e.g. user deleted `.graph/`), re-resolve the interpreter first:
 

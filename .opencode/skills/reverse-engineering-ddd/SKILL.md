@@ -308,15 +308,15 @@ skill 闭环时自动在项目根目录的 `AGENTS.md` 中追加知识库指引�
 
 下表说明各 BC 级 `.md` 文件承载什么内容。是否读取、读取哪个，由 AI 在 graphify query 返回结果后自主判断——本清单不做触发式加载条件。
 
-| 文件 | 承载内容 | 典型适用场景（供 AI 判断是否需要读） |
+| 文件 | 承载内容 |
 |------|---------|-----------------------------------|
-| `docs/features/<bc>/technical-constraints.md` | 该 BC 特有的技术选型理由 + 编码规范 | 改动该 BC 内代码、需理解该 BC 特有约束 |
-| `docs/features/<bc>/business-flow.md` | 关键业务用例时序编排（含周期任务/外部触发入口）+ 失败/补偿矩阵 | 理解业务流程编排、失败补偿策略、定位入口点 |
-| `docs/features/<bc>/invariants.md` | 业务不变式（违反即业务状态非法） | 判断什么必须永远为真、修改聚合根时 |
-| `docs/features/<bc>/contracts.md` | 接口业务承诺（前置/后置/失败语义）+ 跨 BC 契约定位符 | 理解接口语义、查端点归属 |
+| `docs/features/<bc>/technical-constraints.md` | 该 BC 特有的技术选型理由 + 编码规范 |
+| `docs/features/<bc>/business-flow.md` | 关键业务用例时序编排（含周期任务/外部触发入口）+ 失败/补偿矩阵 |
+| `docs/features/<bc>/invariants.md` | 业务不变式（违反即业务状态非法） |
+| `docs/features/<bc>/contracts.md` | 接口业务承诺（前置/后置/失败语义）+ 跨 BC 契约定位符 |
 | `docs/features/<bc>/domain-events.md` | 业务状态变更事件 | 理解业务状态转换 |
-| `docs/features/<bc>/domain-model.md` | 聚合协作视图 + 边界 + 状态机 + 行为归属 | 理解聚合协作、判断行为归属 |
-| `docs/features/<bc>/apis/*.feature` | 基于 karate 语法的对外用例（可选；需安装 harness-karate-design） | 质量门禁、对外用例 |
+| `docs/features/<bc>/domain-model.md` | 聚合协作视图 + 边界 + 状态机 + 行为归属 |
+| `docs/features/<bc>/apis/*.feature` | 基于 karate 语法的规格用例（可选） |
 
 > graphify query 返回 `doc-anchor` 节点时，其 `filePath` 会指向上表中的文件——这是 AI 判断是否需要进一步读取以获取完整业务语境（WHY/RULES/REASONS）的信号之一，非强制。
 

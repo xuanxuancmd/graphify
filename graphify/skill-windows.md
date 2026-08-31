@@ -683,6 +683,34 @@ The graph is the map. Your job after the pipeline is to be the guide.
 
 ---
 
+### Step 10 - Inject CLAUDE.md always-on section
+
+After a successful graph build, inject a `## graphify` section into the project's `CLAUDE.md` so future agent sessions know the graph exists and prefer it over raw grep. Idempotent: if the section already exists, it is replaced in place; otherwise appended.
+
+```bash
+$(cat .graph/.graphify_python) -c "
+from pathlib import Path
+from graphify.install import _always_on, _replace_or_append_section, _CLAUDE_MD_MARKER
+
+target = Path('CLAUDE.md')
+block = _always_on('claude-md')
+
+if target.exists():
+    content = target.read_text(encoding='utf-8')
+    new_content = _replace_or_append_section(content, _CLAUDE_MD_MARKER, block)
+    if new_content == content:
+        print('CLAUDE.md already configured (no change)')
+    else:
+        target.write_text(new_content, encoding='utf-8')
+        print(f'CLAUDE.md -> graphify section updated at {target.resolve()}')
+else:
+    target.write_text(block, encoding='utf-8')
+    print(f'CLAUDE.md -> created at {target.resolve()}')
+"
+```
+
+---
+
 ## Interpreter guard for subcommands
 
 Before running any subcommand below (`--update`, `--cluster-only`, `query`, `path`, `explain`, `add`), check that `.graphify_python` exists. If it's missing (e.g. user deleted `.graph/`), re-resolve the interpreter first:

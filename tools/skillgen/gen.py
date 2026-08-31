@@ -169,25 +169,57 @@ _AGENTS_MD_HOOKS: dict[str, dict[str, str]] = {
     "trae": {
         "heading_suffix": " (Trae)",
         "host_display": "Trae",
-        "install_block": "graphify trae install       # or: graphify trae-cn install",
-        "uninstall_block": "graphify trae uninstall     # or: graphify trae-cn uninstall   # remove the section",
+        "install_block": "# AGENTS.md is injected automatically by /graphify when it builds the graph.",
+        "uninstall_block": "# Remove the ## graphify section from AGENTS.md manually, or run /graphify --no-inject.",
         "pretooluse_note": _TRAE_PRETOOLUSE_NOTE,
     },
     "amp": {
         "heading_suffix": "",
         "host_display": "Amp",
-        "install_block": "graphify amp install",
-        "uninstall_block": "graphify amp uninstall  # remove the section",
+        "install_block": "# AGENTS.md is injected automatically by /graphify when it builds the graph.",
+        "uninstall_block": "# Remove the ## graphify section from AGENTS.md manually.",
         "pretooluse_note": "",
     },
     "agents": {
-        # The generic cross-framework Agent-Skills target. Mirrors amp's bare,
-        # caveat-free agents-md section, worded for an unspecified host and
-        # pointing at `graphify agents install` (which wires AGENTS.md, like amp).
         "heading_suffix": "",
         "host_display": "your agent",
-        "install_block": "graphify agents install",
-        "uninstall_block": "graphify agents uninstall  # remove the section",
+        "install_block": "# AGENTS.md is injected automatically by /graphify when it builds the graph.",
+        "uninstall_block": "# Remove the ## graphify section from AGENTS.md manually.",
+        "pretooluse_note": "",
+    },
+    "opencode": {
+        "heading_suffix": " (OpenCode)",
+        "host_display": "OpenCode",
+        "install_block": "# AGENTS.md is injected automatically by /graphify when it builds the graph.\n# The OpenCode plugin (tool.execute.before hook) is installed globally by:\n#   graphify install --platform opencode",
+        "uninstall_block": "# Remove the ## graphify section from AGENTS.md manually.\n# Uninstall the global plugin with: graphify uninstall",
+        "pretooluse_note": "",
+    },
+    "codex": {
+        "heading_suffix": " (Codex)",
+        "host_display": "Codex",
+        "install_block": "# AGENTS.md is injected automatically by /graphify when it builds the graph.",
+        "uninstall_block": "# Remove the ## graphify section from AGENTS.md manually.",
+        "pretooluse_note": "",
+    },
+    "claw": {
+        "heading_suffix": " (OpenClaw)",
+        "host_display": "OpenClaw",
+        "install_block": "# AGENTS.md is injected automatically by /graphify when it builds the graph.",
+        "uninstall_block": "# Remove the ## graphify section from AGENTS.md manually.",
+        "pretooluse_note": "",
+    },
+    "droid": {
+        "heading_suffix": " (Factory Droid)",
+        "host_display": "Factory Droid",
+        "install_block": "# AGENTS.md is injected automatically by /graphify when it builds the graph.",
+        "uninstall_block": "# Remove the ## graphify section from AGENTS.md manually.",
+        "pretooluse_note": "",
+    },
+    "copilot": {
+        "heading_suffix": " (GitHub Copilot)",
+        "host_display": "GitHub Copilot",
+        "install_block": "# AGENTS.md is injected automatically by /graphify when it builds the graph.",
+        "uninstall_block": "# Remove the ## graphify section from AGENTS.md manually.",
         "pretooluse_note": "",
     },
 }
@@ -536,6 +568,18 @@ def _render_core(platform: Platform) -> str:
     else:
         extra = ""
 
+    # Always-on injection step: AGENTS.md hosts get the agents-md inject step,
+    # CLAUDE.md hosts get the claude-md inject step. Both are idempotent
+    # marker-based section writes done after a successful graph build.
+    if platform.hooks_variant == "agents-md":
+        always_on_inject = _read_fragment("steps/agents-md-inject.md").rstrip("\n") + "\n\n"
+    elif platform.hooks_variant == "claude-md" and platform.claude_md:
+        # Only hosts that use CLAUDE.md as their always-on file (claude, windows,
+        # codebuddy). codeagent reuses claude's split bundle so it is covered too.
+        always_on_inject = _read_fragment("steps/claude-md-inject.md").rstrip("\n") + "\n\n"
+    else:
+        always_on_inject = ""
+
     body = (
         template.replace("@@FRONTMATTER@@", _render_frontmatter(platform))
         .replace("@@INSTALL@@", install)
@@ -543,6 +587,7 @@ def _render_core(platform: Platform) -> str:
         .replace("@@DISPATCH@@", dispatch)
         .replace("@@QUERY_STUB@@", query_stub)
         .replace("@@HOOKS_TARGET@@", platform.hooks_target)
+        .replace("@@ALWAYS_ON_INJECT@@", always_on_inject)
         .replace("@@EXTRA@@", extra)
     )
     if "@@" in body:

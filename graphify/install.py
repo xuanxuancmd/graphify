@@ -592,7 +592,24 @@ def _print_banner() -> None:
 """)
     except Exception:
         pass
-def install(platform: str = "claude", *, project: bool = False, project_dir: Path | None = None) -> None:
+
+
+def _try_register_schedule() -> None:
+    """Best-effort registration of the daily ``graphify check --all`` task.
+
+    Idempotent: schtasks uses ``/f`` (force overwrite) and cron filters
+    existing graphify lines before appending, so calling this from every
+    install path is safe.  A failure does not block installation.
+    """
+    try:
+        exe = _resolve_graphify_exe() or "graphify"
+        from graphify.cli import _schedule_register
+        _schedule_register(exe)
+    except Exception:
+        pass  # scheduling is best-effort, not a hard requirement
+
+
+def install(platform: str = "codeagent", *, project: bool = False, project_dir: Path | None = None) -> None:
     _print_banner()
     platform = _canonical_platform(platform)
     if platform == "gemini":
@@ -674,18 +691,17 @@ def install(platform: str = "claude", *, project: bool = False, project_dir: Pat
             print(f"  CODEBUDDY.md     ->  created at {codebuddy_md}")
 
     if platform == "opencode":
-        _install_opencode_plugin(project_dir if project else Path("."))
+        _install_opencode_plugin()
+    elif platform in ("claude", "windows"):
+        _install_claude_hook_global()
+    elif platform == "codeagent":
+        _install_codeagent_hook_global()
 
-    # Auto-register the weekly scheduled task (global, one per machine).
-    # Runs ``graphify check --all`` every Monday at a random 0:00~5:59 time,
-    # iterating the active-projects list maintained by the SessionStart hook.
+    # Auto-register the daily scheduled task (global, one per machine).
+    # Runs ``graphify check --all`` at a random 0:00~5:59 time, iterating
+    # the active-projects list maintained by the SessionStart hook.
     # Best-effort: a failure here does not block installation.
-    try:
-        exe = _resolve_graphify_exe() or "graphify"
-        from graphify.cli import _schedule_register
-        _schedule_register(exe)
-    except Exception:
-        pass  # scheduling is best-effort, not a hard requirement
+    _try_register_schedule()
 
     if project:
         _print_project_git_add_hint([_project_scope_root(skill_dst, project_dir)])
@@ -743,6 +759,9 @@ def gemini_install(project_dir: Path | None = None, *, project: bool = False) ->
     _install_gemini_hook(project_dir)
     if project:
         _print_project_git_add_hint([_project_scope_root(skill_dst, project_dir), project_dir / "GEMINI.md", project_dir / ".gemini"])
+
+    _try_register_schedule()
+
     print()
     print("Gemini CLI will now check the knowledge graph before answering")
     print("codebase questions and rebuild it after code changes.")
@@ -900,6 +919,8 @@ def vscode_install(project_dir: Path | None = None) -> None:
         instructions.write_text(_always_on("vscode-instructions"), encoding="utf-8")
         print(f"  {instructions}  ->  created")
 
+    _try_register_schedule()
+
     print()
     print(
         "VS Code Copilot Chat configured. Type /graphify in the chat panel to build the graph."
@@ -979,6 +1000,8 @@ def _kiro_install(project_dir: Path) -> None:
         action = "updated" if steering_dst.exists() else "written"
         steering_dst.write_text(_always_on("kiro-steering"), encoding="utf-8")
         print(f"  .kiro/steering/graphify.md  ->  always-on steering {action}")
+
+    _try_register_schedule()
 
     print()
     print("Kiro will now read the knowledge graph before every conversation.")
@@ -1134,6 +1157,9 @@ def _cursor_install(project_dir: Path) -> None:
     action = "updated" if rule_path.exists() else "written"
     rule_path.write_text(_CURSOR_RULE, encoding="utf-8")
     print(f"graphify rule {action} at {rule_path.resolve()}")
+
+    _try_register_schedule()
+
     print()
     print("Cursor will now always include the knowledge graph context.")
     print("Run /graphify . first to build the graph if you haven't already.")
@@ -1368,16 +1394,33 @@ export const GraphifyPlugin = async ({ directory }) => {
   };
 };
 """
-_OPENCODE_PLUGIN_PATH = Path(".opencode") / "plugins" / "graphify.js"
-_OPENCODE_CONFIG_PATH = Path(".opencode") / "opencode.json"
-def _install_opencode_plugin(project_dir: Path) -> None:
-    """Write graphify.js plugin and register it in opencode.json."""
-    plugin_file = project_dir / _OPENCODE_PLUGIN_PATH
+# Global OpenCode plugin path — ~/.config/opencode/plugins/graphify.js
+# Plugin is a tool.execute.before hook (equivalent to Claude's PreToolUse hook).
+# It checks the current project's .graph/graph.json at runtime, so a single
+# global install serves every project. Kept out of the project tree so it does
+# not pollute git or require per-project installation.
+_OPENCODE_PLUGIN_PATH = Path(".config") / "opencode" / "plugins" / "graphify.js"
+_OPENCODE_CONFIG_PATH = Path(".config") / "opencode" / "opencode.json"
+def _opencode_global_dir() -> Path:
+    """Return the global opencode config directory (~/.config/opencode)."""
+    return Path.home() / ".config" / "opencode"
+def _install_opencode_plugin() -> None:
+    """Write graphify.js plugin to the global opencode config and register it.
+
+    The plugin is a tool.execute.before hook that fires before every bash tool
+    call. When the current project has .graph/graph.json, it prepends a
+    one-time reminder to use the graph. Installed globally (not per-project)
+    because: (1) it is a host-level hook like Claude's PreToolUse, (2) the JS
+    resolves the current project at runtime via the `directory` parameter, so
+    one copy serves all projects, (3) it should not pollute the project tree.
+    """
+    opencode_dir = _opencode_global_dir()
+    plugin_file = opencode_dir / "plugins" / "graphify.js"
     plugin_file.parent.mkdir(parents=True, exist_ok=True)
     plugin_file.write_text(_OPENCODE_PLUGIN_JS, encoding="utf-8")
-    print(f"  {_OPENCODE_PLUGIN_PATH}  ->  tool.execute.before hook written")
+    print(f"  {plugin_file.relative_to(Path.home())}  ->  tool.execute.before hook written")
 
-    config_file = project_dir / _OPENCODE_CONFIG_PATH
+    config_file = opencode_dir / "opencode.json"
     if config_file.exists():
         try:
             config = json.loads(config_file.read_text(encoding="utf-8"))
@@ -1387,21 +1430,23 @@ def _install_opencode_plugin(project_dir: Path) -> None:
         config = {}
 
     plugins = config.setdefault("plugin", [])
-    entry = _OPENCODE_PLUGIN_PATH.as_posix()
+    # Use the absolute path so OpenCode can resolve the plugin from any cwd.
+    entry = str(plugin_file).replace("\\", "/")
     if entry not in plugins:
         plugins.append(entry)
         config_file.write_text(json.dumps(config, indent=2), encoding="utf-8")
-        print(f"  {_OPENCODE_CONFIG_PATH}  ->  plugin registered")
+        print(f"  {config_file.relative_to(Path.home())}  ->  plugin registered")
     else:
-        print(f"  {_OPENCODE_CONFIG_PATH}  ->  plugin already registered (no change)")
-def _uninstall_opencode_plugin(project_dir: Path) -> None:
-    """Remove graphify.js plugin and deregister from opencode.json."""
-    plugin_file = project_dir / _OPENCODE_PLUGIN_PATH
+        print(f"  {config_file.relative_to(Path.home())}  ->  plugin already registered (no change)")
+def _uninstall_opencode_plugin() -> None:
+    """Remove graphify.js plugin from the global opencode config and deregister."""
+    opencode_dir = _opencode_global_dir()
+    plugin_file = opencode_dir / "plugins" / "graphify.js"
     if plugin_file.exists():
         plugin_file.unlink()
-        print(f"  {_OPENCODE_PLUGIN_PATH}  ->  removed")
+        print(f"  {plugin_file.relative_to(Path.home())}  ->  removed")
 
-    config_file = project_dir / _OPENCODE_CONFIG_PATH
+    config_file = opencode_dir / "opencode.json"
     if not config_file.exists():
         return
     try:
@@ -1409,13 +1454,13 @@ def _uninstall_opencode_plugin(project_dir: Path) -> None:
     except json.JSONDecodeError:
         return
     plugins = config.get("plugin", [])
-    entry = _OPENCODE_PLUGIN_PATH.as_posix()
+    entry = str(plugin_file).replace("\\", "/")
     if entry in plugins:
         plugins.remove(entry)
         if not plugins:
             config.pop("plugin")
         config_file.write_text(json.dumps(config, indent=2), encoding="utf-8")
-        print(f"  {_OPENCODE_CONFIG_PATH}  ->  plugin deregistered")
+        print(f"  {config_file.relative_to(Path.home())}  ->  plugin deregistered")
 def _resolve_graphify_exe() -> str:
     """Return the absolute path to the graphify executable, with forward slashes.
 
@@ -1492,41 +1537,28 @@ def _uninstall_codex_hook(project_dir: Path) -> None:
     hooks_path.write_text(json.dumps(existing, indent=2), encoding="utf-8")
     print(f"  .codex/hooks.json  ->  PreToolUse hook removed")
 def _agents_install(project_dir: Path, platform: str) -> None:
-    """Write the graphify section to the local AGENTS.md for always-on platforms."""
-    target = (project_dir or Path(".")) / "AGENTS.md"
+    """Deprecated. AGENTS.md injection moved to the /graphify skill; plugin
+    install moved to ``graphify install --platform opencode``.
 
-    if target.exists():
-        content = target.read_text(encoding="utf-8")
-        new_content = _replace_or_append_section(
-            content, _AGENTS_MD_MARKER, _always_on("agents-md")
-        )
-    else:
-        new_content = _always_on("agents-md")
-
-    if target.exists() and new_content == target.read_text(encoding="utf-8"):
-        print(f"graphify already configured in {target.resolve()} (no change)")
-    else:
-        target.write_text(new_content, encoding="utf-8")
-        print(f"graphify section written to {target.resolve()}")
-
-    if platform == "codex":
-        _install_codex_hook(project_dir or Path("."))
-    elif platform == "opencode":
-        _install_opencode_plugin(project_dir or Path("."))
-    elif platform == "kilo":
-        _install_kilo_plugin(project_dir or Path("."))
-
-    print()
+    Kept as a no-op that prints a deprecation notice so users who run
+    ``graphify <platform> install`` are redirected to the new flow instead of
+    silently getting nothing.
+    """
+    _print_deprecated_agents_install(platform)
+def _print_deprecated_agents_install(platform: str) -> None:
+    """Print a deprecation notice for `graphify <platform> install`."""
     print(
-        f"{platform.capitalize()} will now check the knowledge graph before answering"
+        f"note: `graphify {platform} install` is deprecated. The per-project "
+        "AGENTS.md injection is now done automatically by the `/graphify` "
+        "skill when it builds the graph, and the OpenCode plugin is installed "
+        "globally by `graphify install --platform opencode`.",
+        file=sys.stderr,
     )
-    print("codebase questions and rebuild it after code changes.")
-    if platform not in ("codex", "opencode", "kilo"):
-        print()
-        print("Note: unlike Claude Code, there is no PreToolUse hook equivalent for")
-        print(
-            f"{platform.capitalize()} — the AGENTS.md rules are the always-on mechanism."
-        )
+    print(
+        "  - Global (once):  graphify install --platform opencode",
+        file=sys.stderr,
+    )
+    print("  - Per project:   /graphify", file=sys.stderr)
 def _amp_legacy_cleanup() -> None:
     """Best-effort removal of the pre-fix ~/.amp/skills/graphify install dir.
 
@@ -1540,10 +1572,12 @@ def _amp_legacy_cleanup() -> None:
         if not legacy.exists():
             print(f"  legacy removed   ->  {legacy}")
 def _amp_install(project_dir: Path | None = None) -> None:
-    """User-scope Amp install: skill into ~/.config/agents/skills + AGENTS.md."""
+    """Deprecated. ``graphify amp install`` is replaced by ``graphify install --platform amp``.
+    AGENTS.md injection moved to the /graphify skill.
+    """
+    _print_deprecated_agents_install("amp")
     _amp_legacy_cleanup()
     _copy_skill_file("amp")
-    _agents_install(project_dir or Path("."), "amp")
 def _amp_uninstall(project_dir: Path | None = None) -> None:
     """User-scope Amp uninstall: remove the skill and the AGENTS.md section."""
     removed = _remove_skill_file("amp")
@@ -1551,17 +1585,11 @@ def _amp_uninstall(project_dir: Path | None = None) -> None:
         print("skill removed")
     _agents_uninstall(project_dir or Path("."), platform="amp")
 def _agents_platform_install(project_dir: Path | None = None) -> None:
-    """`graphify agents install`: skill into ~/.agents/skills + AGENTS.md.
-
-    The amp-twin of the generic Agent-Skills target. Mirrors _amp_install but
-    lands the skill at the spec's user-global ~/.agents/skills (set in
-    _platform_skill_destination). Wiring AGENTS.md keeps it honest with the
-    rendered hooks reference, which points at `graphify agents install`. The bare
-    `graphify install --platform agents` path stays skill-only (via install()),
-    exactly as amp's `--platform amp` does.
+    """Deprecated. ``graphify agents install`` is replaced by ``graphify install --platform agents``.
+    AGENTS.md injection moved to the /graphify skill.
     """
+    _print_deprecated_agents_install("agents")
     _copy_skill_file("agents")
-    _agents_install(project_dir or Path("."), "agents")
 def _agents_platform_uninstall(project_dir: Path | None = None) -> None:
     """`graphify agents uninstall`: remove the skill and the AGENTS.md section."""
     removed = _remove_skill_file("agents")
@@ -1585,9 +1613,12 @@ def _project_install(platform_name: str, project_dir: Path | None = None, strict
         _kiro_install(project_dir)
         _print_project_git_add_hint([project_dir / ".kiro"])
     elif platform_name in ("aider", "amp", "codex", "opencode", "claw", "droid", "trae", "trae-cn", "hermes"):
+        # Project-scoped skill install only. AGENTS.md injection is now done
+        # by the /graphify skill when it builds the graph; the OpenCode plugin
+        # is installed globally by `graphify install --platform opencode`.
+        _print_deprecated_agents_install(platform_name)
         skill_dst = _copy_skill_file(platform_name, project=True, project_dir=project_dir)
-        _agents_install(project_dir, platform_name)
-        hint_paths = [_project_scope_root(skill_dst, project_dir), project_dir / "AGENTS.md"]
+        hint_paths = [_project_scope_root(skill_dst, project_dir)]
         if platform_name == "opencode":
             hint_paths.append(project_dir / ".opencode")
         elif platform_name == "codex":
@@ -1657,13 +1688,17 @@ def _project_uninstall_all(project_dir: Path | None = None) -> None:
         _project_uninstall(platform_name, project_dir)
     print("\nDone.")
 def _agents_uninstall(project_dir: Path, platform: str = "") -> None:
-    """Remove the graphify section from the local AGENTS.md."""
+    """Remove the graphify section from the local AGENTS.md.
+
+    Also removes the OpenCode plugin (now global) when platform == 'opencode'.
+    The AGENTS.md cleanup is kept because /graphify may have injected it.
+    """
     target = (project_dir or Path(".")) / "AGENTS.md"
 
     if not target.exists():
         print("No AGENTS.md found in current directory - nothing to do")
         if platform == "opencode":
-            _uninstall_opencode_plugin(project_dir or Path("."))
+            _uninstall_opencode_plugin()
         elif platform == "kilo":
             _uninstall_kilo_plugin(project_dir or Path("."))
         return
@@ -1673,7 +1708,7 @@ def _agents_uninstall(project_dir: Path, platform: str = "") -> None:
     if cleaned is None:
         print("graphify section not found in AGENTS.md - nothing to do")
         if platform == "opencode":
-            _uninstall_opencode_plugin(project_dir or Path("."))
+            _uninstall_opencode_plugin()
         elif platform == "kilo":
             _uninstall_kilo_plugin(project_dir or Path("."))
         return
@@ -1686,7 +1721,7 @@ def _agents_uninstall(project_dir: Path, platform: str = "") -> None:
         print(f"AGENTS.md was empty after removal - deleted {target.resolve()}")
 
     if platform == "opencode":
-        _uninstall_opencode_plugin(project_dir or Path("."))
+        _uninstall_opencode_plugin()
     elif platform == "kilo":
         _uninstall_kilo_plugin(project_dir or Path("."))
 def _kilo_uninstall_global() -> list[str]:
@@ -1728,26 +1763,18 @@ def _kilo_uninstall(project_dir: Path) -> None:
     removed = _kilo_uninstall_global()
     print("; ".join(removed) if removed else "nothing to remove")
 def claude_install(project_dir: Path | None = None, strict: bool = False) -> None:
-    """Write the graphify section to the local CLAUDE.md."""
-    target = (project_dir or Path(".")) / "CLAUDE.md"
+    """Install graphify always-on hooks for Claude Code (global).
 
-    if target.exists():
-        content = target.read_text(encoding="utf-8")
-        new_content = _replace_or_append_section(
-            content, _CLAUDE_MD_MARKER, _always_on("claude-md")
-        )
-    else:
-        new_content = _always_on("claude-md")
+    Writes the PreToolUse hook to ~/.claude/settings.json (global, not
+    per-project). CLAUDE.md injection is now done by the /graphify skill
+    when it builds the graph.
 
-    if target.exists() and new_content == target.read_text(encoding="utf-8"):
-        print(f"graphify already configured in {target.resolve()} (no change)")
-    else:
-        target.write_text(new_content, encoding="utf-8")
-        print(f"graphify section written to {target.resolve()}")
+    The ``project_dir`` parameter is kept for backward-compatibility but
+    no longer writes CLAUDE.md. The hook is always installed globally.
+    """
+    _install_claude_hook_global(strict=strict)
 
-    # Always re-install the Claude Code PreToolUse hook so an old hook
-    # payload (e.g. pre-issue-#580 wording) is replaced on upgrade.
-    _install_claude_hook(project_dir or Path("."), strict=strict)
+    _try_register_schedule()
 
     print()
     print("Claude Code will now check the knowledge graph before answering")
@@ -1755,6 +1782,26 @@ def claude_install(project_dir: Path | None = None, strict: bool = False) -> Non
     if strict:
         print("Strict mode: the first raw file read per session is blocked until")
         print("one `graphify query` runs (toggle with GRAPHIFY_HOOK_STRICT=0).")
+def _install_claude_hook_global(strict: bool = False) -> None:
+    """Add graphify PreToolUse hook to ~/.claude/settings.json (global)."""
+    settings_path = Path.home() / ".claude" / "settings.json"
+    settings_path.parent.mkdir(parents=True, exist_ok=True)
+
+    settings = _read_settings_for_merge(settings_path)
+
+    hooks = settings.setdefault("hooks", {})
+    if not isinstance(hooks, dict):
+        _refuse_to_modify(settings_path)
+    pre_tool = hooks.setdefault("PreToolUse", [])
+    if not isinstance(pre_tool, list):
+        _refuse_to_modify(settings_path)
+
+    hooks["PreToolUse"] = [h for h in pre_tool if not (isinstance(h, dict) and h.get("matcher") in ("Glob|Grep", "Bash", "Bash|Grep", "Read|Glob") and "graphify" in str(h))]
+    hooks["PreToolUse"].extend(_claude_pretooluse_hooks(strict=strict))
+
+    _write_settings_with_backup(settings_path, settings)
+    _mode = " (strict)" if strict else ""
+    print(f"  ~/.claude/settings.json  ->  PreToolUse hooks registered (Bash|Grep search + Read/Glob){_mode}")
 def _install_claude_hook(project_dir: Path, strict: bool = False) -> None:
     """Add graphify PreToolUse hook to .claude/settings.json."""
     settings_path = project_dir / ".claude" / "settings.json"
@@ -1799,6 +1846,11 @@ def _strip_graphify_hook(settings_path: Path) -> None:
     settings["hooks"]["PreToolUse"] = filtered
     settings_path.write_text(json.dumps(settings, indent=2), encoding="utf-8")
     print(f"  .claude/{settings_path.name}  ->  PreToolUse hook removed")
+def _uninstall_claude_hook_global() -> None:
+    """Remove the graphify PreToolUse hook from ~/.claude/settings.json (global)."""
+    claude_dir = Path.home() / ".claude"
+    for name in ("settings.json", "settings.local.json"):
+        _strip_graphify_hook(claude_dir / name)
 def uninstall_all(project_dir: Path | None = None, purge: bool = False) -> None:
     """Remove graphify from every platform detected in the current project."""
     pd = project_dir or Path(".")
@@ -1823,7 +1875,7 @@ def uninstall_all(project_dir: Path | None = None, purge: bool = False) -> None:
     # The generic agents platform's user-scope skill lives at ~/.agents/skills,
     # which neither the AGENTS.md cleanup nor amp's removal reaches.
     _remove_skill_file("agents")
-    _uninstall_opencode_plugin(pd)
+    _uninstall_opencode_plugin()
     _uninstall_codex_hook(pd)
 
     # Git hook
@@ -1846,21 +1898,11 @@ def uninstall_all(project_dir: Path | None = None, purge: bool = False) -> None:
 
     print("\nDone. Run 'pip uninstall graphifyy' to remove the package itself.")
 def claude_uninstall(project_dir: Path | None = None, *, project: bool = False, remove_user_skill: bool | None = None) -> None:
-    """Remove the graphify skill tree (SKILL.md + references/) and the graphify
-    section from CLAUDE.md and its local-only variants, plus the PreToolUse hook.
+    """Remove the graphify skill tree, the CLAUDE.md section, and the global hook.
 
-    Mirrors gemini_uninstall: the bare `graphify uninstall` and `graphify claude
-    uninstall` must remove the installed skill, not just strip CLAUDE.md, or the
-    progressive-disclosure tree (SKILL.md + references/) is orphaned (#1121).
-
-    A user may relocate the section/hook into the local-only files Claude Code
-    supports so they are not committed to a shared repo, so uninstall also cleans
-    CLAUDE.local.md, .claude/CLAUDE.local.md and .claude/settings.local.json (#1731).
-
-    Scope rules (#2215): a bare call removes the user-global skill; passing
-    ``project_dir`` (or ``project=True``) scopes skill removal to that project
-    and leaves the global tree untouched, unless ``remove_user_skill=True``
-    explicitly opts back into the global delete (as ``uninstall_all`` does).
+    The PreToolUse hook was moved to ~/.claude/settings.json (global), so
+    uninstall removes it from there. CLAUDE.md cleanup is kept because the
+    /graphify skill may have injected it.
     """
     explicit_dir = project_dir is not None
     project_dir = project_dir or Path(".")
@@ -1879,7 +1921,6 @@ def claude_uninstall(project_dir: Path | None = None, *, project: bool = False, 
     existing = [t for t in md_targets if t.exists()]
     removed_any = False
     for target in existing:
-        # Not short-circuited: every present file must be cleaned, not just the first.
         if _strip_graphify_md_section(target):
             removed_any = True
 
@@ -1888,7 +1929,8 @@ def claude_uninstall(project_dir: Path | None = None, *, project: bool = False, 
     elif not removed_any:
         print("graphify section not found in CLAUDE.md - nothing to do")
 
-    _uninstall_claude_hook(project_dir)
+    # Remove the global PreToolUse hook
+    _uninstall_claude_hook_global()
 def _strip_graphify_md_section(target: Path) -> bool:
     """Strip the ## graphify section from one CLAUDE.md-style file.
 
@@ -1934,6 +1976,8 @@ def codebuddy_install(project_dir: Path | None = None) -> None:
 
     # Also write CodeBuddy PreToolUse hook to .codebuddy/settings.json
     _install_codebuddy_hook(project_dir or Path("."))
+
+    _try_register_schedule()
 
     print()
     print("CodeBuddy will now check the knowledge graph before answering")
@@ -2098,33 +2142,52 @@ def _uninstall_codeagent_hook(project_dir: Path) -> None:
     if changed:
         settings_path.write_text(json.dumps(settings, indent=2), encoding="utf-8")
         print(f"  .cac/settings.json  ->  hooks removed")
+def _uninstall_codeagent_hook_global() -> None:
+    """Remove graphify PreToolUse + SessionStart hooks from ~/.cac/settings.json (global)."""
+    settings_path = Path.home() / ".cac" / "settings.json"
+    if not settings_path.exists():
+        return
+    try:
+        settings = json.loads(settings_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return
+    hooks = settings.get("hooks", {})
+    changed = False
+    pre_tool = hooks.get("PreToolUse", [])
+    filtered_pre = [h for h in pre_tool if not (h.get("matcher") in ("Glob|Grep", "Bash", "Bash|Grep", "Read|Glob") and "graphify" in str(h))]
+    if len(filtered_pre) != len(pre_tool):
+        hooks["PreToolUse"] = filtered_pre
+        changed = True
+    session_start = hooks.get("SessionStart", [])
+    filtered_ss = []
+    for g in session_start:
+        if isinstance(g, dict):
+            inner = g.get("hooks") or []
+            if any(isinstance(h, dict) and "graphify check" in str(h.get("command", "")) for h in inner):
+                continue
+        filtered_ss.append(g)
+    if len(filtered_ss) != len(session_start):
+        if filtered_ss:
+            hooks["SessionStart"] = filtered_ss
+        else:
+            hooks.pop("SessionStart", None)
+        changed = True
+    if changed:
+        settings_path.write_text(json.dumps(settings, indent=2), encoding="utf-8")
+        print(f"  ~/.cac/settings.json  ->  hooks removed")
 
 
 def codeagent_install(project_dir: Path | None = None, strict: bool = False) -> None:
-    """Install graphify for codeagent (same as Claude Code, but .cac directory).
+    """Install graphify always-on hooks for codeagent (global, .cac directory).
 
-    Writes the graphify section to CLAUDE.md, installs the skill to
-    ~/.cac/skills/graphify/, and registers PreToolUse + SessionStart hooks
-    in .cac/settings.json.
+    Writes the PreToolUse + SessionStart hooks to ~/.cac/settings.json (global,
+    not per-project). CLAUDE.md injection is now done by the /graphify skill
+    when it builds the graph.
     """
     _copy_skill_file("codeagent", project=bool(project_dir), project_dir=project_dir)
-    target = (project_dir or Path(".")) / "CLAUDE.md"
+    _install_codeagent_hook_global(strict=strict)
 
-    if target.exists():
-        content = target.read_text(encoding="utf-8")
-        new_content = _replace_or_append_section(
-            content, _CLAUDE_MD_MARKER, _always_on("claude-md")
-        )
-    else:
-        new_content = _always_on("claude-md")
-
-    if target.exists() and new_content == target.read_text(encoding="utf-8"):
-        print(f"graphify already configured in {target.resolve()} (no change)")
-    else:
-        target.write_text(new_content, encoding="utf-8")
-        print(f"graphify section written to {target.resolve()}")
-
-    _install_codeagent_hook(project_dir or Path("."), strict=strict)
+    _try_register_schedule()
 
     print()
     print("codeagent will now check the knowledge graph before answering")
@@ -2132,10 +2195,46 @@ def codeagent_install(project_dir: Path | None = None, strict: bool = False) -> 
     if strict:
         print("Strict mode: the first raw file read per session is blocked until")
         print("one `graphify query` runs (toggle with GRAPHIFY_HOOK_STRICT=0).")
+def _install_codeagent_hook_global(strict: bool = False) -> None:
+    """Add graphify PreToolUse + SessionStart hooks to ~/.cac/settings.json (global)."""
+    settings_path = Path.home() / ".cac" / "settings.json"
+    settings_path.parent.mkdir(parents=True, exist_ok=True)
+
+    settings = _read_settings_for_merge(settings_path)
+
+    hooks = settings.setdefault("hooks", {})
+    if not isinstance(hooks, dict):
+        _refuse_to_modify(settings_path)
+    pre_tool = hooks.setdefault("PreToolUse", [])
+    if not isinstance(pre_tool, list):
+        _refuse_to_modify(settings_path)
+
+    hooks["PreToolUse"] = [h for h in pre_tool if not (isinstance(h, dict) and h.get("matcher") in ("Glob|Grep", "Bash", "Bash|Grep", "Read|Glob") and "graphify" in str(h))]
+    hooks["PreToolUse"].extend(_claude_pretooluse_hooks(strict=strict))
+
+    # SessionStart hook — reuses the same graphify exe resolution.
+    session = hooks.setdefault("SessionStart", [])
+    if not isinstance(session, list):
+        _refuse_to_modify(settings_path)
+    exe = _resolve_graphify_exe()
+    session_entry = {
+        "hooks": [{"type": "command", "command": f'"{exe}" check'}],
+    }
+    session[:] = [h for h in session if "graphify" not in str(h)]
+    session.append(session_entry)
+
+    _write_settings_with_backup(settings_path, settings)
+    _mode = " (strict)" if strict else ""
+    print(f"  ~/.cac/settings.json  ->  PreToolUse + SessionStart hooks registered{_mode}")
 
 
 def codeagent_uninstall(project_dir: Path | None = None, *, project: bool = False, remove_user_skill: bool | None = None) -> None:
-    """Remove graphify skill, CLAUDE.md section, and hooks from codeagent (.cac)."""
+    """Remove graphify skill, CLAUDE.md section, and global hooks from codeagent (.cac).
+
+    The hooks were moved to ~/.cac/settings.json (global), so uninstall removes
+    them from there. CLAUDE.md cleanup is kept because the /graphify skill may
+    have injected it.
+    """
     explicit_dir = project_dir is not None
     project_dir = project_dir or Path(".")
     if remove_user_skill is None:
@@ -2159,7 +2258,7 @@ def codeagent_uninstall(project_dir: Path | None = None, *, project: bool = Fals
     elif not removed_any:
         print("graphify section not found in CLAUDE.md - nothing to do")
 
-    _uninstall_codeagent_hook(project_dir)
+    _uninstall_codeagent_hook_global()
 
 
 _CLI_INSTALL_COMMANDS = frozenset({
@@ -2200,8 +2299,9 @@ def dispatch_install_cli(cmd: str) -> bool:
     if cmd not in _CLI_INSTALL_COMMANDS:
         return False
     if cmd == "install":
-        # Default to windows platform on Windows, claude elsewhere
-        default_platform = "windows" if platform.system() == "Windows" else "claude"
+        # Default to windows platform on Windows, codeagent elsewhere.
+        # codeagent uses .cac directory (same mechanism as claude's .claude).
+        default_platform = "windows" if platform.system() == "Windows" else "codeagent"
         selected_platform: str | None = None
         project_scope = False
         strict = False

@@ -140,8 +140,8 @@ def test_install_project_codex_writes_skill_and_agents(tmp_path, monkeypatch):
     with patch("graphify.__main__.Path.home", return_value=home):
         main()
     assert (project / ".codex" / "skills" / "graphify" / "SKILL.md").exists()
-    assert (project / "AGENTS.md").exists()
-    assert (project / ".codex" / "hooks.json").exists()
+    # AGENTS.md is no longer written by project install (moved to /graphify skill)
+    assert not (project / "AGENTS.md").exists()
     assert not (home / ".codex" / "skills" / "graphify" / "SKILL.md").exists()
 
 
@@ -159,7 +159,8 @@ def test_claude_subcommand_project_install_and_uninstall_are_project_scoped(tmp_
         main()
         assert (project / ".claude" / "skills" / "graphify" / "SKILL.md").exists()
         assert (project / ".claude" / "CLAUDE.md").exists()
-        assert (project / "CLAUDE.md").exists()
+        # CLAUDE.md (project root) is no longer written by claude_install
+        # (moved to /graphify skill). Only .claude/CLAUDE.md (skill registration) is written.
         assert user_skill.exists()
 
         monkeypatch.setattr(sys, "argv", ["graphify", "claude", "uninstall", "--project"])
@@ -184,8 +185,9 @@ def test_codex_subcommand_project_install_and_uninstall_are_project_scoped(tmp_p
         monkeypatch.setattr(sys, "argv", ["graphify", "codex", "install", "--project"])
         main()
         assert (project / ".codex" / "skills" / "graphify" / "SKILL.md").exists()
-        assert (project / "AGENTS.md").exists()
-        assert (project / ".codex" / "hooks.json").exists()
+        # AGENTS.md is no longer written by project install (moved to /graphify skill)
+        assert not (project / "AGENTS.md").exists()
+        # codex hook is no longer installed by project install (moved to global)
         assert user_skill.exists()
 
         monkeypatch.setattr(sys, "argv", ["graphify", "codex", "uninstall", "--project"])
@@ -194,9 +196,9 @@ def test_codex_subcommand_project_install_and_uninstall_are_project_scoped(tmp_p
     assert user_skill.exists()
     assert not (project / ".codex" / "skills" / "graphify" / "SKILL.md").exists()
     assert not (project / "AGENTS.md").exists()
+    # codex hooks.json was never written by project install (hook moved to global)
     hooks_path = project / ".codex" / "hooks.json"
-    assert hooks_path.exists()
-    assert "graphify" not in hooks_path.read_text()
+    assert not hooks_path.exists()
 
 
 def test_antigravity_install_project_writes_project_skill(tmp_path, monkeypatch):
@@ -607,55 +609,61 @@ def _kilo_uninstall(project_dir, home_dir):
         _uninstall_fn(project_dir)
 
 
-def test_codex_agents_install_writes_agents_md(tmp_path):
+def test_codex_agents_install_writes_agents_md(tmp_path, capsys):
+    """_agents_install is deprecated: no-op, prints deprecation warning."""
     _agents_install(tmp_path, "codex")
     agents_md = tmp_path / "AGENTS.md"
-    assert agents_md.exists()
-    assert "graphify" in agents_md.read_text()
-    assert "GRAPH_REPORT.md" in agents_md.read_text()
+    assert not agents_md.exists()
+    assert "deprecated" in capsys.readouterr().err.lower()
 
 
-def test_opencode_agents_install_writes_agents_md(tmp_path):
+def test_opencode_agents_install_writes_agents_md(tmp_path, capsys):
+    """_agents_install is deprecated: no-op, no AGENTS.md written."""
     _agents_install(tmp_path, "opencode")
-    assert (tmp_path / "AGENTS.md").exists()
+    assert not (tmp_path / "AGENTS.md").exists()
+    assert "deprecated" in capsys.readouterr().err.lower()
 
 
-def test_claw_agents_install_writes_agents_md(tmp_path):
+def test_claw_agents_install_writes_agents_md(tmp_path, capsys):
+    """_agents_install is deprecated: no-op."""
     _agents_install(tmp_path, "claw")
-    assert (tmp_path / "AGENTS.md").exists()
+    assert not (tmp_path / "AGENTS.md").exists()
+    assert "deprecated" in capsys.readouterr().err.lower()
 
 
 def test_agents_install_idempotent(tmp_path):
-    """Installing twice does not duplicate the section."""
+    """_agents_install is a no-op; calling twice does nothing."""
     _agents_install(tmp_path, "codex")
     _agents_install(tmp_path, "codex")
-    content = (tmp_path / "AGENTS.md").read_text()
-    assert content.count("## graphify") == 1
+    assert not (tmp_path / "AGENTS.md").exists()
 
 
-def test_agents_install_appends_to_existing(tmp_path):
-    """Installs into an existing AGENTS.md without overwriting other content."""
+def test_agents_install_does_not_touch_existing(tmp_path):
+    """_agents_install is a no-op; existing AGENTS.md is left unchanged."""
     agents_md = tmp_path / "AGENTS.md"
-    agents_md.write_text("# Existing rules\n\nDo not break things.\n")
+    original = "# Existing rules\n\nDo not break things.\n"
+    agents_md.write_text(original)
     _agents_install(tmp_path, "codex")
-    content = agents_md.read_text()
-    assert "Do not break things." in content
-    assert "## graphify" in content
+    assert agents_md.read_text() == original
 
 
 def test_agents_uninstall_removes_section(tmp_path):
-    _agents_install(tmp_path, "codex")
-    _agents_uninstall(tmp_path)
+    """Uninstall removes a pre-existing ## graphify section from AGENTS.md."""
+    from graphify.install import _always_on, _AGENTS_MD_MARKER
     agents_md = tmp_path / "AGENTS.md"
-    # File deleted when it only contained graphify section
+    agents_md.write_text(_always_on("agents-md"))
+    _agents_uninstall(tmp_path)
     assert not agents_md.exists()
 
 
 def test_agents_uninstall_preserves_other_content(tmp_path):
-    """Uninstall keeps pre-existing content."""
+    """Uninstall keeps pre-existing content, removes only ## graphify section."""
+    from graphify.install import _always_on, _AGENTS_MD_MARKER, _replace_or_append_section
     agents_md = tmp_path / "AGENTS.md"
     agents_md.write_text("# Existing rules\n\nDo not break things.\n")
-    _agents_install(tmp_path, "codex")
+    # Simulate what /graphify would inject
+    content = _replace_or_append_section(agents_md.read_text(), _AGENTS_MD_MARKER, _always_on("agents-md"))
+    agents_md.write_text(content)
     _agents_uninstall(tmp_path)
     assert agents_md.exists()
     content = agents_md.read_text()
@@ -728,30 +736,35 @@ def test_uninstall_untouched_when_only_user_h3_present(tmp_path, capsys):
     assert "nothing to do" in capsys.readouterr().out
 
 
-# --- OpenCode plugin tests ---
+# --- OpenCode plugin tests (global) ---
+
+
+def _install_opencode_plugin_with_home(tmp_path):
+    """Call _install_opencode_plugin() with Path.home patched to tmp_path."""
+    from graphify.install import _install_opencode_plugin
+    with patch("graphify.install.Path.home", return_value=tmp_path):
+        _install_opencode_plugin()
+
+
+def _uninstall_opencode_plugin_with_home(tmp_path):
+    from graphify.install import _uninstall_opencode_plugin
+    with patch("graphify.install.Path.home", return_value=tmp_path):
+        _uninstall_opencode_plugin()
 
 
 def test_opencode_agents_install_writes_plugin(tmp_path):
-    """opencode install writes .opencode/plugins/graphify.js."""
-    _agents_install(tmp_path, "opencode")
-    plugin = tmp_path / ".opencode" / "plugins" / "graphify.js"
+    """opencode install writes ~/.config/opencode/plugins/graphify.js (global)."""
+    _install_opencode_plugin_with_home(tmp_path)
+    plugin = tmp_path / ".config" / "opencode" / "plugins" / "graphify.js"
     assert plugin.exists()
     assert "tool.execute.before" in plugin.read_text()
 
 
 def test_opencode_plugin_reminder_has_no_backticks(tmp_path):
-    """The bash reminder string must not contain backticks or $(...) (regression test for #1413).
-
-    The plugin prepends `echo "<reminder>" && <cmd>` to the user's bash command.
-    Backticks or $() inside the reminder trigger bash command substitution
-    when the echo runs, which both corrupts tool output and silently executes
-    the very graphify command we are only suggesting.
-    """
-    _agents_install(tmp_path, "opencode")
-    plugin = tmp_path / ".opencode" / "plugins" / "graphify.js"
+    """The bash reminder string must not contain backticks or $(...) (regression test for #1413)."""
+    _install_opencode_plugin_with_home(tmp_path)
+    plugin = tmp_path / ".config" / "opencode" / "plugins" / "graphify.js"
     body = plugin.read_text()
-    # Extract the echoed reminder string literal between the double-quotes
-    # of the `output.args.command = 'echo "..." && ' +` line.
     import re
 
     m = re.search(r'echo "([^"]*)"', body)
@@ -762,21 +775,17 @@ def test_opencode_plugin_reminder_has_no_backticks(tmp_path):
 
 
 def test_opencode_plugin_uses_semicolon_not_ampersand(tmp_path):
-    """The reminder must be joined to the user's command with ';', not '&&'
-    (#1646). Windows PowerShell 5.1 rejects '&&' as a statement separator, which
-    broke the first bash command of every OpenCode session on Windows. ';' works
-    in PowerShell 5.1, Bash, and POSIX shells."""
-    _agents_install(tmp_path, "opencode")
-    body = (tmp_path / ".opencode" / "plugins" / "graphify.js").read_text()
-    # The prepend line ends with the separator before `' +`.
+    """The reminder must be joined to the user's command with ';', not '&&' (#1646)."""
+    _install_opencode_plugin_with_home(tmp_path)
+    body = (tmp_path / ".config" / "opencode" / "plugins" / "graphify.js").read_text()
     assert '" ; \' +' in body or '." ; \' +' in body, "reminder should join with ';'"
     assert '" && \' +' not in body, "'&&' breaks PowerShell 5.1 (#1646)"
 
 
 def test_opencode_agents_install_registers_plugin_in_config(tmp_path):
-    """opencode install registers the plugin in .opencode/opencode.json."""
-    _agents_install(tmp_path, "opencode")
-    config_file = tmp_path / ".opencode" / "opencode.json"
+    """opencode install registers the plugin in ~/.config/opencode/opencode.json (global)."""
+    _install_opencode_plugin_with_home(tmp_path)
+    config_file = tmp_path / ".config" / "opencode" / "opencode.json"
     assert config_file.exists()
     import json as _json
 
@@ -785,25 +794,23 @@ def test_opencode_agents_install_registers_plugin_in_config(tmp_path):
 
 
 def test_opencode_agents_install_merges_existing_config(tmp_path):
-    """opencode install preserves existing .opencode/opencode.json keys."""
+    """opencode install preserves existing ~/.config/opencode/opencode.json keys."""
     import json as _json
 
-    config_file = tmp_path / ".opencode" / "opencode.json"
+    config_file = tmp_path / ".config" / "opencode" / "opencode.json"
     config_file.parent.mkdir(parents=True, exist_ok=True)
     config_file.write_text(_json.dumps({"model": "claude-opus-4-5", "plugin": []}))
-    _agents_install(tmp_path, "opencode")
+    _install_opencode_plugin_with_home(tmp_path)
     config = _json.loads(config_file.read_text())
     assert config["model"] == "claude-opus-4-5"
     assert any("graphify.js" in p for p in config["plugin"])
 
 
 def test_opencode_agents_uninstall_removes_plugin(tmp_path):
-    """opencode uninstall removes the plugin file and deregisters from opencode.json."""
-    import json as _json
-
-    _agents_install(tmp_path, "opencode")
-    _agents_uninstall(tmp_path, platform="opencode")
-    plugin = tmp_path / ".opencode" / "plugins" / "graphify.js"
+    """opencode uninstall removes the global plugin file and deregisters from opencode.json."""
+    _install_opencode_plugin_with_home(tmp_path)
+    _uninstall_opencode_plugin_with_home(tmp_path)
+    plugin = tmp_path / ".config" / "opencode" / "plugins" / "graphify.js"
     assert not plugin.exists()
     config_file = tmp_path / ".opencode" / "opencode.json"
     if config_file.exists():
@@ -811,9 +818,11 @@ def test_opencode_agents_uninstall_removes_plugin(tmp_path):
         assert not any("graphify.js" in p for p in config.get("plugin", []))
 
 
-def test_kilo_agents_install_writes_agents_md(tmp_path):
+def test_kilo_agents_install_writes_agents_md(tmp_path, capsys):
+    """_agents_install is deprecated: no-op for kilo too."""
     _agents_install(tmp_path, "kilo")
-    assert (tmp_path / "AGENTS.md").exists()
+    assert not (tmp_path / "AGENTS.md").exists()
+    assert "deprecated" in capsys.readouterr().err.lower()
 
 
 def test_kilo_agents_install_writes_plugin(tmp_path):
@@ -907,7 +916,8 @@ def test_kilo_install_writes_global_and_project_artifacts(tmp_path):
     _kilo_install(project_dir, home_dir)
     assert (home_dir / ".config" / "kilo" / "skills" / "graphify" / "SKILL.md").exists()
     assert (home_dir / ".config" / "kilo" / "command" / "graphify.md").exists()
-    assert (project_dir / "AGENTS.md").exists()
+    # AGENTS.md is no longer written by kilo install (moved to /graphify skill)
+    assert not (project_dir / "AGENTS.md").exists()
     assert (project_dir / ".kilo" / "plugins" / "graphify.js").exists()
 
 
@@ -1062,8 +1072,8 @@ def test_amp_user_install_lands_in_config_agents(tmp_path, monkeypatch):
     old = home / ".amp" / "skills" / "graphify" / "SKILL.md"
     assert correct.exists(), f"amp skill missing from Amp search root {correct}"
     assert not old.exists(), f"amp skill must not land at the unsearched {old}"
-    # AGENTS.md still written in the project for the always-on rules.
-    assert (project / "AGENTS.md").exists()
+    # AGENTS.md is no longer written by amp install (moved to /graphify skill)
+    assert not (project / "AGENTS.md").exists()
 
 
 def test_amp_install_cleans_legacy_amp_skills_dir(tmp_path, monkeypatch):
@@ -1121,7 +1131,8 @@ def test_amp_project_install_lands_in_dot_agents(tmp_path, monkeypatch):
 
     assert (project / ".agents" / "skills" / "graphify" / "SKILL.md").exists()
     assert not (project / ".amp" / "skills" / "graphify" / "SKILL.md").exists()
-    assert (project / "AGENTS.md").exists()
+    # AGENTS.md is no longer written by project install (moved to /graphify skill)
+    assert not (project / "AGENTS.md").exists()
     # User scope untouched.
     assert not (home / ".config" / "agents" / "skills" / "graphify" / "SKILL.md").exists()
 

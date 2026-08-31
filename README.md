@@ -42,6 +42,9 @@ pip install graphifyy && graphify install
 |------|----------|
 | Claude Code | `graphify install` |
 | OpenCode | `graphify install --platform opencode` |
+| CodeAgent | `graphify install --platform codeagent` |
+
+安装命令做两件事：①把 skill 装到全局（`~/.claude/skills/` 或 `~/.config/opencode/skills/` 等），②把常驻 hook 装到全局配置（Claude/CodeAgent 写 `~/.claude/settings.json` / `~/.cac/settings.json` 的 PreToolUse hook；OpenCode 写 `~/.config/opencode/plugins/graphify.js` 的 `tool.execute.before` plugin）。
 
 Codex 用户还需要在 `~/.codex/config.toml` 的 `[features]` 下打开 `multi_agent = true`，这样才能并行提取。CodeBuddy 使用与 Claude Code 相同的 Agent 工具和 PreToolUse hook 机制。OpenClaw 目前的并行 agent 支持还比较早期，所以使用顺序提取。Trae 使用 Agent 工具进行并行子代理调度，**不支持** PreToolUse hook，因此 AGENTS.md 是其常驻机制。
 
@@ -51,30 +54,17 @@ Codex 用户还需要在 `~/.codex/config.toml` 的 `[features]` 下打开 `mult
 /graphify .
 ```
 
-### 让助手始终优先使用图谱（推荐）
+`/graphify` 建图成功后，会自动往项目根的 `AGENTS.md`（或 `CLAUDE.md`）注入一段 `## graphify` 常驻提示，告诉 agent 这个项目有图谱、先查图谱再 grep。无需再手动跑额外命令。
 
-图构建完成后，在项目里运行一次：
+### 常驻 hook 和显式触发的区别
 
-| 平台 | 命令 |
-|------|------|
-| Claude Code | `graphify claude install` |
-| OpenCode | `graphify opencode install` |
-
-**Claude Code** 会做两件事：
-1. 在 `CLAUDE.md` 中写入一段规则，告诉 Claude 在回答架构问题前先读 `.graph/GRAPH_REPORT.md`
-2. 安装一个 **PreToolUse hook**（写入 `settings.json`），在每次 `Glob` 和 `Grep` 前触发
-
-如果知识图谱存在，Claude 会先看到：_"graphify: Knowledge graph exists. Read .graph/GRAPH_REPORT.md for god nodes and community structure before searching raw files."_ —— 这样 Claude 会优先按图谱导航，而不是一上来就 grep 整个项目。
-
-卸载时使用对应平台的 uninstall 命令即可（例如 `graphify claude uninstall`）。
-
-**常驻模式和显式触发有什么区别？**
-
-常驻 hook 会优先暴露 `GRAPH_REPORT.md` —— 这是一页式总结，包含 god nodes、社区结构和意外连接。你的助手在搜索文件前会先读它，因此会按结构导航，而不是按关键字乱搜。这已经能覆盖大部分日常问题。
+常驻 hook（全局安装时已配好）会优先暴露 `GRAPH_REPORT.md` —— 这是一页式总结，包含 god nodes、社区结构和意外连接。你的助手在搜索文件前会先读到它（通过 PreToolUse hook 或 plugin 提醒），因此会按结构导航，而不是按关键字乱搜。这已经能覆盖大部分日常问题。
 
 `/graphify query`、`/graphify path` 和 `/graphify explain` 会更深入：它们会逐跳遍历底层 `graph.json`，追踪节点之间的精确路径，并展示边级别细节（关系类型、置信度、源位置）。当你想从图谱里精确回答某个问题，而不仅仅是获得整体感知时，就该用这些命令。
 
 可以这样理解：常驻 hook 是先给助手一张地图，`/graphify` 这几个命令则是让它沿着地图精确导航。
+
+> `graphify <platform> install`（如 `graphify opencode install`、`graphify claude install`）已废弃。全局 hook 安装由 `graphify install --platform <P>` 完成，项目级 AGENTS.md/CLAUDE.md 注入由 `/graphify` 建图时自动完成。
 
 <details>
 <summary>手动安装（curl）</summary>
@@ -168,12 +158,13 @@ When the user types `/graphify`, use the installed graphify skill or instruction
 
 | 命令 | 说明 | 对外/对内 |
 |---|---|---|
-| `graphify install [--platform P]` | 通用安装（自动检测平台）。P = claude\|windows\|codeagent\|codebuddy\|codex\|opencode\|aider\|amp\|agents\|claw\|droid\|trae\|trae-cn\|gemini\|cursor\|antigravity\|hermes\|kiro\|pi\|devin | 对外 |
+| `graphify install [--platform P]` | 通用安装：装全局 skill + 装全局常驻 hook（PreToolUse/plugin）。P = claude\|windows\|codeagent\|codebuddy\|codex\|opencode\|aider\|amp\|agents\|claw\|droid\|trae\|trae-cn\|gemini\|cursor\|antigravity\|hermes\|kiro\|pi\|devin | 对外 |
 | `graphify uninstall [--purge]` | 从所有已检测平台移除（`--purge` 同时删除 .graph/） | 对外 |
-| `graphify claude install` | CLAUDE.md + PreToolUse hook（Claude Code） | 对外 |
-| `graphify claude uninstall` | 移除 Claude Code 集成 | 对外 |
-| `graphify codeagent install` | CLAUDE.md + PreToolUse + SessionStart hook（.cac 目录） | 对外 |
-| `graphify codeagent uninstall` | 移除 CodeAgent 集成 | 对外 |
+| `graphify claude install` | [deprecated] 全局 hook 安装，已归入 `graphify install --platform claude` | 对外 |
+| `graphify codeagent install` | [deprecated] 全局 hook 安装，已归入 `graphify install --platform codeagent` | 对外 |
+| `graphify <host> install` | [deprecated] 各平台独立安装命令，已归入 `graphify install --platform <host>` | 对外 |
+
+> 项目级 AGENTS.md / CLAUDE.md 注入不再由 CLI 完成，而是在 `/graphify` 建图时自动注入。
 
 #### Git hooks
 

@@ -161,9 +161,8 @@ def test_install_platform_agents_project_writes_dot_agents(tmp_path):
 
 
 def test_agents_subcommand_install_also_wires_agents_md(tmp_path):
-    """`graphify agents install` is the amp-twin: skill at ~/.agents/skills PLUS a
-    `## graphify` section in AGENTS.md (so the rendered hooks reference, which
-    points at `graphify agents install`, stays honest)."""
+    """`graphify agents install` is deprecated: it now only installs the skill
+    and prints a deprecation warning. AGENTS.md injection moved to /graphify."""
     home = tmp_path / "home"
     cwd = tmp_path / "cwd"
     home.mkdir()
@@ -174,18 +173,16 @@ def test_agents_subcommand_install_also_wires_agents_md(tmp_path):
     skill = home / ".agents" / "skills" / "graphify" / "SKILL.md"
     agents_md = cwd / "AGENTS.md"
     assert skill.exists()
-    assert agents_md.exists()
-    assert "## graphify" in agents_md.read_text(encoding="utf-8")
+    # AGENTS.md is NOT written by install anymore (moved to /graphify skill)
+    assert not agents_md.exists()
 
     _run(cwd, ["agents", "uninstall"], home)
     assert not skill.exists()
-    # The section is stripped unconditionally: the file is either removed (it held
-    # only our section) or no longer contains the marker.
-    assert not agents_md.exists() or "## graphify" not in agents_md.read_text(encoding="utf-8")
 
 
 def test_agents_subcommand_install_is_idempotent(tmp_path):
-    """Running `graphify agents install` twice leaves a single AGENTS.md section."""
+    """Running `graphify agents install` twice just installs the skill twice
+    (deprecation no-op, no AGENTS.md written)."""
     home = tmp_path / "home"
     cwd = tmp_path / "cwd"
     home.mkdir()
@@ -194,13 +191,16 @@ def test_agents_subcommand_install_is_idempotent(tmp_path):
     _run(cwd, ["agents", "install"], home)
     _run(cwd, ["agents", "install"], home)
 
-    body = (cwd / "AGENTS.md").read_text(encoding="utf-8")
-    assert body.count("## graphify") == 1, "AGENTS.md gained a duplicate graphify section"
+    skill = home / ".agents" / "skills" / "graphify" / "SKILL.md"
+    assert skill.exists()
+    # AGENTS.md is NOT written by install (moved to /graphify skill)
+    assert not (cwd / "AGENTS.md").exists()
 
 
 def test_skills_subcommand_is_the_agents_subcommand(tmp_path):
     """`graphify skills install`/`uninstall` behaves exactly like the agents form:
-    skill at ~/.agents/skills (with references) PLUS the AGENTS.md section."""
+    skill at ~/.agents/skills (with references). AGENTS.md is no longer written
+    (moved to /graphify skill)."""
     home = tmp_path / "home"
     cwd = tmp_path / "cwd"
     home.mkdir()
@@ -211,13 +211,12 @@ def test_skills_subcommand_is_the_agents_subcommand(tmp_path):
     agents_md = cwd / "AGENTS.md"
     assert skill.exists()
     assert (skill.parent / "references" / "extraction-spec.md").exists()
-    assert agents_md.exists()
-    assert "## graphify" in agents_md.read_text(encoding="utf-8")
+    # AGENTS.md is NOT written by install (moved to /graphify skill)
+    assert not agents_md.exists()
 
     # The `skills` alias of the uninstall subcommand tears it back down.
     _run(cwd, ["skills", "uninstall"], home)
     assert not skill.exists()
-    assert not agents_md.exists() or "## graphify" not in agents_md.read_text(encoding="utf-8")
 
 
 # --- bare install is unchanged -------------------------------------------------
