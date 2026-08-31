@@ -1,1 +1,1 @@
-{"generated_at": "2026-08-27T14:15:59.617440+00:00", "node_count": 106, "dim": 384, "model": "paraphrase-multilingual-MiniLM-L12-v2", "backend": "sentence-transformers"}
+{"generated_at": "2026-08-31T02:08:46.612582+00:00", "node_count": 30, "dim": 384, "model": "paraphrase-multilingual-MiniLM-L12-v2", "backend": "sentence-transformers", "graph_commit": "6c8e80d1a2891464eefe6be465ddaa79594597b2"}

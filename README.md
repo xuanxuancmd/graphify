@@ -98,163 +98,171 @@ When the user types `/graphify`, use the installed graphify skill or instruction
 
 ### Skill 命令（在 AI 编码助手里输入）
 
-```
-/graphify                          # 对当前目录运行
-/graphify ./raw                    # 对指定目录运行
-/graphify ./raw --mode deep        # 更激进地抽取 INFERRED 边
-/graphify ./raw --update           # 只重新提取变更文件，并合并到已有图谱
-/graphify ./raw --cluster-only     # 只重新聚类已有图谱，不重新提取
-/graphify ./raw --no-viz           # 跳过 HTML，只生成 report + JSON
-/graphify ./raw --obsidian         # 额外生成 Obsidian vault（可选）
+所有 skill 命令均为对外命令。`<path>` 可省略，默认为当前目录 `.`。多个 flag 可组合使用（如 `/graphify . --mode deep --directed --svg`）。
 
-/graphify add https://arxiv.org/abs/1706.03762        # 拉取论文、保存并更新图谱
-/graphify add https://x.com/karpathy/status/...       # 拉取推文
-/graphify add https://... --author "Name"             # 标记原作者
-/graphify add https://... --contributor "Name"        # 标记是谁把它加入语料库的
+#### 建图与更新
 
-/graphify query "what connects attention to the optimizer?"
-/graphify query "what connects attention to the optimizer?" --dfs   # 追踪一条具体路径
-/graphify query "what connects attention to the optimizer?" --budget 1500  # 把预算限制在 N tokens
-/graphify path "DigestAuth" "Response"
-/graphify explain "SwinTransformer"
+| 命令 | 说明 |
+|---|---|
+| `/graphify` | 对当前目录全量建图（AST + 语义 LLM） |
+| `/graphify <path>` | 对指定目录全量建图 |
+| `/graphify <path> --update` | 增量更新：只重提取变更文件（代码走 AST 免费，文档/图片走 LLM 语义） |
+| `/graphify <path> --cluster-only` | 只重新聚类已有图谱，不重新提取 |
+| `/graphify <path> --mode deep` | 更激进地抽取 INFERRED 边 |
+| `/graphify <path> --directed` | 构建有向图（保留边方向 source→target） |
+| `/graphify <path> --whisper-model <model>` | 指定 Whisper 模型转录视频/音频（默认 small，可选 medium/large） |
 
-/graphify ./raw --watch            # 文件变更时自动同步图谱（代码：立即更新；文档：提醒你）
-/graphify ./raw --wiki             # 构建可供 agent 抓取的 wiki（index.md + 每个 community 一篇文章）
-/graphify ./raw --svg              # 导出 graph.svg
-/graphify ./raw --graphml          # 导出 graph.graphml（Gephi、yEd）
-/graphify ./raw --neo4j            # 生成给 Neo4j 用的 cypher.txt
-/graphify ./raw --neo4j-push bolt://localhost:7687    # 直接推送到运行中的 Neo4j
-/graphify ./raw --mcp              # 启动 MCP stdio server
-```
+> `--update` 不带路径时默认对当前目录增量更新。代码变更走 AST（免费、无 LLM）；文档/论文/图片变更走 LLM 语义提取。
+
+#### GitHub 与多仓库
+
+| 命令 | 说明 |
+|---|---|
+| `/graphify https://github.com/<owner>/<repo>` | clone 仓库后全量建图 |
+| `/graphify https://github.com/<owner>/<repo> --branch <branch>` | clone 指定分支 |
+| `/graphify <url1> <url2> ...` | 多个 repo clone 后合并为一张跨仓库图 |
+
+#### 添加内容
+
+| 命令 | 说明 |
+|---|---|
+| `/graphify add <url>` | 拉取 URL 保存到 ./raw，更新图谱 |
+| `/graphify add <url> --author "Name"` | 标记原作者 |
+| `/graphify add <url> --contributor "Name"` | 标记是谁把它加入语料库的 |
+
+#### 查询与分析
+
+| 命令 | 说明 |
+|---|---|
+| `/graphify query "<question>"` | BFS 遍历，获取广度上下文 |
+| `/graphify query "<question>" --dfs` | DFS 遍历，追踪一条具体路径 |
+| `/graphify query "<question>" --budget <N>` | 限制输出 token 数（默认 2000） |
+| `/graphify path "<A>" "<B>"` | 两节点间最短路径 |
+| `/graphify explain "<X>"` | 节点的自然语言解释 |
+
+#### 导出与可视化
+
+| 命令 | 说明 |
+|---|---|
+| `/graphify <path> --no-viz` | 跳过 HTML，只生成 report + JSON |
+| `/graphify <path> --svg` | 额外导出 graph.svg（可嵌入 Notion、GitHub） |
+| `/graphify <path> --graphml` | 导出 graph.graphml（Gephi、yEd） |
+| `/graphify <path> --neo4j` | 生成 .graph/cypher.txt 供 Neo4j 导入 |
+| `/graphify <path> --neo4j-push <uri>` | 直接推送到运行中的 Neo4j |
+| `/graphify <path> --falkordb` | 生成 .graph/cypher.txt 供 FalkorDB 导入 |
+| `/graphify <path> --falkordb-push <uri>` | 直接推送到运行中的 FalkorDB |
+| `/graphify <path> --obsidian` | 额外生成 Obsidian vault |
+| `/graphify <path> --obsidian --obsidian-dir <dir>` | vault 写到自定义路径（如已有 vault） |
+| `/graphify <path> --wiki` | 构建 agent 可抓取的 wiki（index.md + 每个 community 一篇文章） |
+
+#### 监视与服务
+
+| 命令 | 说明 |
+|---|---|
+| `/graphify <path> --watch` | 监视文件夹：代码变更自动重建（无 LLM），文档变更提醒跑 `--update` |
+| `/graphify <path> --mcp` | 启动 MCP stdio server，供 agent 访问图谱 |
 
 ### CLI 命令（终端里运行）
 
 #### 安装与卸载
 
-```
-# 通用安装（自动检测平台）
-graphify install [--platform P]    # P = claude|windows|codeagent|codebuddy|codex|opencode|aider|amp|agents|claw|droid|trae|trae-cn|gemini|cursor|antigravity|hermes|kiro|pi|devin
-graphify uninstall [--purge]       # 从所有已检测平台移除（--purge 同时删除 .graph/）
-
-# 按平台安装（写入对应的 skill + 常驻规则 + hooks）
-graphify claude install            # CLAUDE.md + PreToolUse hook（Claude Code）
-graphify claude uninstall
-graphify codeagent install         # CLAUDE.md + PreToolUse + SessionStart hook（.cac 目录）
-graphify codeagent uninstall
-graphify codebuddy install         # CODEBUDDY.md + PreToolUse hook（CodeBuddy）
-graphify codebuddy uninstall
-graphify codex install             # AGENTS.md（Codex）
-graphify codex uninstall
-graphify opencode install          # AGENTS.md + plugin（OpenCode）
-graphify opencode uninstall
-graphify gemini install            # GEMINI.md + BeforeTool hook（Gemini CLI）
-graphify gemini uninstall
-graphify cursor install            # .cursor/rules/graphify.mdc（Cursor）
-graphify cursor uninstall
-graphify vscode install            # VS Code Copilot Chat 配置
-graphify vscode uninstall
-graphify kilo install              # Kilo 原生 skill + command + plugin
-graphify kilo uninstall
-graphify aider install             # AGENTS.md（Aider）
-graphify copilot install           # ~/.copilot/skills（GitHub Copilot CLI）
-graphify claw install              # AGENTS.md（OpenClaw）
-graphify droid install             # AGENTS.md（Factory Droid）
-graphify trae install              # AGENTS.md（Trae）
-graphify trae-cn install           # AGENTS.md（Trae CN）
-graphify antigravity install       # .agents/rules + workflows + skill（Google Antigravity）
-graphify hermes install            # ~/.hermes/skills（Hermes）
-graphify kiro install              # .kiro/skills + steering file（Kiro IDE/CLI）
-graphify pi install                # ~/.pi/agent/skills（Pi coding agent）
-graphify devin install             # ~/.config/devin/skills（Devin CLI）
-```
+| 命令 | 说明 | 对外/对内 |
+|---|---|---|
+| `graphify install [--platform P]` | 通用安装（自动检测平台）。P = claude\|windows\|codeagent\|codebuddy\|codex\|opencode\|aider\|amp\|agents\|claw\|droid\|trae\|trae-cn\|gemini\|cursor\|antigravity\|hermes\|kiro\|pi\|devin | 对外 |
+| `graphify uninstall [--purge]` | 从所有已检测平台移除（`--purge` 同时删除 .graph/） | 对外 |
+| `graphify claude install` | CLAUDE.md + PreToolUse hook（Claude Code） | 对外 |
+| `graphify claude uninstall` | 移除 Claude Code 集成 | 对外 |
+| `graphify codeagent install` | CLAUDE.md + PreToolUse + SessionStart hook（.cac 目录） | 对外 |
+| `graphify codeagent uninstall` | 移除 CodeAgent 集成 | 对外 |
 
 #### Git hooks
 
-```
-graphify hook install              # 安装 post-commit + post-checkout hook（跨平台）
-graphify hook uninstall            # 移除 git hooks
-graphify hook status               # 检查是否已安装
-```
+| 命令 | 说明 | 对外/对内 |
+|---|---|---|
+| `graphify hook install` | 安装 post-commit + post-checkout hook（跨平台） | 对外 |
+| `graphify hook uninstall` | 移除 git hooks | 对外 |
+| `graphify hook status` | 检查是否已安装 | 对外 |
 
 #### 图谱构建与更新
 
-```
-graphify extract <path>            # 完整提取（AST + 语义 LLM），适合 CI/脚本
-graphify update <path>             # 只重提取代码文件并更新图谱（不需要 LLM）
-graphify update <path> --force     # 强制覆盖（即使节点数减少）
-graphify update <path> --no-cluster # 跳过聚类，只写原始提取结果
-graphify cluster-only <path>       # 只重新聚类已有 graph.json
-graphify watch <path>              # 监视文件夹，代码变更时自动重建图谱
-```
+| 命令 | 说明 | 对外/对内 |
+|---|---|---|
+| `graphify extract <path>` | 完整提取（AST + 语义 LLM），适合 CI/脚本 | 对外 |
+| `graphify update <path>` | 只重提取代码文件并更新图谱（不需要 LLM） | 对外 |
+| `graphify update <path> --force` | 强制覆盖（即使节点数减少） | 对外 |
+| `graphify update <path> --no-cluster` | 跳过聚类，只写原始提取结果 | 对外 |
+| `graphify cluster-only <path>` | 只重新聚类已有 graph.json | 对外 |
+| `graphify watch <path>` | 监视文件夹，代码变更时自动重建图谱 | 对外 |
 
 #### 查询与分析
 
-```
-graphify query "<question>"        # BFS 遍历图谱回答问题
-graphify query "<question>" --dfs  # 深度优先遍历
-graphify query "<question>" --budget N  # 限制输出 token 数（默认 2000）
-graphify path "A" "B"              # 两节点间最短路径
-graphify explain "X"               # 节点的自然语言解释
-graphify affected "X"              # 反向遍历，查找受 X 影响的节点
-graphify god-nodes                 # 列出连接数最多的节点
-graphify diagnose multigraph       # 检测同端点边折叠风险
-graphify benchmark [graph.json]    # 测量 token 压缩比
-graphify check-update <path>       # 检查是否需要语义重新提取
-```
+| 命令 | 说明 | 对外/对内 |
+|---|---|---|
+| `graphify query "<question>"` | BFS 遍历图谱回答问题 | 对外 |
+| `graphify query "<question>" --dfs` | 深度优先遍历 | 对外 |
+| `graphify query "<question>" --budget N` | 限制输出 token 数（默认 2000） | 对外 |
+| `graphify path "A" "B"` | 两节点间最短路径 | 对外 |
+| `graphify explain "X"` | 节点的自然语言解释 | 对外 |
+| `graphify affected "X"` | 反向遍历，查找受 X 影响的节点 | 对外 |
+| `graphify god-nodes` | 列出连接数最多的节点 | 对外 |
+| `graphify diagnose multigraph` | 检测同端点边折叠风险 | 对外 |
+| `graphify benchmark [graph.json]` | 测量 token 压缩比 | 对外 |
+| `graphify check-update <path>` | 检查是否需要语义重新提取 | 对外 |
 
 #### 导出与可视化
 
-```
-graphify export html               # 从 graph.json 生成可交互 HTML
-graphify export callflow-html      # 生成 Mermaid 调用流 HTML
-graphify export obsidian           # 导出 Obsidian vault
-graphify export svg                # 导出 graph.svg
-graphify export graphml            # 导出 graph.graphml（Gephi、yEd）
-graphify export neo4j              # 生成 Neo4j cypher.txt
-graphify export falkordb           # 推送到 FalkorDB
-graphify tree                      # 生成 D3 可折叠树 HTML
-```
+| 命令 | 说明 | 对外/对内 |
+|---|---|---|
+| `graphify export html` | 从 graph.json 生成可交互 HTML | 对外 |
+| `graphify export callflow-html` | 生成 Mermaid 调用流 HTML | 对外 |
+| `graphify export obsidian` | 导出 Obsidian vault | 对外 |
+| `graphify export svg` | 导出 graph.svg | 对外 |
+| `graphify export graphml` | 导出 graph.graphml（Gephi、yEd） | 对外 |
+| `graphify export neo4j` | 生成 Neo4j cypher.txt | 对外 |
+| `graphify export falkordb` | 推送到 FalkorDB | 对外 |
+| `graphify tree` | 生成 D3 可折叠树 HTML | 对外 |
 
 #### 全局图谱
 
-```
-graphify global add <graph.json>   # 添加/更新项目图谱到全局图谱
-graphify global add <graph.json> --as <tag>  # 指定 repo 标签
-graphify global remove <tag>       # 从全局图谱移除某 repo
-graphify global list               # 列出全局图谱中的 repo
-graphify global path               # 打印全局图谱文件路径
-```
+| 命令 | 说明 | 对外/对内 |
+|---|---|---|
+| `graphify global add <graph.json>` | 添加/更新项目图谱到全局图谱 | 对外 |
+| `graphify global add <graph.json> --as <tag>` | 指定 repo 标签 | 对外 |
+| `graphify global remove <tag>` | 从全局图谱移除某 repo | 对外 |
+| `graphify global list` | 列出全局图谱中的 repo | 对外 |
+| `graphify global path` | 打印全局图谱文件路径 | 对外 |
 
 #### 跨仓库与 URL
 
-```
-graphify clone <github-url>        # 克隆 GitHub repo 供 /graphify 使用
-graphify merge-graphs <g1> <g2>    # 合并多个 graph.json 为跨仓库图谱
-graphify merge-driver <base> <current> <other>  # git merge driver（由 hook install 注册）
-graphify add <url>                 # 拉取 URL 并保存到 ./raw
-graphify add <url> --author "Name"
-graphify add <url> --contributor "Name"
-```
+| 命令 | 说明 | 对外/对内 |
+|---|---|---|
+| `graphify clone <github-url>` | 克隆 GitHub repo 供 /graphify 使用 | 对外 |
+| `graphify merge-graphs <g1> <g2>` | 合并多个 graph.json 为跨仓库图谱 | 对外 |
+| `graphify merge-driver <base> <current> <other>` | git merge driver（由 hook install 注册到 .git/config） | 对内 |
+| `graphify add <url>` | 拉取 URL 并保存到 ./raw | 对外 |
+| `graphify add <url> --author "Name"` | 标记原作者 | 对外 |
+| `graphify add <url> --contributor "Name"` | 标记贡献者 | 对外 |
 
 #### 自动维护（内部命令，无需手动调用）
 
-```
-# SessionStart hook 自动调用：检测 embedding 是否过期，过期则后台增量刷新
-graphify check
-
-# install 时自动注册：每天凌晨 0:00~5:59 随机时间全量刷新所有活跃项目
-graphify schedule                  # 注册/查看/卸载计划任务
-graphify schedule --status         # 查看任务是否已注册
-graphify schedule --unregister     # 移除计划任务
-```
+| 命令 | 说明 | 对外/对内 |
+|---|---|---|
+| `graphify check` | SessionStart hook 自动调用：检测 embedding 是否过期，过期则后台增量刷新 | 对内 |
+| `graphify check --all` | 每周计划任务：遍历活跃项目全量刷新 | 对内 |
+| `graphify check --no-check` | 内部 detach 子进程：跳过检测，直接刷新 | 对内 |
+| `graphify schedule` | 注册每日计划任务（install 时自动注册） | 对内 |
+| `graphify schedule --status` | 查看任务是否已注册 | 对内 |
+| `graphify schedule --unregister` | 移除计划任务 | 对内 |
+| `graphify hook-check` | Codex Desktop PreToolUse hook 的 no-op | 对内 |
+| `graphify hook-guard [search\|read] [--strict]` | Claude/Codebuddy PreToolUse guard，引导 agent 优先用图谱 | 对内 |
 
 #### 反馈与学习
 
-```
-graphify save-result               # 保存 Q&A 结果到 .graph/memory/
-graphify reflect                   # 聚合 .graph/memory/ 生成 lessons 文档
-graphify label <path>              # 用 LLM 为社区命名
-```
+| 命令 | 说明 | 对外/对内 |
+|---|---|---|
+| `graphify save-result` | 保存 Q&A 结果到 .graph/memory/ | 对外（query 后自动调用） |
+| `graphify reflect` | 聚合 .graph/memory/ 生成 lessons 文档 | 对外 |
+| `graphify label <path>` | 用 LLM 为社区命名 | 对外 |
 
 #### Embedding 配置
 
@@ -309,22 +317,3 @@ embed_api_key=any-non-empty-value        # 本地服务器
 | httpx（合成 Python 库） | 6 | ~1x | [`worked/httpx/`](worked/httpx/) |
 
 Token 压缩效果会随着语料规模增大而更明显。6 个文件本来就塞得进上下文窗口，所以 graphify 在这种场景里的价值更多是结构清晰度，而不是 token 压缩。到了 52 个文件（代码 + 论文 + 图片）这种规模，就能做到 71x+。每个 `worked/` 目录里都带了原始输入和真实输出（`GRAPH_REPORT.md`、`graph.json`），你可以自己跑一遍核对数字。
-
-## 隐私
-
-graphify 会把文档、论文和图片的内容发送给你所用 AI 编码助手背后的模型 API 来做语义提取 —— 可能是 Anthropic（Claude Code）、OpenAI（Codex），或者你当前平台使用的其他提供方。代码文件则完全在本地通过 tree-sitter AST 处理，不会把代码内容发出去。项目本身没有任何遥测、使用跟踪或分析。唯一的网络请求就是语义提取阶段调用你平台自己的模型 API，使用的也是你自己的 API key。
-
-## 技术栈
-
-NetworkX + Leiden（graspologic）+ tree-sitter + vis.js。语义提取由 Claude（Claude Code）、GPT-4（Codex）或你当前平台所运行的模型完成。不需要 Neo4j，不需要 server，整体是纯本地运行。
-
-<details>
-<summary>贡献</summary>
-
-**Worked examples** 是最能建立信任的贡献方式。对一个真实语料跑 `/graphify`，把输出保存到 `worked/{slug}/`，再写一份诚实的 `review.md`，评价图谱哪些地方做得对、哪些地方做得不对，然后提交 PR。
-
-**提取 bug** —— 提 issue 时请附上输入文件、对应的缓存项（`.graph/cache/`）以及它漏提取或瞎编了什么。
-
-模块职责和新增语言的方法见 [ARCHITECTURE.md](ARCHITECTURE.md)。
-
-</details>

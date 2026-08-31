@@ -1979,8 +1979,8 @@ def _rebuild_code(
         # NOTE: only refresh when graph.json actually changed (`not no_change`);
         # a no-op rebuild (same graph + same report) leaves the sidecar alone.
         if not no_change:
-            from graphify.embeddings import generate_embedding_sidecar
-            generate_embedding_sidecar(existing_graph, log_prefix="[graphify watch]")
+            from graphify.embeddings import build_embeddings
+            build_embeddings(existing_graph, log_prefix="[graphify watch]")
 
         if not no_change:
             print(f"[graphify watch] Rebuilt: {G.number_of_nodes()} nodes, "

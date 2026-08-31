@@ -117,7 +117,7 @@ def run_benchmark(
             per_question.append({"question": q, "query_tokens": qt, "reduction": round(corpus_tokens / qt, 1)})
 
     if not per_question:
-        return {"error": "No matching nodes found for sample questions. Build the graph first."}
+        return {"error": "样例问题未匹配到任何节点。请先构建图谱。"}
 
     avg_query_tokens = sum(p["query_tokens"] for p in per_question) // len(per_question)
     reduction_ratio = round(corpus_tokens / avg_query_tokens, 1) if avg_query_tokens > 0 else 0
@@ -136,17 +136,18 @@ def run_benchmark(
 def print_benchmark(result: dict) -> None:
     """Print a human-readable benchmark report."""
     if "error" in result:
-        print(f"Benchmark error: {result['error']}")
+        print(_safe("基准测试错误", "Benchmark error") + f": {result['error']}")
         return
 
-    print(f"\ngraphify token reduction benchmark")
+    print()
+    print(_safe("graphify token 压缩基准测试", "graphify token reduction benchmark"))
     print(_hr(50))
     arrow = _safe("→", "->")
-    print(f"  Corpus:          {result['corpus_words']:,} words {arrow} ~{result['corpus_tokens']:,} tokens (naive)")
-    print(f"  Graph:           {result['nodes']:,} nodes, {result['edges']:,} edges")
-    print(f"  Avg query cost:  ~{result['avg_query_tokens']:,} tokens")
-    print(f"  Reduction:       {result['reduction_ratio']}x fewer tokens per query")
-    print(f"\n  Per question:")
+    print(f"  {_safe('语料', 'Corpus')}:          {result['corpus_words']:,} {_safe('词', 'words')} {arrow} {_safe('约', '~')} {result['corpus_tokens']:,} tokens ({_safe('朴素方式', 'naive')})")
+    print(f"  {_safe('图谱', 'Graph')}:           {result['nodes']:,} {_safe('个节点', 'nodes')}, {result['edges']:,} {_safe('条边', 'edges')}")
+    print(f"  {_safe('平均查询开销', 'Avg query cost')}:  {_safe('约', '~')} {result['avg_query_tokens']:,} tokens")
+    print(f"  {_safe('压缩比', 'Reduction')}:        {_safe('每次查询少用', 'fewer tokens per query')} {result['reduction_ratio']}x")
+    print(f"\n  {_safe('各问题', 'Per question')}:")
     for p in result["per_question"]:
         print(f"    [{p['reduction']}x] {p['question'][:55]}")
     print()

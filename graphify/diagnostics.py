@@ -338,9 +338,9 @@ def format_diagnostic_json(summary: dict[str, Any]) -> dict[str, Any]:
         "examples": summary.get("examples", []),
         "producer_suppression": summary.get("producer_suppression", {}),
         "notes": [
-            "Diagnostics are read-only.",
-            "A normal graph.json is already post-build and cannot recover raw producer edges.",
-            "Producer suppression sites are heuristic source-code evidence.",
+            "诊断是只读的。",
+            "正常的 graph.json 已经是构建后的产物，无法恢复原始的 producer 边。",
+            "Producer 抑制位点是基于启发式的源代码证据。",
         ],
     }
 

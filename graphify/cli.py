@@ -885,7 +885,7 @@ def _clone_repo(
     # Extract owner/repo from URL
     m = _re.search(r"github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?$", url)
     if not m:
-        print(f"error: not a recognised GitHub URL: {url}", file=sys.stderr)
+        print(f"error: 不是有效的 GitHub URL：{url}", file=sys.stderr)
         sys.exit(1)
     owner, repo = m.group(1), m.group(2)
 
@@ -895,30 +895,30 @@ def _clone_repo(
         dest = Path.home() / ".graphify" / "repos" / owner / repo
 
     if branch and branch.startswith("-"):
-        print(f"error: invalid branch name: {branch!r}", file=sys.stderr)
+        print(f"error: 无效的分支名：{branch!r}", file=sys.stderr)
         sys.exit(1)
 
     if dest.exists():
-        print(f"Repo already cloned at {dest} - pulling latest...", flush=True)
+        print(f"仓库已克隆到 {dest} - 正在拉取最新...", flush=True)
         cmd = ["git", "-C", str(dest), "pull"]
         if branch:
             cmd += ["origin", "--", branch]
         result = _sp.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
-            print(f"warning: git pull failed:\n{result.stderr}", file=sys.stderr)
+            print(f"警告：git pull 失败：\n{result.stderr}", file=sys.stderr)
     else:
         dest.parent.mkdir(parents=True, exist_ok=True)
-        print(f"Cloning {url} -> {dest} ...", flush=True)
+        print(f"正在克隆 {url} -> {dest} ...", flush=True)
         cmd = ["git", "clone", "--depth", "1"]
         if branch:
             cmd += ["--branch", branch]
         cmd += ["--", git_url, str(dest)]
         result = _sp.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
-            print(f"error: git clone failed:\n{result.stderr}", file=sys.stderr)
+            print(f"error: git clone 失败：\n{result.stderr}", file=sys.stderr)
             sys.exit(1)
 
-    print(f"Ready at: {dest}", flush=True)
+    print(f"就绪于：{dest}", flush=True)
     return dest
 
 
@@ -1067,7 +1067,7 @@ def _check_single_project(
 
     # Fast path 1: no sidecar → needs generation.
     if not meta_path.exists() or not npy_path.exists() or not index_path.exists():
-        print("[graphify] Embedding sidecar missing. Refreshing...")
+        print("[graphify] Embedding sidecar 缺失。正在刷新...")
         if detach:
             _launch_embedding_refresh(graph_dir)
         else:
@@ -1120,9 +1120,9 @@ def _check_single_project(
     )
     if stale:
         if full:
-            print("[graphify] Embedding is stale. Full rebuild...")
+            print("[graphify] Embedding 已陈旧。全量重建...")
         else:
-            print("[graphify] Embedding is stale. Refreshing...")
+            print("[graphify] Embedding 已陈旧。正在刷新...")
         if detach:
             _launch_embedding_refresh(graph_dir)
         else:
@@ -1141,11 +1141,11 @@ def _do_embedding_refresh(graph_path: str, *, full: bool = False) -> None:
         result = generate_embeddings_incremental(Path(graph_path), full=full)
         if result is not None:
             _mode = "full" if full else "incremental"
-            print(f"[graphify] Embedding refreshed ({_mode}): {result}")
+            print(f"[graphify] Embedding 已刷新（{_mode}）：{result}")
         else:
-            print("[graphify] Embedding backend not configured — skipped.")
+            print("[graphify] Embedding 后端未配置——已跳过。")
     except Exception as exc:
-        print(f"[graphify] Embedding refresh failed: {exc}", file=sys.stderr)
+        print(f"[graphify] Embedding 刷新失败：{exc}", file=sys.stderr)
 
 
 def _launch_embedding_refresh(graph_dir: Path) -> None:
@@ -1241,14 +1241,15 @@ def _schedule_register(exe: str) -> None:
 
     The task runs ``graphify check --all`` which iterates the active-projects
     list and does a full rebuild for any stale project. Only ONE global task
-    is registered. Windows uses schtasks; WSL/POSIX uses cron.
+    is registered. Native Windows uses schtasks; WSL uses schtasks.exe (via
+    Windows interop) with a wsl.exe command wrapper; POSIX uses cron.
     """
     import subprocess as _sp
     hour, minute = _random_daily_time()
     cmd_str = f'"{exe}" check --all'
 
     if os.name == "nt":
-        # Windows Task Scheduler: /sc daily
+        # Native Windows Task Scheduler: /sc daily
         log_path = str(Path.home() / ".cache" / "graphify-daily.log")
         tr = f'{cmd_str} >> "{log_path}" 2>&1'
         try:
@@ -1258,13 +1259,38 @@ def _schedule_register(exe: str) -> None:
                  "/sc", "daily", "/st", f"{hour}:{minute}", "/f"],
                 check=True, capture_output=True, text=True,
             )
-            print(f"  Daily task registered: every day at {hour}:{minute}")
-            print(f"  Command: {cmd_str}")
-            print(f"  Log: {log_path}")
+            print(f"  每日任务已注册：每天 {hour}:{minute} 执行")
+            print(f"  命令：{cmd_str}")
+            print(f"  日志：{log_path}")
         except Exception as exc:
-            print(f"  Warning: could not register scheduled task: {exc}", file=sys.stderr)
+            print(f"  警告：无法注册计划任务：{exc}", file=sys.stderr)
+    elif _is_wsl():
+        # WSL: use Windows Task Scheduler (schtasks.exe via interop) because
+        # WSL's cron service is not running by default. The task invokes
+        # wsl.exe to re-enter WSL and run `graphify check --all` — the same
+        # Python entry point as native Windows and native cron. Only the
+        # registration mechanism differs.
+        log_path = str(Path.home() / ".cache" / "graphify-daily.log")
+        # Single-quote exe and log_path inside the bash command so double
+        # quotes don't nest with the outer Windows /tr quoting. Bash parses
+        # single quotes as literal-string delimiters; >> and 2>&1 are shell
+        # redirections interpreted by bash, not Windows.
+        inner_bash = f"'{exe}' check --all >> '{log_path}' 2>&1"
+        tr = f'wsl.exe -e bash -lc "{inner_bash}"'
+        try:
+            _sp.run(
+                ["schtasks.exe", "/create", "/tn", _SCHEDULE_TASK_NAME,
+                 "/tr", tr,
+                 "/sc", "daily", "/st", f"{hour}:{minute}", "/f"],
+                check=True, capture_output=True, text=True,
+            )
+            print(f"  每日任务已注册 (WSL via schtasks.exe)：每天 {hour}:{minute} 执行")
+            print(f"  命令：{cmd_str}")
+            print(f"  日志：{log_path}")
+        except Exception as exc:
+            print(f"  警告：无法注册计划任务：{exc}", file=sys.stderr)
     else:
-        # cron: minute hour * * *
+        # POSIX (Linux/macOS): cron — minute hour * * *
         cron_line = f"{minute} {hour} * * * {cmd_str} >> ~/.cache/graphify-daily.log 2>&1"
         try:
             existing = _sp.run(["crontab", "-l"], capture_output=True, text=True).stdout
@@ -1276,20 +1302,25 @@ def _schedule_register(exe: str) -> None:
         ]
         lines.append(f"{cron_line}  {_SCHEDULE_CRON_MARKER}")
         _sp.run(["crontab", "-"], input="\n".join(lines) + "\n", text=True, check=True)
-        print(f"  Daily cron task registered: every day at {hour}:{minute}")
-        print(f"  Command: {cmd_str}")
+        print(f"  每日 cron 任务已注册：每天 {hour}:{minute} 执行")
+        print(f"  命令：{cmd_str}")
 
 
 def _schedule_unregister() -> None:
-    """Remove the scheduled task."""
+    """Remove the scheduled task.
+
+    Native Windows and WSL both remove via schtasks.exe (WSL registered the
+    task there via interop). POSIX removes via crontab.
+    """
     import subprocess as _sp
-    if os.name == "nt":
+    if os.name == "nt" or _is_wsl():
+        _exe = "schtasks" if os.name == "nt" else "schtasks.exe"
         try:
-            _sp.run(["schtasks", "/delete", "/tn", _SCHEDULE_TASK_NAME, "/f"],
+            _sp.run([_exe, "/delete", "/tn", _SCHEDULE_TASK_NAME, "/f"],
                     capture_output=True, text=True)
-            print(f"  Scheduled task '{_SCHEDULE_TASK_NAME}' removed.")
+            print(f"  计划任务 '{_SCHEDULE_TASK_NAME}' 已移除。")
         except Exception:
-            print("  No scheduled task found.")
+            print("  未找到计划任务。")
     else:
         try:
             existing = _sp.run(["crontab", "-l"], capture_output=True, text=True).stdout
@@ -1300,28 +1331,33 @@ def _schedule_unregister() -> None:
             if _SCHEDULE_CRON_MARKER not in l and "graphify check --all" not in l
         ]
         _sp.run(["crontab", "-"], input="\n".join(lines) + "\n", text=True)
-        print("  Cron task removed.")
+        print("  Cron 任务已移除。")
 
 
 def _schedule_status(exe: str) -> None:
-    """Check if the scheduled task is registered."""
+    """Check if the scheduled task is registered.
+
+    Native Windows and WSL both query via schtasks.exe (WSL registered the
+    task there via interop). POSIX queries via crontab.
+    """
     import subprocess as _sp
-    if os.name == "nt":
-        r = _sp.run(["schtasks", "/query", "/tn", _SCHEDULE_TASK_NAME],
+    if os.name == "nt" or _is_wsl():
+        _exe = "schtasks" if os.name == "nt" else "schtasks.exe"
+        r = _sp.run([_exe, "/query", "/tn", _SCHEDULE_TASK_NAME],
                      capture_output=True, text=True)
         if r.returncode == 0:
-            print(f"  Scheduled task '{_SCHEDULE_TASK_NAME}' is registered.")
+            print(f"  计划任务 '{_SCHEDULE_TASK_NAME}' 已注册。")
         else:
-            print(f"  Scheduled task '{_SCHEDULE_TASK_NAME}' is NOT registered.")
+            print(f"  计划任务 '{_SCHEDULE_TASK_NAME}' 未注册。")
     else:
         try:
             existing = _sp.run(["crontab", "-l"], capture_output=True, text=True).stdout
         except Exception:
             existing = ""
         if _SCHEDULE_CRON_MARKER in existing or "graphify check --all" in existing:
-            print("  Cron task is registered.")
+            print("  Cron 任务已注册。")
         else:
-            print("  Cron task is NOT registered.")
+            print("  Cron 任务未注册。")
 
 
 def dispatch_command(cmd: str) -> None:
@@ -1340,7 +1376,7 @@ def dispatch_command(cmd: str) -> None:
                 except Exception:
                     pass
             if not existing:
-                print("No custom providers registered.")
+                print("未注册任何自定义 provider。")
             else:
                 for name in existing:
                     print(f"  {name}  ({existing[name].get('base_url', '')})")
@@ -1348,7 +1384,7 @@ def dispatch_command(cmd: str) -> None:
         elif subcmd == "show":
             name = sys.argv[3] if len(sys.argv) > 3 else ""
             if not name:
-                print("Usage: graphify provider show <name>", file=sys.stderr)
+                print("用法：graphify provider show <name>", file=sys.stderr)
                 sys.exit(1)
             existing = {}
             if global_path.is_file():
@@ -1357,7 +1393,7 @@ def dispatch_command(cmd: str) -> None:
                 except Exception:
                     pass
             if name not in existing:
-                print(f"Provider '{name}' not found.", file=sys.stderr)
+                print(f"Provider '{name}' 未找到。", file=sys.stderr)
                 sys.exit(1)
             print(_json.dumps({name: existing[name]}, indent=2))
 
@@ -1365,10 +1401,10 @@ def dispatch_command(cmd: str) -> None:
             args = sys.argv[3:]
             name = args[0] if args and not args[0].startswith("-") else ""
             if not name:
-                print("Usage: graphify provider add <name> --base-url URL --default-model MODEL --env-key KEY", file=sys.stderr)
+                print("用法：graphify provider add <name> --base-url URL --default-model MODEL --env-key KEY", file=sys.stderr)
                 sys.exit(1)
             if name in BACKENDS:
-                print(f"Error: '{name}' is a built-in provider and cannot be overridden.", file=sys.stderr)
+                print(f"错误：'{name}' 是内置 provider，不能覆盖。", file=sys.stderr)
                 sys.exit(1)
             base_url = ""
             default_model = ""
@@ -1397,11 +1433,11 @@ def dispatch_command(cmd: str) -> None:
                 else:
                     i += 1
             if not base_url or not default_model or not env_key:
-                print("Error: --base-url, --default-model, and --env-key are required.", file=sys.stderr)
+                print("错误：--base-url、--default-model 和 --env-key 是必填项。", file=sys.stderr)
                 sys.exit(1)
             from graphify.llm import provider_base_url_ok
             if not provider_base_url_ok(base_url, name):
-                print(f"Error: refusing to add provider with unsafe base_url {base_url!r}.", file=sys.stderr)
+                print(f"错误：拒绝添加 base_url 不安全的 provider {base_url!r}。", file=sys.stderr)
                 sys.exit(1)
             global_path.parent.mkdir(parents=True, exist_ok=True)
             existing = {}
@@ -1418,12 +1454,12 @@ def dispatch_command(cmd: str) -> None:
                 "temperature": 0,
             }
             global_path.write_text(_json.dumps(existing, indent=2) + "\n", encoding="utf-8")
-            print(f"Provider '{name}' added. Use with: graphify extract . --backend {name}")
+            print(f"Provider '{name}' 已添加。使用方式：graphify extract . --backend {name}")
 
         elif subcmd == "remove":
             name = sys.argv[3] if len(sys.argv) > 3 else ""
             if not name:
-                print("Usage: graphify provider remove <name>", file=sys.stderr)
+                print("用法：graphify provider remove <name>", file=sys.stderr)
                 sys.exit(1)
             existing = {}
             if global_path.is_file():
@@ -1432,14 +1468,14 @@ def dispatch_command(cmd: str) -> None:
                 except Exception:
                     pass
             if name not in existing:
-                print(f"Provider '{name}' not found.", file=sys.stderr)
+                print(f"Provider '{name}' 未找到。", file=sys.stderr)
                 sys.exit(1)
             del existing[name]
             global_path.write_text(_json.dumps(existing, indent=2) + "\n", encoding="utf-8")
-            print(f"Provider '{name}' removed.")
+            print(f"Provider '{name}' 已移除。")
 
         else:
-            print("Usage: graphify provider [add|list|show|remove]", file=sys.stderr)
+            print("用法：graphify provider [add|list|show|remove]", file=sys.stderr)
             if subcmd:
                 sys.exit(1)
     elif cmd == "prs":
@@ -1460,11 +1496,11 @@ def dispatch_command(cmd: str) -> None:
         elif subcmd == "status":
             print(hook_status(Path(".")))
         else:
-            print("Usage: graphify hook [install|uninstall|status]", file=sys.stderr)
+            print("用法：graphify hook [install|uninstall|status]", file=sys.stderr)
             sys.exit(1)
     elif cmd == "query":
         if len(sys.argv) < 3:
-            print("Usage: graphify query \"<question>\" [--dfs] [--context C] [--budget N] [--graph path]\n"
+            print("用法：graphify query \"<question>\" [--dfs] [--context C] [--budget N] [--graph path]\n"
                   "                              [--no-semantic] [--top-k N] [--top-n N]", file=sys.stderr)
             sys.exit(1)
         from graphify.serve import _query_graph_text
@@ -1491,14 +1527,14 @@ def dispatch_command(cmd: str) -> None:
                 try:
                     budget = int(args[i + 1])
                 except ValueError:
-                    print(f"error: --budget must be an integer", file=sys.stderr)
+                    print(f"error: --budget 必须是整数", file=sys.stderr)
                     sys.exit(1)
                 i += 2
             elif args[i].startswith("--budget="):
                 try:
                     budget = int(args[i].split("=", 1)[1])
                 except ValueError:
-                    print(f"error: --budget must be an integer", file=sys.stderr)
+                    print(f"error: --budget 必须是整数", file=sys.stderr)
                     sys.exit(1)
                 i += 1
             elif args[i] == "--context" and i + 1 < len(args):
@@ -1520,38 +1556,38 @@ def dispatch_command(cmd: str) -> None:
                 try:
                     top_k = int(args[i + 1])
                 except ValueError:
-                    print(f"error: --top-k must be an integer", file=sys.stderr)
+                    print(f"error: --top-k 必须是整数", file=sys.stderr)
                     sys.exit(1)
                 i += 2
             elif args[i].startswith("--top-k="):
                 try:
                     top_k = int(args[i].split("=", 1)[1])
                 except ValueError:
-                    print(f"error: --top-k must be an integer", file=sys.stderr)
+                    print(f"error: --top-k 必须是整数", file=sys.stderr)
                     sys.exit(1)
                 i += 1
             elif args[i] == "--top-n" and i + 1 < len(args):
                 try:
                     top_n = int(args[i + 1])
                 except ValueError:
-                    print(f"error: --top-n must be an integer", file=sys.stderr)
+                    print(f"error: --top-n 必须是整数", file=sys.stderr)
                     sys.exit(1)
                 i += 2
             elif args[i].startswith("--top-n="):
                 try:
                     top_n = int(args[i].split("=", 1)[1])
                 except ValueError:
-                    print(f"error: --top-n must be an integer", file=sys.stderr)
+                    print(f"error: --top-n 必须是整数", file=sys.stderr)
                     sys.exit(1)
                 i += 1
             else:
                 i += 1
         gp = Path(graph_path).resolve()
         if not gp.exists():
-            print(f"error: graph file not found: {gp}", file=sys.stderr)
+            print(f"error: 未找到图谱文件：{gp}", file=sys.stderr)
             sys.exit(1)
         if not gp.suffix == ".json":
-            print(f"error: graph file must be a .json file", file=sys.stderr)
+            print(f"error: 图谱文件必须是 .json 文件", file=sys.stderr)
             sys.exit(1)
         _enforce_graph_size_cap_or_exit(gp)
         try:
@@ -1599,7 +1635,7 @@ def dispatch_command(cmd: str) -> None:
             except Exception:
                 pass
         except Exception as exc:
-            print(f"error: could not load graph: {exc}", file=sys.stderr)
+            print(f"error: 无法加载图谱：{exc}", file=sys.stderr)
             sys.exit(1)
         import time as _time
         _t0 = _time.perf_counter()
@@ -1630,7 +1666,7 @@ def dispatch_command(cmd: str) -> None:
         print(_result)
     elif cmd == "affected":
         if len(sys.argv) < 3:
-            print("Usage: graphify affected \"<node-or-label>\" [--relation R] [--depth N] [--graph path]", file=sys.stderr)
+            print("用法：graphify affected \"<node-or-label>\" [--relation R] [--depth N] [--graph path]", file=sys.stderr)
             sys.exit(1)
         from graphify.affected import DEFAULT_AFFECTED_RELATIONS, format_affected, load_graph
         query = sys.argv[2]
@@ -1650,14 +1686,14 @@ def dispatch_command(cmd: str) -> None:
                 try:
                     depth = int(args[i + 1])
                 except ValueError:
-                    print("error: --depth must be an integer", file=sys.stderr)
+                    print("error: --depth 必须是整数", file=sys.stderr)
                     sys.exit(1)
                 i += 2
             elif args[i].startswith("--depth="):
                 try:
                     depth = int(args[i].split("=", 1)[1])
                 except ValueError:
-                    print("error: --depth must be an integer", file=sys.stderr)
+                    print("error: --depth 必须是整数", file=sys.stderr)
                     sys.exit(1)
                 i += 1
             elif args[i] == "--relation" and i + 1 < len(args):
@@ -1670,15 +1706,15 @@ def dispatch_command(cmd: str) -> None:
                 i += 1
         gp = Path(graph_path).resolve()
         if not gp.exists():
-            print(f"error: graph file not found: {gp}", file=sys.stderr)
+            print(f"error: 未找到图谱文件：{gp}", file=sys.stderr)
             sys.exit(1)
         if not gp.suffix == ".json":
-            print("error: graph file must be a .json file", file=sys.stderr)
+            print("error: 图谱文件必须是 .json 文件", file=sys.stderr)
             sys.exit(1)
         try:
             graph = load_graph(gp)
         except Exception as exc:
-            print(f"error: could not load graph: {exc}", file=sys.stderr)
+            print(f"error: 无法加载图谱：{exc}", file=sys.stderr)
             sys.exit(1)
         # Derive the analysed repo root from the graph's own location so an
         # absolute-path seed resolves without requiring cwd to be that root
@@ -1720,29 +1756,29 @@ def dispatch_command(cmd: str) -> None:
                 try:
                     top_n = int(args[i + 1])
                 except ValueError:
-                    print("error: --top must be an integer", file=sys.stderr)
+                    print("error: --top 必须是整数", file=sys.stderr)
                     sys.exit(1)
                 i += 2
             elif args[i].startswith("--top="):
                 try:
                     top_n = int(args[i].split("=", 1)[1])
                 except ValueError:
-                    print("error: --top must be an integer", file=sys.stderr)
+                    print("error: --top 必须是整数", file=sys.stderr)
                     sys.exit(1)
                 i += 1
             else:
                 i += 1
         gp = Path(graph_path).resolve()
         if not gp.exists():
-            print(f"error: graph file not found: {gp}", file=sys.stderr)
+            print(f"error: 未找到图谱文件：{gp}", file=sys.stderr)
             sys.exit(1)
         if not gp.suffix == ".json":
-            print("error: graph file must be a .json file", file=sys.stderr)
+            print("error: 图谱文件必须是 .json 文件", file=sys.stderr)
             sys.exit(1)
         try:
             G = load_graph(gp)
         except Exception as exc:
-            print(f"error: could not load graph: {exc}", file=sys.stderr)
+            print(f"error: 无法加载图谱：{exc}", file=sys.stderr)
             sys.exit(1)
         gods = _god_nodes(G, top_n=top_n)
         if as_json:
@@ -1750,7 +1786,7 @@ def dispatch_command(cmd: str) -> None:
         else:
             print("God nodes (most connected):")
             for rank, n in enumerate(gods, 1):
-                print(f"  {rank}. {_sanitize_label(str(n['label']))} - {n['degree']} edges")
+                print(f"  {rank}. {_sanitize_label(str(n['label']))} - {n['degree']} 条边")
     elif cmd == "save-result":
         # graphify save-result --question Q --answer A [--type T] [--nodes N1 N2 ...]
         #                      [--outcome useful|dead_end|corrected] [--correction TEXT]
@@ -1781,7 +1817,7 @@ def dispatch_command(cmd: str) -> None:
             outcome=opts.outcome,
             correction=opts.correction,
         )
-        print(f"Saved to {out}")
+        print(f"已保存到 {out}")
     elif cmd == "reflect":
         import argparse as _ap
 
@@ -1822,7 +1858,7 @@ def dispatch_command(cmd: str) -> None:
         if opts.if_stale and _lessons_fresh(
             Path(opts.out), Path(opts.memory_dir), _gp, _analysis_path, _labels_path
         ):
-            print(f"Lessons already up to date -> {opts.out} (skipped; omit --if-stale to force)")
+            print(f"经验已是最新 -> {opts.out}（已跳过；省略 --if-stale 可强制重算）")
         else:
             out_path, agg = _reflect(
                 memory_dir=Path(opts.memory_dir),
@@ -1835,9 +1871,9 @@ def dispatch_command(cmd: str) -> None:
             )
             c = agg["counts"]
             print(
-                f"Reflected {agg['total']} memories "
-                f"({c['useful']} useful, {c['dead_end']} dead ends, "
-                f"{c['corrected']} corrected) -> {out_path}"
+                f"已回顾 {agg['total']} 条记忆"
+                f"（{c['useful']} 有用，{c['dead_end']} 死胡同，"
+                f"{c['corrected']} 已更正）-> {out_path}"
             )
     elif cmd == "path":
         if len(sys.argv) < 4:
@@ -1881,7 +1917,7 @@ def dispatch_command(cmd: str) -> None:
         undirected = direction_flag == "undirected"
         gp = Path(graph_path).resolve()
         if not gp.exists():
-            print(f"error: graph file not found: {gp}", file=sys.stderr)
+            print(f"error: 未找到图谱文件：{gp}", file=sys.stderr)
             sys.exit(1)
         _enforce_graph_size_cap_or_exit(gp)
         _raw = json.loads(gp.read_text(encoding="utf-8"))
@@ -1901,10 +1937,10 @@ def dispatch_command(cmd: str) -> None:
         src_scored = _score_nodes(G, [t.lower() for t in source_label.split()])
         tgt_scored = _score_nodes(G, [t.lower() for t in target_label.split()])
         if not src_scored:
-            print(f"No node matching '{source_label}' found.", file=sys.stderr)
+            print(f"未找到匹配 '{source_label}' 的节点。", file=sys.stderr)
             sys.exit(1)
         if not tgt_scored:
-            print(f"No node matching '{target_label}' found.", file=sys.stderr)
+            print(f"未找到匹配 '{target_label}' 的节点。", file=sys.stderr)
             sys.exit(1)
         src_nid = _pick_scored_endpoint(G, src_scored, source_label)
         tgt_nid = _pick_scored_endpoint(G, tgt_scored, target_label)
@@ -2021,7 +2057,7 @@ def dispatch_command(cmd: str) -> None:
                 graph_path = args[i + 1]
         gp = Path(graph_path).resolve()
         if not gp.exists():
-            print(f"error: graph file not found: {gp}", file=sys.stderr)
+            print(f"error: 未找到图谱文件：{gp}", file=sys.stderr)
             sys.exit(1)
         _enforce_graph_size_cap_or_exit(gp)
         _raw = json.loads(gp.read_text(encoding="utf-8"))
@@ -3576,19 +3612,19 @@ def dispatch_command(cmd: str) -> None:
         # disables the incremental gate and skips semantic-cache reads (#1894).
         force = os.environ.get("GRAPHIFY_FORCE", "").lower() in ("1", "true", "yes")
 
-        def _generate_embedding_sidecar(
+        def _build_embeddings(
             graph_json_path: Path,
             embed_backend: str | None,
             embed_model: str | None,
         ) -> None:
-            """Thin wrapper over the shared embeddings.generate_embedding_sidecar.
+            """Thin wrapper over the shared embeddings.build_embeddings.
 
             Kept as a local alias so the two call sites below read naturally
             with the extract command's variable names; the real logic lives
             in embeddings.py so watch.py (the post-commit hook path) shares
             the exact same embedding refresh behavior.
             """
-            from graphify.embeddings import generate_embedding_sidecar as _gen
+            from graphify.embeddings import build_embeddings as _gen
             _gen(graph_json_path, embed_backend=embed_backend,
                  embed_model=embed_model, log_prefix="[graphify extract]")
 
@@ -4857,7 +4893,7 @@ def dispatch_command(cmd: str) -> None:
             # when a backend is configured, else `graphify . --no-cluster` or
             # `graphify extract . --code-only` would silently skip embedding
             # generation even with GRAPHIFY_EMBED_BACKEND set.
-            _generate_embedding_sidecar(graph_json_path, embed_backend, embed_model)
+            _build_embeddings(graph_json_path, embed_backend, embed_model)
             stages.total()
             sys.exit(0)
 
@@ -5046,7 +5082,7 @@ def dispatch_command(cmd: str) -> None:
         )
         # Embedding generation (clustered path). Same logic as the --no-cluster
         # path above: config-driven default-on, silent skip when no backend.
-        _generate_embedding_sidecar(graph_json_path, embed_backend, embed_model)
+        _build_embeddings(graph_json_path, embed_backend, embed_model)
         stages.total()
 
     elif cmd == "cache-check":

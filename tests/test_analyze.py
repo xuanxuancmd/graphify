@@ -611,7 +611,7 @@ def test_suggest_questions_excludes_rationale_nodes_from_isolated_count():
     questions = suggest_questions(G, communities={}, community_labels={}, top_n=10)
     isolated = next(question for question in questions if question["type"] == "isolated_nodes")
 
-    assert isolated["why"].startswith("1 weakly-connected node")
+    assert isolated["why"].startswith("发现 1 个弱连接节点")
     assert "`Service`" in isolated["question"]
     assert "Explains service" not in isolated["question"]
 

@@ -77,16 +77,16 @@ def _learning_section(lines: list, learning: dict | None, top_n: int = 10) -> No
                                    -float(kv[1].get("score", 0) or 0), kv[0]))
     if not preferred and not dead_ends:
         return
-    lines += ["", "## Work-memory lessons"]
+    lines += ["", "## 工作记忆经验"]
     if preferred:
-        lines += ["", "**Preferred sources** — corroborated by past sessions; start here."]
+        lines += ["", "**首选来源** —— 已被过往会话印证；从这里开始查。"]
         for nid, e in preferred[:top_n]:
             label = e.get("label") or nid
-            stale = " _(code changed — re-verify)_" if e.get("stale") else ""
-            lines.append(f"- `{label}` ({e.get('uses', 0)}× useful, "
+            stale = " _（代码已变更——需重新验证）_" if e.get("stale") else ""
+            lines.append(f"- `{label}`（{e.get('uses', 0)}× 有用，"
                          f"score={e.get('score', 0)}){stale}")
     if dead_ends:
-        lines += ["", "**Known dead ends** — questions that led nowhere; don't re-derive."]
+        lines += ["", "**已知死胡同** —— 这些问题查不出结果；别再重复推导。"]
         for d in dead_ends:
             nodes = ", ".join(f"`{n}`" for n in d.get("nodes", []))
             lines.append(f"- \"{d.get('question', '')}\""
@@ -126,16 +126,16 @@ def generate(
     inf_avg = round(sum(inf_scores) / len(inf_scores), 2) if inf_scores else None
 
     lines = [
-        f"# Graph Report - {_portable_root_label(root)}  ({today})",
+        f"# 图谱报告 - {_portable_root_label(root)}  ({today})",
         "",
-        "## Corpus Check",
+        "## 语料检查",
     ]
     if detection_result.get("warning"):
         lines.append(f"- {detection_result['warning']}")
     else:
         lines += [
-            f"- {detection_result['total_files']} files · ~{detection_result['total_words']:,} words",
-            "- Verdict: corpus is large enough that graph structure adds value.",
+            f"- {detection_result['total_files']} 个文件 · 约 {detection_result['total_words']:,} 词",
+            "- 判定：语料规模足够大，图结构能带来价值。",
         ]
 
     from .analyze import _is_file_node as _ifn
@@ -149,21 +149,21 @@ def generate(
 
     lines += [
         "",
-        "## Summary",
-        f"- {G.number_of_nodes()} nodes · {G.number_of_edges()} edges · {len(communities)} communities"
-        + (f" ({shown_count} shown, {thin_count_summary} thin omitted)" if thin_count_summary else ""),
-        f"- Extraction: {ext_pct}% EXTRACTED · {inf_pct}% INFERRED · {amb_pct}% AMBIGUOUS"
-        + (f" · INFERRED: {len(inf_edges)} edges (avg confidence: {inf_avg})" if inf_avg is not None else ""),
-        f"- Token cost: {token_cost.get('input', 0):,} input · {token_cost.get('output', 0):,} output",
+        "## 概要",
+        f"- {G.number_of_nodes()} 个节点 · {G.number_of_edges()} 条边 · {len(communities)} 个社区"
+        + (f"（展示 {shown_count} 个，省略 {thin_count_summary} 个稀疏社区）" if thin_count_summary else ""),
+        f"- 提取：{ext_pct}% EXTRACTED · {inf_pct}% INFERRED · {amb_pct}% AMBIGUOUS"
+        + (f" · INFERRED：{len(inf_edges)} 条边（平均置信度：{inf_avg}）" if inf_avg is not None else ""),
+        f"- Token 开销：{token_cost.get('input', 0):,} 输入 · {token_cost.get('output', 0):,} 输出",
     ]
 
     if built_at_commit:
         lines += [
             "",
-            "## Graph Freshness",
-            f"- Built from commit: `{built_at_commit[:8]}`",
-            "- Run `git rev-parse HEAD` and compare to check if the graph is stale.",
-            "- Run `graphify update .` after code changes (no API cost).",
+            "## 图谱新鲜度",
+            f"- 构建自提交：`{built_at_commit[:8]}`",
+            "- 运行 `git rev-parse HEAD` 并与之对比，以检查图谱是否陈旧。",
+            "- 代码变更后运行 `graphify update .`（无 API 开销）。",
         ]
 
     # Community hub navigation. The `_COMMUNITY_*.md` notes these wikilinks target
@@ -173,9 +173,9 @@ def generate(
     # literal brackets everywhere else (#1712). Emit wikilinks only when the caller
     # signals Obsidian output; otherwise a plain list, which navigates nowhere-to-break.
     if non_empty:
-        lines += ["", "## Community Hubs (Navigation)"]
+        lines += ["", "## 社区枢纽（导航）"]
         for cid in non_empty:
-            label = community_labels.get(cid, f"Community {cid}")
+            label = community_labels.get(cid, f"社区 {cid}")
             if obsidian:
                 safe = _safe_community_name(label)
                 lines.append(f"- [[_COMMUNITY_{safe}|{label}]]")
@@ -184,12 +184,12 @@ def generate(
 
     lines += [
         "",
-        "## God Nodes (most connected - your core abstractions)",
+        "## God Nodes（连接数最多——核心抽象）",
     ]
     for i, node in enumerate(god_node_list, 1):
-        lines.append(f"{i}. `{node['label']}` - {node['degree']} edges")
+        lines.append(f"{i}. `{node['label']}` - {node['degree']} 条边")
 
-    lines += ["", "## Surprising Connections (you probably didn't know these)"]
+    lines += ["", "## 意外连接（你多半没注意到这些）"]
     if surprise_list:
         for s in surprise_list:
             relation = s.get("relation", "related_to")
@@ -201,13 +201,13 @@ def generate(
                 conf_tag = f"INFERRED {cscore:.2f}"
             else:
                 conf_tag = conf
-            sem_tag = " [semantically similar]" if relation == "semantically_similar_to" else ""
+            sem_tag = " [语义相似]" if relation == "semantically_similar_to" else ""
             lines += [
                 f"- `{s['source']}` --{relation}--> `{s['target']}`  [{conf_tag}]{sem_tag}",
                 f"  {files[0]} → {files[1]}" + (f"  _{note}_" if note else ""),
             ]
     else:
-        lines.append("- None detected - all connections are within the same source files.")
+        lines.append("- 未检测到——所有连接都在同一批源文件内部。")
 
     # Circular imports surfaced from file-level dependency graph. Only meaningful
     # for code — a documents-only corpus has no imports, so the section is pure
@@ -222,7 +222,7 @@ def generate(
     if _has_code:
         from .analyze import find_import_cycles
         cycles = find_import_cycles(G)
-        lines += ["", "## Import Cycles"]
+        lines += ["", "## 导入循环"]
         if cycles:
             for c in cycles:
                 cycle = c.get("cycle", [])
@@ -230,13 +230,13 @@ def generate(
                 if not cycle:
                     continue
                 cycle_path = " -> ".join(cycle + [cycle[0]])
-                lines.append(f"- {length}-file cycle: `{cycle_path}`")
+                lines.append(f"- {length} 个文件的循环：`{cycle_path}`")
         else:
-            lines.append("- None detected.")
+            lines.append("- 未检测到。")
 
     hyperedges = G.graph.get("hyperedges", [])
     if hyperedges:
-        lines += ["", "## Hyperedges (group relationships)"]
+        lines += ["", "## 超边（群组关系）"]
         for h in hyperedges:
             node_labels = ", ".join(h.get("nodes", []))
             conf = h.get("confidence", "INFERRED")
@@ -244,9 +244,9 @@ def generate(
             conf_tag = f"{conf} {cscore:.2f}" if cscore is not None else conf
             lines.append(f"- **{h.get('label', h.get('id', ''))}** — {node_labels} [{conf_tag}]")
 
-    lines += ["", f"## Communities ({len(communities)} total, {thin_count_summary} thin omitted)"]
+    lines += ["", f"## 社区（共 {len(communities)} 个，省略 {thin_count_summary} 个稀疏社区）"]
     for cid, nodes in communities.items():
-        label = community_labels.get(cid, f"Community {cid}")
+        label = community_labels.get(cid, f"社区 {cid}")
         score = cohesion_scores.get(cid, 0.0)
         # Filter method/function stubs from display - they're structural noise
         real_nodes = [n for n in nodes if not _ifn(G, n)]
@@ -255,23 +255,23 @@ def generate(
         if len(real_nodes) < min_community_size:
             continue
         display = [G.nodes[n].get("label", n) for n in real_nodes[:8]]
-        suffix = f" (+{len(real_nodes)-8} more)" if len(real_nodes) > 8 else ""
+        suffix = f"（还有 {len(real_nodes)-8} 个）" if len(real_nodes) > 8 else ""
         lines += [
             "",
-            f"### Community {cid} - \"{label}\"",
-            f"Cohesion: {score:.2f}",
-            f"Nodes ({len(real_nodes)}): {', '.join(display)}{suffix}",
+            f"### 社区 {cid} —— \"{label}\"",
+            f"凝聚度：{score:.2f}",
+            f"节点（共 {len(real_nodes)} 个）：{', '.join(display)}{suffix}",
         ]
 
     ambiguous = [(u, v, d) for u, v, d in G.edges(data=True) if d.get("confidence") == "AMBIGUOUS"]
     if ambiguous:
-        lines += ["", "## Ambiguous Edges - Review These"]
+        lines += ["", "## 歧义边——需复核"]
         for u, v, d in ambiguous:
             ul = G.nodes[u].get("label", u)
             vl = G.nodes[v].get("label", v)
             lines += [
                 f"- `{ul}` → `{vl}`  [AMBIGUOUS]",
-                f"  {d.get('source_file', '')} · relation: {d.get('relation', 'unknown')}",
+                f"  {d.get('source_file', '')} · 关系：{d.get('relation', 'unknown')}",
             ]
 
     # --- Gaps section ---
@@ -291,16 +291,16 @@ def generate(
     gap_count = len(isolated) + len(thin_communities)
 
     if gap_count > 0 or amb_pct > 20:
-        lines += ["", "## Knowledge Gaps"]
+        lines += ["", "## 知识空白"]
         if isolated:
             isolated_labels = [G.nodes[n].get("label", n) for n in isolated[:5]]
-            suffix = f" (+{len(isolated)-5} more)" if len(isolated) > 5 else ""
-            lines.append(f"- **{len(isolated)} isolated node(s):** {', '.join(f'`{l}`' for l in isolated_labels)}{suffix}")
-            lines.append("  These have ≤1 connection - possible missing edges or undocumented components.")
+            suffix = f"（还有 {len(isolated)-5} 个）" if len(isolated) > 5 else ""
+            lines.append(f"- **{len(isolated)} 个孤立节点：** {', '.join(f'`{l}`' for l in isolated_labels)}{suffix}")
+            lines.append("  这些节点的连接数 ≤1——可能漏掉了边，或组件未文档化。")
         if thin_communities:
-            lines.append(f"- **{len(thin_communities)} thin communities (<{min_community_size} nodes) omitted from report** — run `graphify query` to explore isolated nodes.")
+            lines.append(f"- **{len(thin_communities)} 个稀疏社区（<{min_community_size} 个节点）已从报告中省略** —— 运行 `graphify query` 探索孤立节点。")
         if amb_pct > 20:
-            lines.append(f"- **High ambiguity: {amb_pct}% of edges are AMBIGUOUS.** Review the Ambiguous Edges section above.")
+            lines.append(f"- **歧义比例偏高：{amb_pct}% 的边为 AMBIGUOUS。** 请复核上面的“歧义边”一节。")
 
     # --- Work-memory lessons (derived overlay) ---
     # Preferred sources come from the .graphify_learning.json sidecar; the
@@ -310,12 +310,12 @@ def generate(
     _learning_section(lines, learning)
 
     if suggested_questions:
-        lines += ["", "## Suggested Questions"]
+        lines += ["", "## 建议提问"]
         no_signal = len(suggested_questions) == 1 and suggested_questions[0].get("type") == "no_signal"
         if no_signal:
             lines.append(f"_{suggested_questions[0]['why']}_")
         else:
-            lines.append("_Questions this graph is uniquely positioned to answer:_")
+            lines.append("_这张图谱特别适合回答以下问题：_")
             lines.append("")
             for q in suggested_questions:
                 if q.get("question"):

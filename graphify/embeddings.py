@@ -494,37 +494,37 @@ def _write_sidecar_meta(
     )
 
 
-def generate_embedding_sidecar(
+def build_embeddings(
     graph_json_path: Path,
     *,
     embed_backend: str | None = None,
     embed_model: str | None = None,
     log_prefix: str = "[graphify]",
 ) -> None:
-    """Generate (or skip) the embedding sidecar after a successful graph build.
+    """Build (or refresh) the embedding vector index after a graph build.
 
     This is the single shared entry point called by every code path that
-    finishes a graph.json — cli.py's extract command AND watch.py's
-    _rebuild_code (the git post-commit hook path). Keeping the call in one
-    place avoids the two paths drifting: a desc change picked up by either
-    the full `graphify .` extract or the incremental hook rebuild produces
-    a refreshed sidecar.
+    finishes a graph.json — cli.py's extract command, watch.py's
+    _rebuild_code (the git post-commit hook path), and the graphify skill
+    (SKILL.md Step 5.5). Keeping the call in one place avoids the paths
+    drifting: a desc change picked up by either the full `graphify .`
+    extract or the incremental hook rebuild produces a refreshed index.
 
     Default-on via config: when ``embed_backend`` is None (the common case
-    — ``graphify .`` / ``graphify extract .`` / git commit hook all pass
-    None), the backend is auto-detected from .default-graphifyrc,
+    — ``graphify .`` / ``graphify extract .`` / git commit hook / skill
+    all pass None), the backend is auto-detected from .default-graphifyrc,
     .graph/graphifyrc, and env vars. When nothing is configured,
     `generate_embeddings_for_graph` returns None silently — the graph is
     still valid, queries degrade to pure lexical. The config-file chain is
     the sole switch: configured = generate, unconfigured = skip.
 
     ``log_prefix`` labels the stderr output so the caller can identify
-    which path produced the sidecar (e.g. ``[graphify extract]`` vs
-    ``[graphify watch]``).
+    which path produced the index (e.g. ``[graphify extract]`` vs
+    ``[graphify watch]`` vs ``[graphify skill]``).
 
-    Uses ``generate_embeddings_incremental`` when a sidecar already exists
+    Uses ``generate_embeddings_incremental`` when an index already exists
     (only re-embeds new / changed nodes), falling back to a full rebuild
-    when the sidecar is missing, corrupt, or the model changed. This keeps
+    when the index is missing, corrupt, or the model changed. This keeps
     the post-commit hook fast: a one-file change re-embeds only that file's
     nodes instead of the whole graph.
 
@@ -551,6 +551,13 @@ def generate_embedding_sidecar(
             f"(queries will run in pure-lexical mode until fixed): {exc}",
             file=sys.stderr,
         )
+
+
+# Backward-compatible alias. ``generate_embedding_sidecar`` was the original
+# name (sidecar is a Kubernetes term unfamiliar to many users); ``build_embeddings``
+# is clearer and consistent with the ``build_*`` family (build_from_json, build_merge).
+# Existing external callers that import the old name keep working.
+generate_embedding_sidecar = build_embeddings
 
 
 # ---------------------------------------------------------------------------

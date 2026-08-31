@@ -450,8 +450,8 @@ def suggest_questions(
             relation = data.get("relation", "related to")
             questions.append({
                 "type": "ambiguous_edge",
-                "question": f"What is the exact relationship between `{ul}` and `{vl}`?",
-                "why": f"Edge tagged AMBIGUOUS (relation: {relation}) - confidence is low.",
+                "question": f"`{ul}` 和 `{vl}` 之间到底是什么关系？",
+                "why": f"这条边被标记为 AMBIGUOUS（关系：{relation}）——置信度低。",
             })
 
     # 2. Bridge nodes (high betweenness) → cross-cutting concern questions
@@ -468,15 +468,15 @@ def suggest_questions(
         for node_id, score in bridges:
             label = G.nodes[node_id].get("label", node_id)
             cid = node_community.get(node_id)
-            comm_label = community_labels.get(cid, f"Community {cid}") if cid is not None else "unknown"
+            comm_label = community_labels.get(cid, f"社区 {cid}") if cid is not None else "未知"
             neighbors = list(G.neighbors(node_id))
             neighbor_comms = {node_community.get(n) for n in neighbors if node_community.get(n) != cid}
             if neighbor_comms:
-                other_labels = [community_labels.get(c, f"Community {c}") for c in neighbor_comms]
+                other_labels = [community_labels.get(c, f"社区 {c}") for c in neighbor_comms]
                 questions.append({
                     "type": "bridge_node",
-                    "question": f"Why does `{label}` connect `{comm_label}` to {', '.join(f'`{l}`' for l in other_labels)}?",
-                    "why": f"High betweenness centrality ({score:.3f}) - this node is a cross-community bridge.",
+                    "question": f"为什么 `{label}` 把 `{comm_label}` 和 {', '.join(f'`{l}`' for l in other_labels)} 连在一起？",
+                    "why": f"中介中心性高（{score:.3f}）——这个节点是跨社区的桥梁。",
                 })
 
     # 3. God nodes with many INFERRED edges → verification questions
@@ -506,8 +506,8 @@ def suggest_questions(
                 others.append(G.nodes[other_id].get("label", other_id))
             questions.append({
                 "type": "verify_inferred",
-                "question": f"Are the {len(inferred)} inferred relationships involving `{label}` (e.g. with `{others[0]}` and `{others[1]}`) actually correct?",
-                "why": f"`{label}` has {len(inferred)} INFERRED edges - model-reasoned connections that need verification.",
+                "question": f"`{label}` 涉及的 {len(inferred)} 条推断关系（例如与 `{others[0]}` 和 `{others[1]}` 的）真的成立吗？",
+                "why": f"`{label}` 有 {len(inferred)} 条 INFERRED 边——这些是模型推断出来的连接，需要人工核验。",
             })
 
     # 4. Isolated or weakly-connected nodes → exploration questions
@@ -522,8 +522,8 @@ def suggest_questions(
         labels = [G.nodes[n].get("label", n) for n in isolated[:3]]
         questions.append({
             "type": "isolated_nodes",
-            "question": f"What connects {', '.join(f'`{l}`' for l in labels)} to the rest of the system?",
-            "why": f"{len(isolated)} weakly-connected nodes found - possible documentation gaps or missing edges.",
+            "question": f"是什么把 {', '.join(f'`{l}`' for l in labels)} 和系统其余部分连起来的？",
+            "why": f"发现 {len(isolated)} 个弱连接节点——可能是文档空白或漏掉了边。",
         })
 
     # 5. Low-cohesion communities → structural questions
@@ -531,11 +531,11 @@ def suggest_questions(
     for cid, nodes in communities.items():
         score = cohesion_score(G, nodes)
         if score < 0.15 and len(nodes) >= 5:
-            label = community_labels.get(cid, f"Community {cid}")
+            label = community_labels.get(cid, f"社区 {cid}")
             questions.append({
                 "type": "low_cohesion",
-                "question": f"Should `{label}` be split into smaller, more focused modules?",
-                "why": f"Cohesion score {score} - nodes in this community are weakly interconnected.",
+                "question": f"`{label}` 是否应该拆成更小、更聚焦的模块？",
+                "why": f"凝聚度分数 {score}——这个社区内的节点彼此连接较弱。",
             })
 
     if not questions:
@@ -543,10 +543,10 @@ def suggest_questions(
             "type": "no_signal",
             "question": None,
             "why": (
-                "Not enough signal to generate questions. "
-                "This usually means the corpus has no AMBIGUOUS edges, no bridge nodes, "
-                "no INFERRED relationships, and all communities are tightly cohesive. "
-                "Add more files or run with --mode deep to extract richer edges."
+                "没有足够的信号来生成问题。"
+                "通常意味着语料中没有 AMBIGUOUS 边、没有桥梁节点、"
+                "没有 INFERRED 关系，且所有社区都紧密凝聚。"
+                "可以多加一些文件，或用 --mode deep 提取更丰富的边。"
             ),
         }]
 

@@ -43,7 +43,7 @@ def _days_before(n: int) -> str:
 def _run(args: list[str], cwd: Path) -> subprocess.CompletedProcess:
     return subprocess.run(
         [PYTHON, "-m", "graphify"] + args,
-        cwd=cwd, capture_output=True, text=True,
+        cwd=cwd, capture_output=True, text=True, encoding="utf-8",
     )
 
 
@@ -256,7 +256,7 @@ def test_evenly_split_verdict_when_signals_cancel():
     agg = aggregate_lessons(
         [_doc("useful", ["N"], date=day), _doc("dead_end", ["N"], date=day)], now=_NOW)
     assert agg["contested"][0]["verdict"] == "even"
-    assert "evenly split" in render_lessons_md(agg)
+    assert "势均力敌" in render_lessons_md(agg)
 
 
 def test_nonpositive_half_life_disables_decay():
@@ -321,10 +321,10 @@ def test_community_grouping_uses_plurality_community():
         _doc("useful", ["Z"]),            # unknown node -> Uncategorized
     ]
     agg = aggregate_lessons(docs, node_community)
-    assert set(agg["by_community"]) == {"Auth", "Cache", "Uncategorized"}
+    assert set(agg["by_community"]) == {"Auth", "Cache", "未分类"}
     assert agg["by_community"]["Auth"]["counts"]["useful"] == 1
     assert agg["by_community"]["Cache"]["counts"]["dead_end"] == 1
-    assert agg["by_community"]["Uncategorized"]["counts"]["useful"] == 1
+    assert agg["by_community"]["未分类"]["counts"]["useful"] == 1
 
 
 # --- rendering -----------------------------------------------------------------
@@ -343,19 +343,19 @@ def test_render_has_summary_and_sections():
         _doc("corrected", question="pw?", correction="bcrypt"),
     ]
     md = render_lessons_md(aggregate_lessons(docs))
-    assert "# Lessons" in md
-    assert "1 useful · 1 dead ends · 1 corrected" in md
+    assert "# 经验" in md
+    assert "1 有用 · 1 死胡同 · 1 已更正" in md
     assert "`AuthMiddleware`" in md
     assert "where is the cache?" in md
     assert "bcrypt" in md
     # No graph -> no per-topic section.
-    assert "## By topic" not in md
+    assert "## 按主题" not in md
 
 
 def test_render_includes_by_topic_when_graph_present():
     node_community = {"A": "Auth"}
     md = render_lessons_md(aggregate_lessons([_doc("useful", ["A"])], node_community))
-    assert "## By topic" in md
+    assert "## 按主题" in md
     assert "### Auth" in md
 
 
@@ -365,7 +365,7 @@ def test_topic_sections_alpha_with_uncategorized_last():
     docs = [_doc("useful", ["a"]), _doc("useful", ["b"]), _doc("useful", ["unknown"])]
     md = render_lessons_md(aggregate_lessons(docs, nc))
     headers = [line[4:] for line in md.splitlines() if line.startswith("### ")]
-    assert headers == ["Alpha", "Zeta", "Uncategorized"]
+    assert headers == ["Alpha", "Zeta", "未分类"]
 
 
 def test_render_byte_stable_across_independent_aggregations(tmp_path):
@@ -384,17 +384,17 @@ def test_contested_node_renders_once_under_contested():
     a positive bucket and elsewhere."""
     docs = [_doc("useful", ["N"]), _doc("dead_end", ["N"], question="bad?")]
     md = render_lessons_md(aggregate_lessons(docs, now=_NOW))
-    assert "**Contested**" in md
+    assert "**有争议**" in md
     # Exactly one rendered line carries the node as a contested source.
     contested_lines = [l for l in md.splitlines()
-                       if l.startswith("- `N` —") and "useful" in l and "dead end" in l]
+                       if l.startswith("- `N` ——") and "有用" in l and "死胡同" in l]
     assert len(contested_lines) == 1
 
 
 def test_header_is_cautious():
     """The header nudges verification, not blind reuse."""
     md = render_lessons_md(aggregate_lessons([_doc("useful", ["A"])], now=_NOW))
-    assert "verify before relying" in md
+    assert "使用前请核验" in md
     assert "reuse what worked" not in md
 
 
@@ -414,8 +414,8 @@ def test_lessons_artifact_cannot_be_globbed_back_into_memory(tmp_path):
 
 def test_render_empty_memory_is_graceful():
     md = render_lessons_md(aggregate_lessons([], now=_NOW))
-    assert "from 0 session memories" in md
-    assert "_No marked outcomes yet._" in md
+    assert "0 条会话记忆" in md
+    assert "_尚无标记结果。_" in md
 
 
 # --- orchestrator + CLI --------------------------------------------------------
@@ -464,7 +464,7 @@ def test_cli_reflect_end_to_end(tmp_path):
     assert r1.returncode == 0, r1.stderr
     r2 = _run(["reflect"], cwd)
     assert r2.returncode == 0, r2.stderr
-    assert "Reflected 1 memories" in r2.stdout
+    assert "已回顾 1 条记忆" in r2.stdout
     lessons = cwd / ".graph" / "reflections" / "LESSONS.md"
     assert lessons.exists()
     assert "`AuthMiddleware`" in lessons.read_text(encoding="utf-8")
@@ -503,10 +503,10 @@ def test_cli_reflect_cold_start_writes_empty_lessons(tmp_path):
     """First run with no .graph/memory/ still succeeds and writes a valid doc."""
     r = _run(["reflect"], tmp_path)
     assert r.returncode == 0, r.stderr
-    assert "Reflected 0 memories" in r.stdout
+    assert "已回顾 0 条记忆" in r.stdout
     lessons = tmp_path / ".graph" / "reflections" / "LESSONS.md"
     assert lessons.exists()
-    assert "from 0 session memories" in lessons.read_text(encoding="utf-8")
+    assert "0 条会话记忆" in lessons.read_text(encoding="utf-8")
 
 
 def test_cli_reflect_respects_out_flag(tmp_path):
@@ -533,9 +533,9 @@ def test_cli_reflect_groups_by_community_when_graph_present(tmp_path):
     r = _run(["reflect"], tmp_path)
     assert r.returncode == 0, r.stderr
     body = (out / "reflections" / "LESSONS.md").read_text(encoding="utf-8")
-    assert "## By topic" in body
+    assert "## 按主题" in body
     # The label-cited node must land in a real community, not Uncategorized.
-    assert "### Uncategorized" not in body
+    assert "### 未分类" not in body
 
 
 def test_cli_node_existence_gate_drops_stale_node_end_to_end(tmp_path):
@@ -659,7 +659,7 @@ def test_cli_reflect_if_stale_skips_when_fresh(tmp_path):
     # Second call with --if-stale: nothing changed -> skipped, file untouched.
     skipped = _run(["reflect", "--if-stale"], tmp_path)
     assert skipped.returncode == 0
-    assert "up to date" in (skipped.stdout + skipped.stderr).lower()
+    assert "已是最新" in (skipped.stdout + skipped.stderr)
     assert lessons.read_text(encoding="utf-8") == body_before
 
     # A new outcome makes it stale -> --if-stale runs again.
@@ -667,7 +667,7 @@ def test_cli_reflect_if_stale_skips_when_fresh(tmp_path):
           "--nodes", real, "--outcome", "useful"], tmp_path)
     ran = _run(["reflect", "--if-stale"], tmp_path)
     assert ran.returncode == 0
-    assert "up to date" not in (ran.stdout + ran.stderr).lower()
+    assert "已是最新" not in (ran.stdout + ran.stderr)
 
 
 def test_cli_reflect_if_stale_reruns_when_labels_newer(tmp_path):
@@ -693,7 +693,7 @@ def test_cli_reflect_if_stale_reruns_when_labels_newer(tmp_path):
     os.utime(labels_path, (2000, 2000))
     ran = _run(["reflect", "--if-stale"], tmp_path)
     assert ran.returncode == 0, ran.stderr
-    assert "up to date" not in (ran.stdout + ran.stderr).lower()
+    assert "已是最新" not in (ran.stdout + ran.stderr)
     assert "### Renamed Topic" in lessons.read_text(encoding="utf-8")
 
 

@@ -132,7 +132,7 @@ def test_print_benchmark_no_crash(tmp_path, capsys):
     result = run_benchmark(str(graph_file), corpus_words=5_000)
     print_benchmark(result)
     out = capsys.readouterr().out
-    assert "reduction" in out.lower()
+    assert "压缩比" in out or "reduction" in out.lower()
     assert "x" in out
 
 def test_print_benchmark_error_message(capsys):

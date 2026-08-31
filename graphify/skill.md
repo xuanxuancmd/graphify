@@ -122,18 +122,18 @@ print(f'Detected {result[\"total_files\"]} files')
 Replace INPUT_PATH with the actual path the user provided. Do NOT cat or print the JSON - read it silently and present a clean summary instead:
 
 ```
-Corpus: X files · ~Y words
-  code:     N files (.py .ts .go ...)
-  docs:     N files (.md .txt ...)
-  papers:   N files (.pdf ...)
-  images:   N files
-  video:    N files (.mp4 .mp3 ...)
+语料：X 个文件 · 约 Y 词
+  代码：     N 个文件 (.py .ts .go ...)
+  文档：     N 个文件 (.md .txt ...)
+  论文：     N 个文件 (.pdf ...)
+  图片：     N 个文件
+  视频：     N 个文件 (.mp4 .mp3 ...)
 ```
 
-Omit any category with 0 files from the summary.
+文件数为 0 的类别从摘要中省略。
 
-Then act on it:
-- If `total_files` is 0: stop with "No supported files found in [path]."
+然后据此判断：
+- 如果 `total_files` 为 0：停止并提示"在 [path] 中未找到受支持的文件。"
 - If `skipped_sensitive` is non-empty: report the count and list the skipped file names, so a wrongly-flagged source or doc is visible and can be renamed or moved (#2106).
 - If `total_words` > 2,000,000 OR `total_files` > 500: show the warning. Then compute the top 5 first-level subdirectories by file count:
   - Read `scan_root` from the detect JSON (always an absolute path to the resolved INPUT_PATH).
@@ -528,6 +528,38 @@ print('Report updated with community labels')
 Replace `LABELS_DICT` with the actual dict you constructed (e.g. `{0: "Attention Mechanism", 1: "Training Pipeline"}`).
 Replace INPUT_PATH with the actual path.
 
+### Step 5.5 - Build embedding vector index
+
+This step keeps the skill path parity with the `graphify extract` CLI command,
+which calls `build_embeddings` after every successful graph build. The skill
+flow (Step 3 Part A → Step 4 → Step 5) builds the graph via library functions
+but does not pass through the CLI wrapper, so without this explicit call the
+embedding index is never generated — `graphify check` (the SessionStart hook)
+only refreshes an existing index or generates when configured, but the first
+build must produce the sidecar files it compares against.
+
+When no `embed_backend` is configured in `.graph/graphifyrc` or
+`.default-graphifyrc`, `build_embeddings` is a silent no-op — the graph is
+still the primary artifact and queries degrade to pure lexical. When
+configured (e.g. `embed_backend=sentence-transformers`), this generates
+`<graph_dir>/embeddings/embedding.{npy,index.json,meta.json}`. A failure here
+is a warning, not fatal.
+
+This is the same function the CLI and the git post-commit hook call, so all
+three paths (skill / CLI / hook) produce identical embedding output:
+
+```bash
+$(cat .graph/.graphify_python) -c "
+from graphify.embeddings import build_embeddings
+from pathlib import Path
+build_embeddings(Path('.graph/graph.json'), log_prefix='[graphify skill]')
+"
+```
+
+If the output shows `[graphify skill] wrote embeddings: ...`, the index was
+generated. If it prints nothing, no embedding backend is configured — this is
+expected when `.graph/graphifyrc` is absent; the graph is complete without it.
+
 ### Step 6 - Generate Obsidian vault (opt-in) + HTML
 
 **Generate HTML always** (unless `--no-viz`). **Obsidian vault only if `--obsidian` was explicitly given** — skip it otherwise, it generates one file per node.
@@ -627,12 +659,12 @@ Replace INPUT_PATH with the actual path (same value used in Steps 4-5) so the ma
 
 Tell the user (omit the obsidian line unless --obsidian was given):
 ```
-Graph complete. Outputs in PATH_TO_DIR/.graph/
+图谱构建完成。产物位于 PATH_TO_DIR/.graph/
 
-  graph.html            - interactive graph, open in browser
-  GRAPH_REPORT.md       - audit report
-  graph.json            - raw graph data
-  obsidian/             - Obsidian vault (only if --obsidian was given)
+  graph.html            - 可交互图谱，用浏览器打开
+  GRAPH_REPORT.md       - 审计报告
+  graph.json            - 原始图谱数据
+  obsidian/             - Obsidian vault（仅当指定了 --obsidian 时）
 ```
 
 If graphify saved you time, consider supporting it: https://github.com/sponsors/safishamsi
@@ -648,7 +680,7 @@ Do NOT paste the full report - just those three sections. Keep it concise.
 
 Then immediately offer to explore. Pick the single most interesting suggested question from the report - the one that crosses the most community boundaries or has the most surprising bridge node - and ask:
 
-> "The most interesting question this graph can answer: **[question]**. Want me to trace it?"
+> "这张图谱能回答的最有意思的问题是：**[question]**。要我顺着图谱把它追下去吗？"
 
 If the user says yes, run `/graphify query "[question]"` on the graph and walk them through the answer using the graph structure - which nodes connect, which community boundaries get crossed, what the path reveals. Keep going as long as they want to explore. Each answer should end with a natural follow-up ("this connects to X - want to go deeper?") so the session feels like navigation, not a one-shot report.
 
@@ -711,3 +743,10 @@ When the user asks to install the post-commit auto-rebuild hook or wire graphify
 - Always show token cost in the report.
 - Never hide cohesion scores behind symbols - show the raw number.
 - Never run HTML viz on a graph with more than 5,000 nodes without warning the user.
+
+> 诚实规则：
+> - 永不编造边。不确定时标记为 AMBIGUOUS。
+> - 永不跳过语料检查警告。
+> - 报告中始终展示 token 开销。
+> - 永不把凝聚度分数藏在符号背后——直接展示原始数字。
+> - 永不在节点数超过 5000 的图谱上运行 HTML 可视化而不警告用户。

@@ -42,7 +42,7 @@ def test_god_nodes_cli_text_output(monkeypatch, tmp_path, capsys):
     out = capsys.readouterr().out
     assert "God nodes (most connected):" in out
     assert "Auth" in out
-    assert "edges" in out
+    assert "条边" in out
     assert "auth.py" not in out  # file node excluded from the ranking
 
 
@@ -57,7 +57,7 @@ def test_god_nodes_cli_top_limits(monkeypatch, tmp_path, capsys):
     gp = _write_graph(tmp_path)
     _run(monkeypatch, ["graphify", "god-nodes", "--graph", str(gp), "--top", "1"])
     body = capsys.readouterr().out
-    assert body.count(" edges") == 1
+    assert body.count(" 条边") == 1
 
 
 def test_god_nodes_cli_json(monkeypatch, tmp_path, capsys):
@@ -73,4 +73,4 @@ def test_god_nodes_cli_missing_graph_errors(monkeypatch, tmp_path, capsys):
     with pytest.raises(SystemExit) as exc:
         _run(monkeypatch, ["graphify", "god-nodes", "--graph", str(tmp_path / "nope.json")])
     assert exc.value.code == 1
-    assert "graph file not found" in capsys.readouterr().err
+    assert "未找到图谱文件" in capsys.readouterr().err
