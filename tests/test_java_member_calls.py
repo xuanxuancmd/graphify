@@ -19,7 +19,7 @@ def _calls(tmp_path: Path, files: dict[str, str]):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(body, encoding="utf-8")
         paths.append(path)
-    result = extract(paths, cache_root=tmp_path / "graphify-out")
+    result = extract(paths, cache_root=tmp_path / ".graph")
     calls = {
         (edge["source"], edge["target"])
         for edge in result["edges"]

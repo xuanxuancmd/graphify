@@ -1,8 +1,8 @@
 """Tests for `graphify reflect` and the work-memory reflection layer.
 
 `graphify reflect` reads the outcome-tagged Q&A docs that `graphify save-result`
-files into graphify-out/memory/ and writes a deterministic lessons artifact
-(graphify-out/reflections/LESSONS.md) an agent can load next session: preferred
+files into .graph/memory/ and writes a deterministic lessons artifact
+(.graph/reflections/LESSONS.md) an agent can load next session: preferred
 sources, known dead ends, and corrections — optionally grouped by community.
 
 Covers the pure aggregation/rendering helpers (deterministic, no LLM, no graph
@@ -433,7 +433,7 @@ def test_reflect_writes_lessons_file(tmp_path):
 def test_second_session_benefits_from_the_first(tmp_path):
     """The issue's worked example: session 1 records a win and a dead end; session 2
     loads LESSONS.md and sees both."""
-    out = tmp_path / "graphify-out"
+    out = tmp_path / ".graph"
     mem = out / "memory"
 
     # Session 1: one useful answer, one dead end.
@@ -465,7 +465,7 @@ def test_cli_reflect_end_to_end(tmp_path):
     r2 = _run(["reflect"], cwd)
     assert r2.returncode == 0, r2.stderr
     assert "Reflected 1 memories" in r2.stdout
-    lessons = cwd / "graphify-out" / "reflections" / "LESSONS.md"
+    lessons = cwd / ".graph" / "reflections" / "LESSONS.md"
     assert lessons.exists()
     assert "`AuthMiddleware`" in lessons.read_text(encoding="utf-8")
 
@@ -486,7 +486,7 @@ def test_cli_save_result_reads_answer_from_file(tmp_path):
     r = _run(["save-result", "--question", "how does auth work?",
               "--answer-file", str(ans), "--outcome", "useful"], tmp_path)
     assert r.returncode == 0, r.stderr
-    docs = list((tmp_path / "graphify-out" / "memory").glob("*.md"))
+    docs = list((tmp_path / ".graph" / "memory").glob("*.md"))
     assert docs, "save-result wrote no memory doc"
     body = docs[0].read_text(encoding="utf-8")
     assert "line one" in body and "line two" in body
@@ -500,11 +500,11 @@ def test_cli_save_result_requires_answer_or_answer_file(tmp_path):
 
 
 def test_cli_reflect_cold_start_writes_empty_lessons(tmp_path):
-    """First run with no graphify-out/memory/ still succeeds and writes a valid doc."""
+    """First run with no .graph/memory/ still succeeds and writes a valid doc."""
     r = _run(["reflect"], tmp_path)
     assert r.returncode == 0, r.stderr
     assert "Reflected 0 memories" in r.stdout
-    lessons = tmp_path / "graphify-out" / "reflections" / "LESSONS.md"
+    lessons = tmp_path / ".graph" / "reflections" / "LESSONS.md"
     assert lessons.exists()
     assert "from 0 session memories" in lessons.read_text(encoding="utf-8")
 
@@ -558,12 +558,12 @@ def test_cli_node_existence_gate_drops_stale_node_end_to_end(tmp_path):
 
 
 def _make_graph(tmp_path: Path) -> Path:
-    """Build a minimal graph.json + analysis/labels in tmp_path/graphify-out/.
+    """Build a minimal graph.json + analysis/labels in tmp_path/.graph/.
 
     Mirrors tests/test_cli_export.py::_make_graph so reflect can be exercised with a
     real community structure.
     """
-    out = tmp_path / "graphify-out"
+    out = tmp_path / ".graph"
     out.mkdir()
     extraction = json.loads((FIXTURES / "extraction.json").read_text())
     from graphify.build import build_from_json
@@ -756,7 +756,7 @@ def test_sidecar_write_classifies_and_keys_by_canonical_id(tmp_path):
     """reflect with a graph writes .graphify_learning.json next to graph.json with
     the preferred/tentative/contested nodes keyed by canonical node id; the
     dead-end-only node is NOT present; score/uses/provenance are carried."""
-    out = tmp_path / "graphify-out"
+    out = tmp_path / ".graph"
     src = tmp_path / "auth.py"
     src.write_text("def login(): pass\n", encoding="utf-8")
     _overlay_graph(out, [
@@ -795,7 +795,7 @@ def test_sidecar_write_classifies_and_keys_by_canonical_id(tmp_path):
 def test_sidecar_is_byte_identical_across_runs(tmp_path):
     """Two reflect runs on identical input + fixed `now` produce a byte-identical
     sidecar (sorted keys, stable indent)."""
-    out = tmp_path / "graphify-out"
+    out = tmp_path / ".graph"
     src = tmp_path / "auth.py"
     src.write_text("def login(): pass\n", encoding="utf-8")
     _overlay_graph(out, [
@@ -817,7 +817,7 @@ def test_sidecar_is_byte_identical_across_runs(tmp_path):
 def test_loader_marks_entry_stale_when_source_file_changes(tmp_path):
     """load_learning_overlay recomputes the file fingerprint: unchanged source =>
     stale=False; an edit to that source => stale=True."""
-    out = tmp_path / "graphify-out"
+    out = tmp_path / ".graph"
     src = tmp_path / "auth.py"
     src.write_text("def login(): pass\n", encoding="utf-8")
     _overlay_graph(out, [
@@ -838,12 +838,12 @@ def test_loader_marks_entry_stale_when_source_file_changes(tmp_path):
 
 
 def test_relative_source_file_not_spuriously_stale_in_graphify_out_layout(tmp_path):
-    """Regression: with a RELATIVE source_file and graph.json under graphify-out/,
+    """Regression: with a RELATIVE source_file and graph.json under .graph/,
     a freshly-written verdict must NOT be flagged stale. The fingerprint resolves
     the file relative to the PROJECT root (tmp_path), not graph.json's own dir
-    (graphify-out/) — otherwise every node looked unfindable and was marked stale.
+    (.graph/) — otherwise every node looked unfindable and was marked stale.
     The edit case must still flip stale=True."""
-    out = tmp_path / "graphify-out"          # graph.json lives here
+    out = tmp_path / ".graph"          # graph.json lives here
     (tmp_path / "auth.py").write_text("def login(): pass\n", encoding="utf-8")
     _overlay_graph(out, [
         # source_file is RELATIVE to the project root (tmp_path), as `extract` writes it
@@ -892,7 +892,7 @@ def test_flat_layout_does_not_match_same_named_file_one_dir_up(tmp_path):
     (proj / "util.py").write_text("REAL = 1\n", encoding="utf-8")
     # A decoy same-named file in the parent dir (tmp_path / util.py).
     (tmp_path / "util.py").write_text("DECOY = 2\n", encoding="utf-8")
-    # Flat layout: graph.json sits directly in proj/ (not a graphify-out subdir).
+    # Flat layout: graph.json sits directly in proj/ (not a .graph subdir).
     proj.joinpath("graph.json").write_text(json.dumps({
         "nodes": [{"id": "util", "label": "util.py", "source_file": "util.py",
                    "source_location": "L1", "community": 0}],
@@ -916,7 +916,7 @@ def test_flat_layout_does_not_match_same_named_file_one_dir_up(tmp_path):
 def test_provenance_capped_to_five_most_recent(tmp_path):
     """A node cited by >5 useful results keeps exactly the 5 most-recent in
     provenance (recent-first)."""
-    out = tmp_path / "graphify-out"
+    out = tmp_path / ".graph"
     src = tmp_path / "auth.py"
     src.write_text("x\n", encoding="utf-8")
     _overlay_graph(out, [
@@ -939,7 +939,7 @@ def test_provenance_capped_to_five_most_recent(tmp_path):
 def test_ambiguous_or_unresolved_citation_is_skipped(tmp_path):
     """A label shared by >1 node id (ambiguous) or absent from the graph
     (unresolved) is skipped — it can't be displayed against a single node."""
-    out = tmp_path / "graphify-out"
+    out = tmp_path / ".graph"
     _overlay_graph(out, [
         {"id": "dup_a", "label": "Dup", "source_file": "", "community": 0},
         {"id": "dup_b", "label": "Dup", "source_file": "", "community": 0},

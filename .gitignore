@@ -16,7 +16,7 @@ node_modules
 *.so
 *.egg
 .graphify/
-graphify-out/
+.graph/
 .graphify_*.json
 .graphify_python
 .claude/
@@ -43,7 +43,7 @@ paper/
 # macOS Finder metadata
 .DS_Store
 **/.graph/cache
-graphify-out
+.graph
 
 .graph/*
 

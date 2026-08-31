@@ -3,7 +3,7 @@
 These strings live in graphify/__main__.py and are written into project-local
 files (CLAUDE.md, AGENTS.md, GEMINI.md, .cursor/rules/, .kiro/steering/, etc.)
 or into in-process hook payloads. Earlier versions of graphify told every
-assistant to "ALWAYS read graphify-out/GRAPH_REPORT.md before answering" —
+assistant to "ALWAYS read .graph/GRAPH_REPORT.md before answering" —
 which silently increased per-question token usage in Claude Code sessions
 (issue #580). This file locks in the query-first policy so a future revert
 or partial change is caught by CI.
@@ -124,7 +124,7 @@ def test_report_is_still_referenced_as_fallback():
 
 
 def test_agents_section_does_not_skip_dirty_graph_output():
-    assert "Dirty graphify-out/ files are expected" in _AGENTS_MD_SECTION
+    assert "Dirty .graph/ files are expected" in _AGENTS_MD_SECTION
     assert "not a reason to skip graphify" in _AGENTS_MD_SECTION
 
 

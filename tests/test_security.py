@@ -147,7 +147,7 @@ def test_safe_fetch_text_replaces_bad_bytes():
 # ---------------------------------------------------------------------------
 
 def test_validate_graph_path_allows_inside_base(tmp_path):
-    base = tmp_path / "graphify-out"
+    base = tmp_path / ".graph"
     base.mkdir()
     graph = base / "graph.json"
     graph.write_text("{}")
@@ -155,27 +155,27 @@ def test_validate_graph_path_allows_inside_base(tmp_path):
     assert result == graph.resolve()
 
 def test_validate_graph_path_blocks_traversal(tmp_path):
-    base = tmp_path / "graphify-out"
+    base = tmp_path / ".graph"
     base.mkdir()
-    evil = tmp_path / "graphify-out" / ".." / "etc_passwd"
+    evil = tmp_path / ".graph" / ".." / "etc_passwd"
     with pytest.raises(ValueError, match="escapes"):
         validate_graph_path(str(evil), base=base)
 
 def test_validate_graph_path_requires_base_exists(tmp_path):
-    base = tmp_path / "graphify-out"  # not created
+    base = tmp_path / ".graph"  # not created
     with pytest.raises(ValueError, match="does not exist"):
         validate_graph_path(str(base / "graph.json"), base=base)
 
 def test_validate_graph_path_raises_if_file_missing(tmp_path):
-    base = tmp_path / "graphify-out"
+    base = tmp_path / ".graph"
     base.mkdir()
     with pytest.raises(FileNotFoundError):
         validate_graph_path(str(base / "missing.json"), base=base)
 
 def test_validate_graph_path_default_base_discovers_output_dir(tmp_path):
     """With base omitted, the output dir is discovered by walking the path's
-    parents for the configured output-dir name (default 'graphify-out')."""
-    base = tmp_path / "graphify-out"
+    parents for the configured output-dir name (default '.graph')."""
+    base = tmp_path / ".graph"
     base.mkdir()
     graph = base / "graph.json"
     graph.write_text("{}")
@@ -183,7 +183,7 @@ def test_validate_graph_path_default_base_discovers_output_dir(tmp_path):
 
 def test_validate_graph_path_default_base_honours_graphify_out_override(tmp_path, monkeypatch):
     """The base=None discovery must honour GRAPHIFY_OUT, not the hardcoded
-    'graphify-out' literal — otherwise a renamed output dir validates against the
+    '.graph' literal — otherwise a renamed output dir validates against the
     wrong base or raises spuriously (#1423)."""
     monkeypatch.setattr("graphify.security.GRAPHIFY_OUT_NAME", "custom-out")
     monkeypatch.setattr("graphify.security.GRAPHIFY_OUT", "custom-out")
@@ -191,7 +191,7 @@ def test_validate_graph_path_default_base_honours_graphify_out_override(tmp_path
     out.mkdir()
     graph = out / "graph.json"
     graph.write_text("{}")
-    # No base passed → must discover custom-out by name rather than graphify-out.
+    # No base passed → must discover custom-out by name rather than .graph.
     assert validate_graph_path(str(graph)) == graph.resolve()
 
 

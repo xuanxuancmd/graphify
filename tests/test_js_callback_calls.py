@@ -31,7 +31,7 @@ def _extract(tmp_path, files: dict[str, str]):
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(body)
     r = extract([tmp_path / n for n in files],
-                cache_root=tmp_path / "graphify-out", parallel=False)
+                cache_root=tmp_path / ".graph", parallel=False)
     lbl = {n["id"]: n["label"] for n in r["nodes"]}
     calls = {(lbl.get(e["source"]), lbl.get(e["target"])) for e in r["edges"]
              if e["relation"] == "calls"}

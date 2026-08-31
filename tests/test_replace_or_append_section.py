@@ -10,7 +10,7 @@ from __future__ import annotations
 from graphify.__main__ import _replace_or_append_section
 
 MARKER = "## graphify"
-NEW = "## graphify\n\nThis project has a knowledge graph at graphify-out/.\n"
+NEW = "## graphify\n\nThis project has a knowledge graph at .graph/.\n"
 
 
 def test_inline_reference_to_marker_is_not_treated_as_the_section():
@@ -24,7 +24,7 @@ def test_inline_reference_to_marker_is_not_treated_as_the_section():
     after = _replace_or_append_section(before, MARKER, NEW)
     assert "See the `## graphify` section" in after       # bullet preserved
     assert "Critical steps that must not be lost" in after  # later section preserved
-    assert "knowledge graph at graphify-out/" in after      # section still added
+    assert "knowledge graph at .graph/" in after      # section still added
 
 
 def test_real_section_is_replaced_in_place():
@@ -35,7 +35,7 @@ def test_real_section_is_replaced_in_place():
     )
     after = _replace_or_append_section(before, MARKER, NEW)
     assert "OLD text." not in after
-    assert "knowledge graph at graphify-out/" in after
+    assert "knowledge graph at .graph/" in after
     assert "do things" in after and "keep me" in after
 
 
@@ -59,4 +59,4 @@ def test_prefers_last_heading_when_duplicated():
     # the trailing real section is replaced; the earlier stray heading + the
     # user's "mid" content are left intact
     assert "mid" in after
-    assert "knowledge graph at graphify-out/" in after
+    assert "knowledge graph at .graph/" in after

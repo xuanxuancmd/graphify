@@ -28,7 +28,7 @@ def _mixed_repo(tmp_path: Path) -> Path:
 
 def _run(repo: Path, *extra: str):
     env = {k: v for k, v in os.environ.items() if k not in _KEY_VARS}
-    env["GRAPHIFY_OUT"] = str(repo / "graphify-out")
+    env["GRAPHIFY_OUT"] = str(repo / ".graph")
     return subprocess.run(
         [PYTHON, "-m", "graphify", "extract", ".", *extra],
         cwd=repo, capture_output=True, text=True, env=env,
@@ -41,7 +41,7 @@ def test_code_only_succeeds_without_key(tmp_path):
     assert r.returncode == 0, f"--code-only should succeed with no key: {r.stderr}"
     out = r.stdout + r.stderr
     assert "--code-only: skipping" in out
-    graph = repo / "graphify-out" / "graph.json"
+    graph = repo / ".graph" / "graph.json"
     assert graph.exists(), "code graph must still be written"
     import json
     g = json.loads(graph.read_text())
@@ -73,7 +73,7 @@ def _run_relative_out(repo: Path, *extra: str):
     """Like _run but with a RELATIVE GRAPHIFY_OUT so --out/--output controls the
     parent dir (an absolute GRAPHIFY_OUT would override the flag)."""
     env = {k: v for k, v in os.environ.items() if k not in _KEY_VARS}
-    env["GRAPHIFY_OUT"] = "graphify-out"
+    env["GRAPHIFY_OUT"] = ".graph"
     return subprocess.run(
         [PYTHON, "-m", "graphify", "extract", ".", *extra],
         cwd=repo, capture_output=True, text=True, env=env,
@@ -82,7 +82,7 @@ def _run_relative_out(repo: Path, *extra: str):
 
 def test_output_flag_is_alias_of_out(tmp_path):
     """#2004 part 3: `--output DIR` was silently ignored on extract (output went
-    to the default `<path>/graphify-out/`). It is now an alias of `--out`."""
+    to the default `<path>/.graph/`). It is now an alias of `--out`."""
     repo = tmp_path / "repo"
     repo.mkdir()
     (repo / "app.py").write_text("def hello():\n    return 1\n")
@@ -90,8 +90,8 @@ def test_output_flag_is_alias_of_out(tmp_path):
 
     r = _run_relative_out(repo, "--code-only", "--no-cluster", "--output", str(custom))
     assert r.returncode == 0, r.stderr
-    assert (custom / "graphify-out" / "graph.json").exists(), "--output was ignored (#2004)"
-    assert not (repo / "graphify-out").exists(), "output must not go to the default dir"
+    assert (custom / ".graph" / "graph.json").exists(), "--output was ignored (#2004)"
+    assert not (repo / ".graph").exists(), "output must not go to the default dir"
 
 
 def test_output_flag_inline_form(tmp_path):
@@ -101,7 +101,7 @@ def test_output_flag_inline_form(tmp_path):
     custom = tmp_path / "out2"
     r = _run_relative_out(repo, "--code-only", "--no-cluster", f"--output={custom}")
     assert r.returncode == 0, r.stderr
-    assert (custom / "graphify-out" / "graph.json").exists()
+    assert (custom / ".graph" / "graph.json").exists()
 
 
 def test_no_gitignore_indexes_vcs_ignored_code_but_keeps_graphifyignore(tmp_path):
@@ -123,7 +123,7 @@ def test_no_gitignore_indexes_vcs_ignored_code_but_keeps_graphifyignore(tmp_path
     result = _run(repo, "--no-gitignore", "--no-cluster")
 
     assert result.returncode == 0, result.stderr
-    graph = json.loads((repo / "graphify-out" / "graph.json").read_text())
+    graph = json.loads((repo / ".graph" / "graph.json").read_text())
     sources = {Path(str(node.get("source_file", ""))).as_posix() for node in graph["nodes"]}
     assert any(source.endswith("proj/deep/generated/Gen.cs") for source in sources)
     assert any(source.endswith("local/Local.cs") for source in sources)
@@ -142,7 +142,7 @@ def test_no_gitignore_setting_persists_across_flagless_extract(tmp_path):
     (gen / "Gen.py").write_text("def gen():\n    return 2\n")
 
     def _sources():
-        g = json.loads((repo / "graphify-out" / "graph.json").read_text())
+        g = json.loads((repo / ".graph" / "graph.json").read_text())
         return {Path(str(n.get("source_file", ""))).as_posix() for n in g["nodes"]}
 
     r1 = _run(repo, "--no-gitignore", "--code-only", "--no-cluster")
@@ -165,7 +165,7 @@ def test_exclude_setting_persists_across_flagless_extract(tmp_path):
     (vendor / "lib.py").write_text("def vendor():\n    return 2\n")
 
     def _sources():
-        graph = json.loads((repo / "graphify-out" / "graph.json").read_text())
+        graph = json.loads((repo / ".graph" / "graph.json").read_text())
         return {
             Path(str(node.get("source_file", ""))).as_posix()
             for node in graph["nodes"]
@@ -196,7 +196,7 @@ def test_explicit_exclude_replaces_persisted_setting_with_custom_out(tmp_path):
     out_root = tmp_path / "custom-output"
 
     env = {key: value for key, value in os.environ.items() if key not in _KEY_VARS}
-    env["GRAPHIFY_OUT"] = "graphify-out"
+    env["GRAPHIFY_OUT"] = ".graph"
 
     def _run_extract(*extra: str):
         return subprocess.run(
@@ -221,7 +221,7 @@ def test_explicit_exclude_replaces_persisted_setting_with_custom_out(tmp_path):
     first = _run_extract("--exclude", "vendor")
     assert first.returncode == 0, first.stderr
 
-    graph_out = out_root / "graphify-out"
+    graph_out = out_root / ".graph"
     def _sources():
         graph = json.loads((graph_out / "graph.json").read_text())
         return {
@@ -269,7 +269,7 @@ def test_code_only_force_preserves_existing_semantic_layer(tmp_path):
     node and every hyperedge connected to one.
     """
     repo = _mixed_repo(tmp_path)
-    out = repo / "graphify-out"
+    out = repo / ".graph"
     out.mkdir()
     graph = out / "graph.json"
     # Seed a graph.json as if a prior full extract with an LLM backend had run:
@@ -337,7 +337,7 @@ def test_code_only_force_prunes_removed_semantic_files(tmp_path):
     disk (the doc/paper/image tier cannot outlive the corpus it indexes).
     """
     repo = _mixed_repo(tmp_path)
-    out = repo / "graphify-out"
+    out = repo / ".graph"
     out.mkdir()
     graph = out / "graph.json"
     graph.write_text(json.dumps({

@@ -20,7 +20,7 @@ NFD_NAME = unicodedata.normalize("NFD", "café.md")          # cafe + combining 
 
 
 def _write_graph(tmp_path, source_files: list[str]):
-    out = tmp_path / "graphify-out"
+    out = tmp_path / ".graph"
     out.mkdir(exist_ok=True)
     graph_path = out / "graph.json"
     nodes = [

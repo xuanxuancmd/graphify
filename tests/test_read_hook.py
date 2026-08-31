@@ -4,7 +4,7 @@ Closes the issue #1114 gap: the Bash search hook never sees a file read through
 the native Read tool or a Glob. Since #522 the guard runs as the shell-agnostic
 `graphify hook-guard read` subcommand (not inline bash), so it works on Windows
 too. These tests invoke that subcommand with crafted stdin JSON and assert it
-nudges only for a source/doc file outside graphify-out/ when a graph exists, and
+nudges only for a source/doc file outside .graph/ when a graph exists, and
 otherwise stays silent and fails open.
 """
 import json
@@ -21,7 +21,7 @@ def _read_matcher():
 
 
 def _env():
-    # The guard resolves the graph via GRAPHIFY_OUT (default "graphify-out",
+    # The guard resolves the graph via GRAPHIFY_OUT (default ".graph",
     # relative to cwd). Drop any inherited override so the tmp_path graph is found.
     e = dict(os.environ)
     e.pop("GRAPHIFY_OUT", None)
@@ -30,8 +30,8 @@ def _env():
 
 def _run(tool_input, cwd, *, graph: bool):
     if graph:
-        (cwd / "graphify-out").mkdir(parents=True, exist_ok=True)
-        (cwd / "graphify-out" / "graph.json").write_text("{}", encoding="utf-8")
+        (cwd / ".graph").mkdir(parents=True, exist_ok=True)
+        (cwd / ".graph" / "graph.json").write_text("{}", encoding="utf-8")
     stdin = json.dumps({"tool_input": tool_input})
     return subprocess.run(
         [sys.executable, "-m", "graphify", "hook-guard", "read"],
@@ -70,7 +70,7 @@ def test_nudge_payload_is_valid_pretooluse_json(tmp_path):
 
 def test_silent_on_graphify_out_targets(tmp_path):
     """Reading the graph's own report must not start a go-read-the-graph loop."""
-    out = _run({"file_path": "graphify-out/GRAPH_REPORT.md"}, tmp_path, graph=True).stdout
+    out = _run({"file_path": ".graph/GRAPH_REPORT.md"}, tmp_path, graph=True).stdout
     assert out.strip() == ""
 
 
@@ -126,8 +126,8 @@ def test_silent_when_extension_is_on_a_directory_segment(tmp_path):
 
 
 def test_fails_open_on_malformed_stdin(tmp_path):
-    (tmp_path / "graphify-out").mkdir()
-    (tmp_path / "graphify-out" / "graph.json").write_text("{}", encoding="utf-8")
+    (tmp_path / ".graph").mkdir()
+    (tmp_path / ".graph" / "graph.json").write_text("{}", encoding="utf-8")
     r = subprocess.run(
         [sys.executable, "-m", "graphify", "hook-guard", "read"],
         input="this is not json", capture_output=True, text=True, cwd=tmp_path, env=_env(),

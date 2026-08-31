@@ -18,13 +18,13 @@ import graphify.cli as cli
 
 
 def _fixture(tmp_path, *, indexed=True, fresh=True):
-    """A project with graphify-out/graph.json + manifest and one source file.
+    """A project with .graph/graph.json + manifest and one source file.
     ``fresh`` makes the graph newer than the source (not stale)."""
     src = tmp_path / "src"
     src.mkdir()
     f = src / "mod.py"
     f.write_text("def x():\n    return 1\n", encoding="utf-8")
-    out = tmp_path / "graphify-out"
+    out = tmp_path / ".graph"
     out.mkdir()
     (out / "manifest.json").write_text(
         json.dumps({"src/mod.py": {"mtime": 1}} if indexed else {"other/z.py": {"mtime": 1}}),
@@ -67,7 +67,7 @@ def test_strict_first_read_denies_then_nudges(tmp_path, monkeypatch):
     assert _is_deny(out1)
     assert "graphify query" in json.loads(out1)["hookSpecificOutput"]["permissionDecisionReason"]
     # marker created
-    assert (tmp_path / "graphify-out" / "cache" / "hook_sessions" / "s1.denied").exists()
+    assert (tmp_path / ".graph" / "cache" / "hook_sessions" / "s1.denied").exists()
     # same session again -> soft nudge, not a second deny
     out2 = _invoke("read", _read(f), tmp_path, monkeypatch, strict=True)
     assert not _is_deny(out2) and "MANDATORY" in out2
@@ -82,7 +82,7 @@ def test_strict_new_session_denies_again(tmp_path, monkeypatch):
 
 def test_fresh_query_stamp_suppresses_deny(tmp_path, monkeypatch):
     f = _fixture(tmp_path)
-    stamp = tmp_path / "graphify-out" / "cache" / "last_query_stamp"
+    stamp = tmp_path / ".graph" / "cache" / "last_query_stamp"
     stamp.parent.mkdir(parents=True, exist_ok=True)
     stamp.write_text(str(time.time()), encoding="utf-8")
     out = _invoke("read", _read(f), tmp_path, monkeypatch, strict=True)
@@ -91,7 +91,7 @@ def test_fresh_query_stamp_suppresses_deny(tmp_path, monkeypatch):
 
 def test_expired_query_stamp_still_denies(tmp_path, monkeypatch):
     f = _fixture(tmp_path)
-    stamp = tmp_path / "graphify-out" / "cache" / "last_query_stamp"
+    stamp = tmp_path / ".graph" / "cache" / "last_query_stamp"
     stamp.parent.mkdir(parents=True, exist_ok=True)
     stamp.write_text("old", encoding="utf-8")
     old = time.time() - 10_000
@@ -135,7 +135,7 @@ def test_stale_graph_softens_never_denies(tmp_path, monkeypatch):
 
 def test_needs_update_flag_softens(tmp_path, monkeypatch):
     f = _fixture(tmp_path)
-    (tmp_path / "graphify-out" / "needs_update").write_text("1", encoding="utf-8")
+    (tmp_path / ".graph" / "needs_update").write_text("1", encoding="utf-8")
     out = _invoke("read", _read(f), tmp_path, monkeypatch, strict=True)
     assert not _is_deny(out) and "stale" in out.lower()
 

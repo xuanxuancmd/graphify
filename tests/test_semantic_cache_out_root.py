@@ -30,7 +30,7 @@ from graphify.cache import (
 
 def _semantic_dir(root: Path, mode: str | None = None) -> Path:
     kind = "semantic" if mode is None else f"semantic-{mode}"
-    return root / "graphify-out" / "cache" / kind
+    return root / ".graph" / "cache" / kind
 
 
 def _count_cache_files(base: Path) -> int:
@@ -69,7 +69,7 @@ def test_save_semantic_cache_writes_to_cache_root_not_corpus(tmp_path):
 
 
 def test_save_semantic_cache_no_corpus_graphify_out_created(tmp_path):
-    """With cache_root set, no graphify-out/ dir should be created inside corpus."""
+    """With cache_root set, no .graph/ dir should be created inside corpus."""
     corpus = tmp_path / "corpus"
     out = tmp_path / "out"
     corpus.mkdir()
@@ -85,8 +85,8 @@ def test_save_semantic_cache_no_corpus_graphify_out_created(tmp_path):
         cache_root=out,
     )
 
-    assert not (corpus / "graphify-out").exists(), (
-        "graphify-out/ must not be created inside the corpus when cache_root is set"
+    assert not (corpus / ".graph").exists(), (
+        ".graph/ must not be created inside the corpus when cache_root is set"
     )
 
 

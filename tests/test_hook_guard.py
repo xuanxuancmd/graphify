@@ -20,7 +20,7 @@ from graphify import __main__ as m
 # --------------------------------------------------------------------------- #
 # Direct-call harness: hermetic w.r.t. the ambient GRAPHIFY_OUT env.
 # --------------------------------------------------------------------------- #
-def _invoke(kind, payload, tmp_path, monkeypatch, *, graph=True, out_name="graphify-out"):
+def _invoke(kind, payload, tmp_path, monkeypatch, *, graph=True, out_name=".graph"):
     monkeypatch.setattr("graphify.paths.GRAPHIFY_OUT", out_name)
     monkeypatch.setattr("graphify.paths.GRAPHIFY_OUT_NAME", out_name)
     monkeypatch.chdir(tmp_path)
@@ -146,7 +146,7 @@ def test_read_nudges(tool_input, tmp_path, monkeypatch):
     {"file_path": ".gitignore"},
     {"file_path": "Makefile"},                   # no extension
     {"file_path": "my.ts/file"},                 # extension on a directory segment
-    {"file_path": "graphify-out/GRAPH_REPORT.md"},  # the graph's own output
+    {"file_path": ".graph/GRAPH_REPORT.md"},  # the graph's own output
     {"file_path": ""},
     {},                                          # nothing at all
 ])
@@ -167,7 +167,7 @@ def test_read_non_dict_tool_input_is_silent(tmp_path, monkeypatch):
 
 def test_read_respects_custom_output_dir_name(tmp_path, monkeypatch):
     # A source file living under a CUSTOM output dir name must be suppressed too,
-    # not just the literal 'graphify-out/'.
+    # not just the literal '.graph/'.
     out = _invoke("read", {"tool_input": {"file_path": "build-out/report.py"}},
                   tmp_path, monkeypatch, graph=True, out_name="build-out")
     assert out.strip() == ""
@@ -258,8 +258,8 @@ def test_dispatch_unknown_mode_exits_zero_silent(tmp_path):
 ])
 def test_dispatch_always_exits_zero(args, stdin, tmp_path):
     # even with a graph present (nudge path), exit code must be 0 (never blocks)
-    (tmp_path / "graphify-out").mkdir()
-    (tmp_path / "graphify-out" / "graph.json").write_text("{}", encoding="utf-8")
+    (tmp_path / ".graph").mkdir()
+    (tmp_path / ".graph" / "graph.json").write_text("{}", encoding="utf-8")
     r = _cli(args, tmp_path, stdin=stdin)
     assert r.returncode == 0
 
@@ -267,8 +267,8 @@ def test_dispatch_always_exits_zero(args, stdin, tmp_path):
 def test_read_nudge_em_dash_survives_utf8(tmp_path):
     # The read nudge contains an em dash; the emitted bytes must be valid UTF-8
     # and parse back cleanly (guards the ensure_ascii=False + stdout reconfigure).
-    (tmp_path / "graphify-out").mkdir()
-    (tmp_path / "graphify-out" / "graph.json").write_text("{}", encoding="utf-8")
+    (tmp_path / ".graph").mkdir()
+    (tmp_path / ".graph" / "graph.json").write_text("{}", encoding="utf-8")
     r = subprocess.run(
         [sys.executable, "-m", "graphify", "hook-guard", "read"],
         input=b'{"tool_input":{"file_path":"src/app.py"}}',

@@ -98,8 +98,8 @@ def test_deleted_file_hyperedges_are_pruned(tmp_path):
 
 def test_prune_without_root_removes_ghost_nodes_via_grandparent_fallback(tmp_path):
     root = tmp_path / "corpus"
-    (root / "graphify-out").mkdir(parents=True)
-    graph_path = root / "graphify-out" / "graph.json"
+    (root / ".graph").mkdir(parents=True)
+    graph_path = root / ".graph" / "graph.json"
     nodes = [
         {"id": "h1", "label": "handoff", "file_type": "document", "source_file": "HANDOFF.md"},
         {"id": "k1", "label": "keep", "file_type": "document", "source_file": "KEEP.md"},
@@ -114,7 +114,7 @@ def test_prune_without_root_removes_ghost_nodes_via_grandparent_fallback(tmp_pat
 
 
 def test_prune_without_root_uses_graphify_root_marker(tmp_path):
-    # graph.json not under a <root>/graphify-out layout, so grandparent wouldn't
+    # graph.json not under a <root>/.graph layout, so grandparent wouldn't
     # help — the committed .graphify_root marker must be honored instead.
     out = tmp_path / "out"
     out.mkdir()
@@ -136,10 +136,10 @@ def test_prune_matches_across_symlinked_root(tmp_path):
     must still match — lexical relative_to fails, so normalization resolves both
     sides. Regression for the edge case a canonical-tmp unit test can't reach."""
     real = tmp_path / "real"
-    (real / "graphify-out").mkdir(parents=True)
+    (real / ".graph").mkdir(parents=True)
     link = tmp_path / "link"
     os.symlink(real, link)
-    graph_path = real / "graphify-out" / "graph.json"
+    graph_path = real / ".graph" / "graph.json"
     _write_graph(graph_path, [
         {"id": "h1", "label": "handoff", "file_type": "document", "source_file": "HANDOFF.md"},
         {"id": "k1", "label": "keep", "file_type": "document", "source_file": "KEEP.md"},
@@ -156,7 +156,7 @@ def test_reextracted_file_in_prune_sources_is_not_deleted(tmp_path):
     must be REPLACED, not deleted. The old edit-workflow passed the changed file
     in prune_sources; combined with dedup keeping a same-label node, that used to
     silently delete the freshly re-extracted concept. Replace wins over delete."""
-    graph_path = tmp_path / "graphify-out" / "graph.json"
+    graph_path = tmp_path / ".graph" / "graph.json"
     graph_path.parent.mkdir(parents=True)
     _write_graph(
         graph_path,
@@ -184,7 +184,7 @@ def test_reextracted_file_in_prune_sources_is_not_deleted(tmp_path):
 def test_genuine_deletion_still_prunes(tmp_path):
     """#1796 guard must not break real deletions: a file in prune_sources but NOT
     in new_chunks is still removed."""
-    graph_path = tmp_path / "graphify-out" / "graph.json"
+    graph_path = tmp_path / ".graph" / "graph.json"
     graph_path.parent.mkdir(parents=True)
     _write_graph(
         graph_path,
@@ -220,8 +220,8 @@ def test_prune_matches_node_stored_absolute_against_relative_delete(tmp_path):
     node slipped through and a deleted file's graph survived silently. build_merge
     now normalizes the node side too + an absolute-identity fallback."""
     root = tmp_path / "corpus"
-    (root / "graphify-out").mkdir(parents=True)
-    graph_path = root / "graphify-out" / "graph.json"
+    (root / ".graph").mkdir(parents=True)
+    graph_path = root / ".graph" / "graph.json"
     nodes = [
         # gone.py's node kept an ABSOLUTE source_file (a semantic subagent wrote
         # it that way, #932); keep.py's is relative.
@@ -234,7 +234,7 @@ def test_prune_matches_node_stored_absolute_against_relative_delete(tmp_path):
          "source_file": str(root / "gone.py")},
     ]
     _write_graph(graph_path, nodes, edges, [])
-    # Runbook-style: NO root passed (eff_root inferred from the graphify-out
+    # Runbook-style: NO root passed (eff_root inferred from the .graph
     # grandparent), so build() leaves the absolute node form intact. Deletion is
     # expressed RELATIVE — a third form vs the stored absolute node.
     G = build_merge([], graph_path, prune_sources=["gone.py"], dedup=False)
@@ -250,8 +250,8 @@ def test_prune_reextracted_absolute_node_not_deleted(tmp_path):
     deleted — the #2012 form-insensitive match must not resurrect the delete for
     a re-extracted file."""
     root = tmp_path / "corpus"
-    (root / "graphify-out").mkdir(parents=True)
-    graph_path = root / "graphify-out" / "graph.json"
+    (root / ".graph").mkdir(parents=True)
+    graph_path = root / ".graph" / "graph.json"
     _write_graph(graph_path, [
         {"id": "g1", "label": "gone", "file_type": "code",
          "source_file": str(root / "mod.py")},

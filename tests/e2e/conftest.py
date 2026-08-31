@@ -39,7 +39,7 @@ def _run_extraction() -> None:
     env = os.environ.copy()
     env["PYTHONPATH"] = str(Path(__file__).parent.parent.parent)
     env["OPENAI_API_KEY"] = "sk-fake-key-for-e2e-test"
-    # tests/conftest.py sets GRAPHIFY_OUT=graphify-out for upstream tests.
+    # tests/conftest.py sets GRAPHIFY_OUT=.graph for upstream tests.
     # Override to .graph so the output matches GRAPH_JSON below.
     env["GRAPHIFY_OUT"] = ".graph"
     cmd = [

@@ -366,9 +366,9 @@ def _render_frontmatter(platform: Platform) -> str:
 # would drift), the composed body is translated deterministically:
 #
 #   * ```` ```bash ```` fences become ```` ```powershell ```` fences;
-#   * the inline ``$(cat graphify-out/.graphify_python) -c "..."`` python blocks
+#   * the inline ``$(cat .graph/.graphify_python) -c "..."`` python blocks
 #     become single-quoted here-strings piped to the interpreter's stdin
-#     (``@'...'@ | & (Get-Content graphify-out\.graphify_python) -``). A
+#     (``@'...'@ | & (Get-Content .graph\.graphify_python) -``). A
 #     single-quoted here-string is verbatim, so the bash ``\"`` escapes are
 #     dropped and no PowerShell escaping is introduced; piping the program to
 #     stdin (``python -``) sidesteps Windows PowerShell 5.1's native-argument
@@ -381,14 +381,14 @@ def _render_frontmatter(platform: Platform) -> str:
 # untranslated bash to the Windows variant. ``_POWERSHELL_BANNED_TOKENS`` is the
 # belt-and-braces post-check on the final body.
 
-_PY_INVOKE_POSIX = '$(cat graphify-out/.graphify_python) -c "'
+_PY_INVOKE_POSIX = '$(cat .graph/.graphify_python) -c "'
 _PY_INVOKE_PS_OPEN = "@'"
-_PY_INVOKE_PS_CLOSE = "'@ | & (Get-Content graphify-out\\.graphify_python) -"
-_MKDIR_POSIX = "mkdir -p graphify-out"
-_MKDIR_PS = "New-Item -ItemType Directory -Force -Path graphify-out | Out-Null"
-_FIND_CHUNKS_POSIX = "find graphify-out -maxdepth 1 -name '.graphify_chunk_*.json' -delete 2>/dev/null"
+_PY_INVOKE_PS_CLOSE = "'@ | & (Get-Content .graph\\.graphify_python) -"
+_MKDIR_POSIX = "mkdir -p .graph"
+_MKDIR_PS = "New-Item -ItemType Directory -Force -Path .graph | Out-Null"
+_FIND_CHUNKS_POSIX = "find .graph -maxdepth 1 -name '.graphify_chunk_*.json' -delete 2>/dev/null"
 _FIND_CHUNKS_PS = (
-    "Get-ChildItem graphify-out -Filter '.graphify_chunk_*.json' -File "
+    "Get-ChildItem .graph -Filter '.graphify_chunk_*.json' -File "
     "-ErrorAction SilentlyContinue | Remove-Item -Force"
 )
 
@@ -990,7 +990,7 @@ def _is_zero_node_guard_fix_line(line: str) -> bool:
         or s == "raise SystemExit(1)"
         or "to_json(G, communities," in line
         or s == "if not wrote:"
-        or "refused to shrink graphify-out/graph.json" in line
+        or "refused to shrink .graph/graph.json" in line
         or "Guard BEFORE any write" in line
         or "GRAPH_REPORT.md / analysis sidecar" in line
         or "Persist the graph first" in line

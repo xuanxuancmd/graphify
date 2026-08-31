@@ -7,7 +7,7 @@ from graphify.callflow_html import derive_sections_from_communities, write_callf
 
 
 def _make_graphify_out(tmp_path: Path) -> Path:
-    out = tmp_path / "graphify-out"
+    out = tmp_path / ".graph"
     out.mkdir()
     graph = {
         "directed": False,
@@ -54,7 +54,7 @@ def test_write_callflow_html_creates_file_and_uses_report(tmp_path):
 
     html_path = write_callflow_html(
         tmp_path,
-        output="graphify-out/callflow.html",
+        output=".graph/callflow.html",
         max_sections=4,
     )
 
@@ -79,7 +79,7 @@ def test_export_callflow_html_cli_creates_file(tmp_path):
             "export",
             "callflow-html",
             "--output",
-            "graphify-out/from-cli.html",
+            ".graph/from-cli.html",
             "--max-sections",
             "4",
         ],
@@ -89,14 +89,14 @@ def test_export_callflow_html_cli_creates_file(tmp_path):
     )
 
     assert result.returncode == 0, result.stderr
-    html_path = tmp_path / "graphify-out" / "from-cli.html"
+    html_path = tmp_path / ".graph" / "from-cli.html"
     assert html_path.exists()
     assert "callflow HTML written" in result.stdout
 
 
 def test_export_callflow_html_cli_accepts_positional_graph_path(tmp_path):
     _make_graphify_out(tmp_path)
-    external_out = tmp_path / "GitNexus" / "graphify-out"
+    external_out = tmp_path / "GitNexus" / ".graph"
     external_out.mkdir(parents=True)
     graph = {
         "directed": False,

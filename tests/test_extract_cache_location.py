@@ -3,7 +3,7 @@
 The cache is an output. When no cache_root is given it used to default to the
 inferred common parent of the input files — the source tree — so analyzing a
 read-only corpus (someone else's repo, a knowledge base) silently created
-graphify-out/cache/ inside it. It now defaults to the current working directory;
+.graph/cache/ inside it. It now defaults to the current working directory;
 an explicit cache_root still wins.
 
 Crucially, the cache *location* is decoupled from the key/id *anchor*: the
@@ -50,11 +50,11 @@ def test_default_cache_lands_in_cwd_not_source_tree(tmp_path, monkeypatch):
     assert result["nodes"], "extraction should still produce nodes"
     # Nothing at all in the source tree — not the AST cache, and not the
     # stat-index.json the hash fastpath writes (which file_hash used to anchor on
-    # the key-root, leaving a stray graphify-out/ in a writable corpus, #1774).
-    assert not (corpus / "graphify-out").exists(), (
+    # the key-root, leaving a stray .graph/ in a writable corpus, #1774).
+    assert not (corpus / ".graph").exists(), (
         "cache/stat-index written into the analyzed source tree (#1774)"
     )
-    assert (work / "graphify-out" / "cache").is_dir(), "cache should land under CWD"
+    assert (work / ".graph" / "cache").is_dir(), "cache should land under CWD"
 
 
 def test_default_cache_does_not_leave_stat_index_in_source_tree(tmp_path, monkeypatch):
@@ -72,8 +72,8 @@ def test_default_cache_does_not_leave_stat_index_in_source_tree(tmp_path, monkey
     # the flush now so we can assert WHERE it lands.
     cache._flush_stat_index()
 
-    assert not (corpus / "graphify-out").exists(), "stat-index leaked into the corpus"
-    assert (work / "graphify-out" / "cache" / "stat-index.json").exists(), (
+    assert not (corpus / ".graph").exists(), "stat-index leaked into the corpus"
+    assert (work / ".graph" / "cache" / "stat-index.json").exists(), (
         "stat-index should be written under the cache location (CWD)"
     )
 
@@ -88,9 +88,9 @@ def test_explicit_cache_root_still_wins(tmp_path, monkeypatch):
 
     ex.extract([corpus / "a.py"], cache_root=out, parallel=False)
 
-    assert (out / "graphify-out" / "cache").is_dir()
-    assert not (corpus / "graphify-out").exists()
-    assert not (work / "graphify-out").exists()
+    assert (out / ".graph" / "cache").is_dir()
+    assert not (corpus / ".graph").exists()
+    assert not (work / ".graph").exists()
 
 
 def test_default_cache_round_trips_via_extract(tmp_path, monkeypatch):

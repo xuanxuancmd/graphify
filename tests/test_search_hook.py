@@ -26,8 +26,8 @@ def _env():
 
 def _run(command, cwd, *, graph: bool):
     if graph:
-        (cwd / "graphify-out").mkdir(parents=True, exist_ok=True)
-        (cwd / "graphify-out" / "graph.json").write_text("{}", encoding="utf-8")
+        (cwd / ".graph").mkdir(parents=True, exist_ok=True)
+        (cwd / ".graph" / "graph.json").write_text("{}", encoding="utf-8")
     stdin = json.dumps({"tool_input": {"command": command}})
     return subprocess.run(
         [sys.executable, "-m", "graphify", "hook-guard", "search"],
@@ -38,8 +38,8 @@ def _run(command, cwd, *, graph: bool):
 def _run_grep_tool(tool_input, cwd, *, graph: bool):
     """Feed a Grep-tool-shaped payload (pattern/path/glob, no command) to the guard."""
     if graph:
-        (cwd / "graphify-out").mkdir(parents=True, exist_ok=True)
-        (cwd / "graphify-out" / "graph.json").write_text("{}", encoding="utf-8")
+        (cwd / ".graph").mkdir(parents=True, exist_ok=True)
+        (cwd / ".graph" / "graph.json").write_text("{}", encoding="utf-8")
     stdin = json.dumps({"tool_name": "Grep", "tool_input": tool_input})
     return subprocess.run(
         [sys.executable, "-m", "graphify", "hook-guard", "search"],
@@ -106,8 +106,8 @@ def test_nudge_payload_is_valid_pretooluse_json(tmp_path):
 
 
 def test_fails_open_on_malformed_stdin(tmp_path):
-    (tmp_path / "graphify-out").mkdir()
-    (tmp_path / "graphify-out" / "graph.json").write_text("{}", encoding="utf-8")
+    (tmp_path / ".graph").mkdir()
+    (tmp_path / ".graph" / "graph.json").write_text("{}", encoding="utf-8")
     r = subprocess.run(
         [sys.executable, "-m", "graphify", "hook-guard", "search"],
         input="not json", capture_output=True, text=True, cwd=tmp_path, env=_env(),
@@ -175,8 +175,8 @@ def test_grep_tool_never_blocks(tmp_path):
 def test_bash_non_search_with_stray_pattern_key_does_not_nudge(tmp_path):
     """A Bash tool_input carries `command`; the Grep-shape detection must not
     fire when a command is present but is not a search."""
-    (tmp_path / "graphify-out").mkdir(parents=True, exist_ok=True)
-    (tmp_path / "graphify-out" / "graph.json").write_text("{}", encoding="utf-8")
+    (tmp_path / ".graph").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ".graph" / "graph.json").write_text("{}", encoding="utf-8")
     stdin = json.dumps({"tool_input": {"command": "ls -la", "pattern": "x"}})
     r = subprocess.run(
         [sys.executable, "-m", "graphify", "hook-guard", "search"],

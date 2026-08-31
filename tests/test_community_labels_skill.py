@@ -9,7 +9,7 @@ Two guards:
 2. A template lint over the generated ``graphify/skill*.md`` bodies (and the
    fragments they render from): the Step-5 / post-labels code block — the one
    that builds the curated ``labels = LABELS_DICT`` dict — must re-export
-   ``graphify-out/graph.json`` with ``community_labels=labels``. This locks the
+   ``.graph/graph.json`` with ``community_labels=labels``. This locks the
    #2490 fix so a future template edit cannot silently drop the kwarg again.
 """
 from __future__ import annotations
@@ -92,7 +92,7 @@ def test_skill_step5_reexports_graph_json_with_curated_labels(path: Path):
 
     The Step-5 block is the only place the curated labels dict exists, so it is
     the block that must call ``to_json(..., community_labels=labels)``. Any
-    ``to_json(...graphify-out/graph.json...)`` call in that block without the
+    ``to_json(....graph/graph.json...)`` call in that block without the
     kwarg would ship graph.json nodes with no ``community_name`` (#2490).
     """
     text = path.read_text(encoding="utf-8")
@@ -101,13 +101,13 @@ def test_skill_step5_reexports_graph_json_with_curated_labels(path: Path):
     ]
     assert post_labels_blocks, f"{path.name}: no Step-5 (LABELS_DICT) code block found"
     for block in post_labels_blocks:
-        assert "to_json(G, communities, 'graphify-out/graph.json', community_labels=labels)" in block, (
+        assert "to_json(G, communities, '.graph/graph.json', community_labels=labels)" in block, (
             f"{path.name}: the post-labels Step-5 block must re-export "
-            f"graphify-out/graph.json with community_labels=labels (#2490)"
+            f".graph/graph.json with community_labels=labels (#2490)"
         )
         # No label-less graph.json export may coexist in the post-labels block.
         for line in block.splitlines():
-            if "to_json(" in line and "graphify-out/graph.json" in line:
+            if "to_json(" in line and ".graph/graph.json" in line:
                 assert "community_labels=labels" in line, (
                     f"{path.name}: post-labels to_json call is missing "
                     f"community_labels=labels: {line.strip()!r}"
@@ -125,7 +125,7 @@ def test_core_fragments_step5_reexport_with_curated_labels(fragment: Path):
     ]
     assert post_labels_blocks, f"{fragment.name}: no Step-5 (LABELS_DICT) code block found"
     for block in post_labels_blocks:
-        assert "to_json(G, communities, 'graphify-out/graph.json', community_labels=labels)" in block, (
+        assert "to_json(G, communities, '.graph/graph.json', community_labels=labels)" in block, (
             f"{fragment.name}: the post-labels Step-5 block must re-export "
-            f"graphify-out/graph.json with community_labels=labels (#2490)"
+            f".graph/graph.json with community_labels=labels (#2490)"
         )

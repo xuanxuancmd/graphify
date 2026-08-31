@@ -20,6 +20,7 @@ from graphify.extractors.custom.swagger import (
     _match_controller,
     _match_handler,
     _build_code_indices,
+    _detect_main_language,
 )
 from graphify.extractors.registry import ExtractionResult
 
@@ -405,6 +406,133 @@ class TestMatchController:
     def test_empty_tag_returns_empty(self) -> None:
         assert _match_controller("", _build_code_indices([])) == []
 
+    # --- Java codegen Impl suffix fallback ---
+
+    def test_java_impl_fallback_when_direct_match_missing(self) -> None:
+        """Java codegen emits <Name>Impl classes; fall back to Impl suffix
+        when the swagger tag has no direct class match and the corpus
+        contains .java files."""
+        nodes = [_class_node("FooServiceImpl", source_file="src/FooServiceImpl.java")]
+        idx = _build_code_indices(nodes)
+        result = _match_controller("FooService", idx)
+        assert len(result) == 1
+        assert result[0][0]["label"] == "FooServiceImpl"
+        assert result[0][1] == "EXTRACTED"
+        assert result[0][2] == 1.0
+
+    def test_java_impl_fallback_skipped_when_direct_class_exists(self) -> None:
+        """When a direct class match exists, Impl fallback must not fire
+        (avoid preferring an Impl class over the real controller)."""
+        nodes = [
+            _class_node("FooService", source_file="src/FooService.java"),
+            _class_node("FooServiceImpl", source_file="src/FooServiceImpl.java"),
+        ]
+        idx = _build_code_indices(nodes)
+        result = _match_controller("FooService", idx)
+        assert len(result) == 1
+        assert result[0][0]["label"] == "FooService"
+
+    def test_java_impl_fallback_not_used_for_non_java_projects(self) -> None:
+        """Impl suffix fallback must NOT fire for TypeScript/Python projects
+        where XxxImpl is not a codegen convention."""
+        nodes = [_class_node("FooServiceImpl", source_file="src/FooServiceImpl.ts")]
+        idx = _build_code_indices(nodes)
+        result = _match_controller("Foo", idx)
+        assert result == []
+
+    def test_java_impl_fallback_prefers_impl_class_over_non_class_node(self) -> None:
+        """When the direct lookup finds only a non-class node (e.g. a function)
+        but the Impl-suffixed lookup finds a class, prefer the Impl class."""
+        nodes = [
+            _function_node("Foo", source_file="src/Foo.java"),
+            _class_node("FooImpl", source_file="src/FooImpl.java"),
+        ]
+        idx = _build_code_indices(nodes)
+        result = _match_controller("Foo", idx)
+        assert len(result) == 1
+        assert result[0][0]["label"] == "FooImpl"
+        assert result[0][1] == "EXTRACTED"
+
+    def test_java_impl_fallback_ambiguous_multiple_impl_classes(self) -> None:
+        """Multiple <Name>Impl classes -> AMBIGUOUS, same as direct matching."""
+        nodes = [
+            _class_node("FooImpl", source_file="src/v1/FooImpl.java"),
+            _class_node("FooImpl", source_file="src/v2/FooImpl.java"),
+        ]
+        idx = _build_code_indices(nodes)
+        result = _match_controller("Foo", idx)
+        assert len(result) == 2
+        for _node, conf, score in result:
+            assert conf == "AMBIGUOUS"
+            assert score == 0.3
+
+    def test_java_impl_fallback_returns_empty_when_impl_also_missing(self) -> None:
+        """main_language=java but neither <Name> nor <Name>Impl exists -> []."""
+        nodes = [_class_node("BarServiceImpl", source_file="src/BarServiceImpl.java")]
+        idx = _build_code_indices(nodes)
+        assert _match_controller("Foo", idx) == []
+
+    def test_main_language_java_detected(self) -> None:
+        """_build_code_indices sets main_language='java' when .java files
+        are the majority of code nodes."""
+        nodes = [_class_node("Foo", source_file="src/Foo.java")]
+        assert _build_code_indices(nodes)["main_language"] == "java"
+
+    def test_main_language_non_java(self) -> None:
+        """_build_code_indices sets main_language to the extension of the
+        majority language."""
+        nodes = [_class_node("Foo", source_file="src/Foo.ts")]
+        assert _build_code_indices(nodes)["main_language"] == "ts"
+
+    def test_main_language_mixed_java_dominant(self) -> None:
+        """Mixed Java + TS project where Java has more nodes -> main_language='java'.
+        Impl fallback fires and finds the Java <Name>Impl class."""
+        nodes = [
+            _class_node("UserClient", source_file="frontend/src/UserClient.ts"),
+            _class_node("UserControllerImpl", source_file="backend/src/UserControllerImpl.java"),
+            _function_node("query", source_file="backend/src/UserControllerImpl.java"),
+            _function_node("create", source_file="backend/src/UserControllerImpl.java"),
+        ]
+        idx = _build_code_indices(nodes)
+        assert idx["main_language"] == "java"
+        # "UserController" has no direct match -> Impl fallback finds UserControllerImpl
+        result = _match_controller("UserController", idx)
+        assert len(result) == 1
+        assert result[0][0]["label"] == "UserControllerImpl"
+
+    def test_main_language_ts_dominant_no_impl_fallback(self) -> None:
+        """Mixed Java + TS project where TS has more nodes -> main_language='ts'.
+        Impl fallback must NOT fire even if a <Name>Impl.java class exists,
+        because the backend is TypeScript-dominant."""
+        nodes = [
+            _class_node("UserControllerImpl", source_file="backend/src/UserControllerImpl.java"),
+            _class_node("UserClient", source_file="frontend/src/UserClient.ts"),
+            _function_node("render", source_file="frontend/src/UserClient.ts"),
+            _function_node("mount", source_file="frontend/src/UserClient.ts"),
+        ]
+        idx = _build_code_indices(nodes)
+        assert idx["main_language"] == "ts"
+        # main_language != "java" -> no Impl fallback -> no match
+        result = _match_controller("UserController", idx)
+        assert result == []
+
+    def test_main_language_build_scripts_dont_dominate(self) -> None:
+        """Python/Shell build scripts have fewer nodes than Java app code,
+        so main_language stays 'java' even in a polyglot repo."""
+        nodes = [
+            _class_node("FooController", source_file="src/FooController.java"),
+            _function_node("handleGet", source_file="src/FooController.java"),
+            _function_node("handlePost", source_file="src/FooController.java"),
+            _function_node("build", source_file="scripts/build.py"),
+            _function_node("deploy", source_file="scripts/deploy.sh"),
+        ]
+        idx = _build_code_indices(nodes)
+        assert idx["main_language"] == "java"
+
+    def test_main_language_empty_for_no_code_nodes(self) -> None:
+        """No code nodes -> main_language=''."""
+        assert _build_code_indices([])["main_language"] == ""
+
 
 class TestMatchHandler:
     def test_unique_match_with_controller(self) -> None:
@@ -441,4 +569,158 @@ class TestMatchHandler:
         idx = _build_code_indices([cls])
         ctrl = _match_controller("FooService", idx)
         assert _match_handler("doThing", ctrl, idx) == []
+
+
+# ---------------------------------------------------------------------------
+# End-to-end: Java codegen Impl fallback through extract_swagger
+# ---------------------------------------------------------------------------
+
+class TestJavaImplFallbackE2E:
+    """Verify the Impl suffix fallback works end-to-end: swagger tag
+    ``APPPublishService`` matches Java class ``APPPublishServiceImpl`` when
+    no bare ``APPPublishService`` class exists in the code index."""
+
+    @pytest.fixture
+    def result_impl(self, tmp_path: Path) -> ExtractionResult:
+        src_dir = tmp_path / "docs"
+        src_dir.mkdir()
+        fixture = src_dir / "apppublish.yaml"
+        fixture.write_text(
+            (FIXTURES / "apppublish.yaml").read_text(encoding="utf-8"), encoding="utf-8"
+        )
+        # Java codegen output: APPPublishServiceImpl class + handler methods.
+        # Note: NO bare APPPublishService class — only the Impl-suffixed one.
+        code_nodes = [
+            _class_node("APPPublishServiceImpl", source_file="src/APPPublishServiceImpl.java"),
+            _function_node("query", source_file="src/APPPublishServiceImpl.java"),
+            _function_node("getById", source_file="src/APPPublishServiceImpl.java"),
+            _function_node("create", source_file="src/APPPublishServiceImpl.java"),
+        ]
+        return extract_swagger(fixture, root=tmp_path, nodes=_code_index(code_nodes))
+
+    def test_controller_matched_via_impl_fallback(self, result_impl: ExtractionResult) -> None:
+        """Each endpoint should have a references edge to APPPublishServiceImpl."""
+        refs = [e for e in result_impl.edges if e["relation"] == "references"]
+        controller_refs = [
+            e for e in refs if "apppublishserviceimpl" in e["target"]
+        ]
+        # 3 endpoints, each linking to the controller class
+        assert len(controller_refs) == 3
+        for e in controller_refs:
+            assert e["confidence"] == "EXTRACTED"
+            assert e["confidence_score"] == 1.0
+
+    def test_handler_matched_same_file_as_impl_controller(self, result_impl: ExtractionResult) -> None:
+        """Handler functions should match in the Impl class's source_file."""
+        refs = [e for e in result_impl.edges if e["relation"] == "references"]
+        handler_refs = [e for e in refs if "_fn" in e["target"]]
+        # 3 endpoints x 1 handler each = 3 handler refs
+        assert len(handler_refs) == 3
+        for e in handler_refs:
+            assert e["confidence"] == "EXTRACTED"
+
+    def test_no_unmatched_anchors(self, result_impl: ExtractionResult) -> None:
+        """All tags and operationIds should be matched via Impl fallback."""
+        assert len(result_impl.unmatched) == 0
+
+    def test_impl_fallback_not_triggered_for_ts_project(self, tmp_path: Path) -> None:
+        """Same swagger yaml, but code index has only .ts files -> no Impl
+        fallback, all controller anchors unmatched."""
+        src_dir = tmp_path / "docs"
+        src_dir.mkdir()
+        fixture = src_dir / "apppublish.yaml"
+        fixture.write_text(
+            (FIXTURES / "apppublish.yaml").read_text(encoding="utf-8"), encoding="utf-8"
+        )
+        # TypeScript project: only APPPublishServiceImpl.ts (no .java files)
+        code_nodes = [
+            _class_node("APPPublishServiceImpl", source_file="src/APPPublishServiceImpl.ts"),
+        ]
+        result = extract_swagger(fixture, root=tmp_path, nodes=_code_index(code_nodes))
+        assert result is not None
+        # main_language="ts" -> no Impl fallback -> controller unmatched
+        controller_unmatched = [
+            u for u in result.unmatched if u["anchorKind"] == "controller_tag"
+        ]
+        assert len(controller_unmatched) == 3
+
+
+# ---------------------------------------------------------------------------
+# Unit tests for _detect_main_language
+# ---------------------------------------------------------------------------
+
+class TestDetectMainLanguage:
+    def test_pure_java_project(self) -> None:
+        nodes = [
+            _class_node("FooController", source_file="src/FooController.java"),
+            _function_node("handleGet", source_file="src/FooController.java"),
+        ]
+        assert _detect_main_language(nodes) == "java"
+
+    def test_pure_typescript_project(self) -> None:
+        nodes = [_class_node("Foo", source_file="src/Foo.ts")]
+        assert _detect_main_language(nodes) == "ts"
+
+    def test_python_build_scripts(self) -> None:
+        nodes = [_function_node("main", source_file="build.py")]
+        assert _detect_main_language(nodes) == "py"
+
+    def test_mixed_java_dominant(self) -> None:
+        """Java backend (3 nodes) + Python build script (1 node) -> java."""
+        nodes = [
+            _class_node("UserController", source_file="src/UserController.java"),
+            _function_node("handleGet", source_file="src/UserController.java"),
+            _function_node("handlePost", source_file="src/UserController.java"),
+            _function_node("build", source_file="scripts/build.py"),
+        ]
+        assert _detect_main_language(nodes) == "java"
+
+    def test_mixed_ts_dominant_over_java(self) -> None:
+        """TS frontend (3 nodes) + Java backend (1 node) -> ts.
+        Frontend-heavy repo: Impl fallback correctly stays off."""
+        nodes = [
+            _class_node("App", source_file="frontend/src/App.ts"),
+            _function_node("render", source_file="frontend/src/App.ts"),
+            _function_node("mount", source_file="frontend/src/App.ts"),
+            _class_node("UserControllerImpl", source_file="backend/UserControllerImpl.java"),
+        ]
+        assert _detect_main_language(nodes) == "ts"
+
+    def test_empty_nodes_returns_empty(self) -> None:
+        assert _detect_main_language([]) == ""
+
+    def test_no_code_file_type_returns_empty(self) -> None:
+        """Non-code nodes (file_type != 'code') are ignored."""
+        nodes = [{"id": "x", "label": "x", "file_type": "document", "source_file": "x.java"}]
+        assert _detect_main_language(nodes) == ""
+
+    def test_no_source_file_returns_empty(self) -> None:
+        """Nodes without source_file are skipped."""
+        nodes = [{"id": "x", "label": "x", "file_type": "code"}]
+        assert _detect_main_language(nodes) == ""
+
+    def test_no_extension_returns_empty(self) -> None:
+        """source_file without extension contributes nothing."""
+        nodes = [{"id": "x", "label": "x", "file_type": "code", "source_file": "Makefile"}]
+        assert _detect_main_language(nodes) == ""
+
+    def test_tie_returns_first_encountered(self) -> None:
+        """When two languages have equal counts, the first encountered wins
+        (Python dict preserves insertion order). This is acceptable — ties
+        are rare and both languages are equally 'main'."""
+        nodes = [
+            _class_node("A", source_file="src/A.java"),
+            _class_node("B", source_file="src/B.ts"),
+        ]
+        result = _detect_main_language(nodes)
+        assert result in ("java", "ts")
+
+    def test_counts_all_extensions(self) -> None:
+        """Shell scripts are counted too, but won't dominate if app code
+        has more nodes."""
+        nodes = [
+            _class_node("Foo", source_file="src/Foo.java"),
+            _function_node("deploy", source_file="scripts/deploy.sh"),
+        ]
+        assert _detect_main_language(nodes) == "java"
 

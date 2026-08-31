@@ -708,9 +708,9 @@ def test_detect_incremental_propagates_follow_symlinks(requires_symlinks, tmp_pa
     (real_dir / "note.md").write_text("# real note\n\nsome content")
     (tmp_path / "linked_corpus").symlink_to(real_dir)
 
-    # Store manifest inside graphify-out/ so it is pruned by _SKIP_DIRS
+    # Store manifest inside .graph/ so it is pruned by _SKIP_DIRS
     # and doesn't get re-detected as a code file now that .json is indexed.
-    manifest_dir = tmp_path / "graphify-out"
+    manifest_dir = tmp_path / ".graph"
     manifest_dir.mkdir()
     manifest_path = str(manifest_dir / "manifest.json")
 
@@ -742,7 +742,7 @@ def test_detect_incremental_survives_dict_valued_mtime(tmp_path, monkeypatch):
     src = tmp_path / "mod.py"
     src.write_text("def f():\n    return 1\n", encoding="utf-8")
 
-    manifest_dir = tmp_path / "graphify-out"
+    manifest_dir = tmp_path / ".graph"
     manifest_dir.mkdir()
     manifest_path = str(manifest_dir / "manifest.json")
 
@@ -784,7 +784,7 @@ def test_detect_incremental_legacy_float_reextracts_on_backwards_mtime(tmp_path,
     src.write_text("def old_content():\n    return 1\n", encoding="utf-8")
     current_mtime = os.stat(src).st_mtime
 
-    manifest_dir = tmp_path / "graphify-out"
+    manifest_dir = tmp_path / ".graph"
     manifest_dir.mkdir()
     manifest_path = str(manifest_dir / "manifest.json")
 
@@ -813,7 +813,7 @@ def test_detect_incremental_legacy_float_skips_when_mtime_matches(tmp_path, monk
     src = tmp_path / "mod.py"
     src.write_text("def stable():\n    return 1\n", encoding="utf-8")
 
-    manifest_dir = tmp_path / "graphify-out"
+    manifest_dir = tmp_path / ".graph"
     manifest_dir.mkdir()
     manifest_path = str(manifest_dir / "manifest.json")
 
@@ -1907,7 +1907,7 @@ def test_save_manifest_clear_semantic_erases_stale_hash_for_omitted_file(tmp_pat
     doc = tmp_path / "docs" / "doc.md"
     doc.parent.mkdir()
     doc.write_text("# Doc\n\ncontent")
-    manifest_path = str(tmp_path / "graphify-out" / "manifest.json")
+    manifest_path = str(tmp_path / ".graph" / "manifest.json")
 
     # Run 1: doc.md is dispatched and stamped.
     corpus = {str(doc)}
@@ -1935,14 +1935,14 @@ def test_save_manifest_clear_semantic_erases_stale_hash_for_omitted_file(tmp_pat
 
 def test_save_manifest_clear_ast_blanks_both_hashes_for_failed_extra(tmp_path):
     """#2543: AST failure (missing optional extra) must blank both hashes so
-    the next extract re-queues the file without deleting graphify-out/."""
+    the next extract re-queues the file without deleting .graph/."""
     import json
 
     sql = tmp_path / "schema.sql"
     sql.write_text("CREATE TABLE users (id INT);\n")
     py = tmp_path / "main.py"
     py.write_text("def main():\n    return 1\n")
-    manifest_path = str(tmp_path / "graphify-out" / "manifest.json")
+    manifest_path = str(tmp_path / ".graph" / "manifest.json")
     corpus = {str(sql), str(py)}
 
     # Run 1: both files stamped as if a prior full extract succeeded.
@@ -2381,7 +2381,7 @@ def test_shebang_interpreter_env_vs_assignment_before_interpreter(tmp_path):
 
 # --- #777: portable manifest paths ------------------------------------------
 # When ``root`` is supplied, the on-disk manifest stores forward-slash
-# relative keys so a committed ``graphify-out/`` round-trips across machines
+# relative keys so a committed ``.graph/`` round-trips across machines
 # and CI runners. In-memory the keys are still absolute, so internal callers
 # (notably :func:`detect_incremental`) remain unchanged.
 
@@ -2394,7 +2394,7 @@ def test_save_manifest_relativizes_keys_when_root_given(tmp_path):
     (tmp_path / "src" / "foo.py").write_text("def x(): pass\n")
     (tmp_path / "doc.md").write_text("hello\n")
 
-    manifest_path = str(tmp_path / "graphify-out" / "manifest.json")
+    manifest_path = str(tmp_path / ".graph" / "manifest.json")
     files = {
         "code": [str(tmp_path / "src" / "foo.py")],
         "document": [str(tmp_path / "doc.md")],
@@ -2422,7 +2422,7 @@ def test_save_manifest_without_root_keeps_absolute_keys(tmp_path):
 
     f = tmp_path / "foo.py"
     f.write_text("pass\n")
-    manifest_path = str(tmp_path / "graphify-out" / "manifest.json")
+    manifest_path = str(tmp_path / ".graph" / "manifest.json")
     save_manifest({"code": [str(f)]}, manifest_path)
 
     raw = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
@@ -2437,7 +2437,7 @@ def test_load_manifest_absolutizes_relative_keys(tmp_path):
     import json
     from graphify.detect import load_manifest
 
-    manifest_path = tmp_path / "graphify-out" / "manifest.json"
+    manifest_path = tmp_path / ".graph" / "manifest.json"
     manifest_path.parent.mkdir(parents=True)
     manifest_path.write_text(json.dumps({
         "src/foo.py": {"mtime": 0.0, "ast_hash": "h1", "semantic_hash": ""},
@@ -2455,7 +2455,7 @@ def test_load_manifest_passes_through_legacy_absolute_keys(tmp_path):
     import json
     from graphify.detect import load_manifest
 
-    manifest_path = tmp_path / "graphify-out" / "manifest.json"
+    manifest_path = tmp_path / ".graph" / "manifest.json"
     manifest_path.parent.mkdir(parents=True)
     abs_key = str((tmp_path / "foo.py").resolve())
     manifest_path.write_text(json.dumps({abs_key: {"mtime": 0.0, "ast_hash": "h", "semantic_hash": ""}}))
@@ -2474,7 +2474,7 @@ def test_save_manifest_out_of_root_keeps_absolute(tmp_path):
     outside = tmp_path.parent / f"{tmp_path.name}-sibling.py"
     outside.write_text("pass\n")
     try:
-        manifest_path = str(tmp_path / "graphify-out" / "manifest.json")
+        manifest_path = str(tmp_path / ".graph" / "manifest.json")
         save_manifest({"code": [str(outside)]}, manifest_path, root=tmp_path)
         raw = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
         key = list(raw)[0]
@@ -2500,7 +2500,7 @@ def test_detect_incremental_portable_across_paths(tmp_path):
     (repo_a / "src" / "foo.py").write_text("pass\n")
     (repo_a / "doc.md").write_text("hello\n")
 
-    manifest_a = str(repo_a / "graphify-out" / "manifest.json")
+    manifest_a = str(repo_a / ".graph" / "manifest.json")
     files = {
         "code": [str(repo_a / "src" / "foo.py")],
         "document": [str(repo_a / "doc.md")],
@@ -2512,8 +2512,8 @@ def test_detect_incremental_portable_across_paths(tmp_path):
     (repo_b / "src").mkdir(parents=True)
     (repo_b / "src" / "foo.py").write_text("pass\n")
     (repo_b / "doc.md").write_text("hello\n")
-    (repo_b / "graphify-out").mkdir()
-    manifest_b = repo_b / "graphify-out" / "manifest.json"
+    (repo_b / ".graph").mkdir()
+    manifest_b = repo_b / ".graph" / "manifest.json"
     manifest_b.write_text(Path(manifest_a).read_text())
 
     # Stat the copied files match the originals' content hash so
@@ -2628,7 +2628,7 @@ def test_save_manifest_in_root_symlink_roundtrips(tmp_path):
         import pytest
         pytest.skip("filesystem does not support symlinks")
 
-    manifest_path = str(tmp_path / "graphify-out" / "manifest.json")
+    manifest_path = str(tmp_path / ".graph" / "manifest.json")
     save_manifest({"code": [str(alias)]}, manifest_path, root=tmp_path)
 
     raw = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
@@ -2692,13 +2692,13 @@ def test_convert_office_file_does_not_rewrite_existing_sidecar(tmp_path, monkeyp
 def test_convert_office_file_sidecar_name_stable_across_checkouts(tmp_path, monkeypatch):
     """#2059: the sidecar name must depend on the scan-root-RELATIVE path, not the
     absolute checkout location, so the same tracked file in two clones/worktrees
-    produces the same sidecar name (no unbounded duplicates when graphify-out/ is
+    produces the same sidecar name (no unbounded duplicates when .graph/ is
     committed). Also verifies the no-root fallback matches the explicit form."""
     monkeypatch.setattr(detect_mod, "xlsx_to_markdown", lambda p: "sheet body")
 
     def _sidecar(root):
         src = root / "docs" / "report.xlsx"
-        out_dir = root / "graphify-out" / "converted"
+        out_dir = root / ".graph" / "converted"
         return detect_mod.convert_office_file(src, out_dir, root=root)
 
     checkout_a = tmp_path / "checkout-a"
@@ -2713,7 +2713,7 @@ def test_convert_office_file_sidecar_name_stable_across_checkouts(tmp_path, monk
 
     # No explicit root -> the out_dir.parent.parent fallback yields the same name.
     fallback = detect_mod.convert_office_file(
-        checkout_a / "docs" / "report.xlsx", checkout_a / "graphify-out" / "converted"
+        checkout_a / "docs" / "report.xlsx", checkout_a / ".graph" / "converted"
     )
     assert fallback is not None and fallback.name == out_a.name
 
@@ -2725,7 +2725,7 @@ def test_convert_office_file_hash_disambiguates_same_stem(tmp_path, monkeypatch)
     root = tmp_path / "repo"
     (root / "a").mkdir(parents=True)
     (root / "b").mkdir(parents=True)
-    out_dir = root / "graphify-out" / "converted"
+    out_dir = root / ".graph" / "converted"
     out_a = detect_mod.convert_office_file(root / "a" / "report.xlsx", out_dir, root=root)
     out_b = detect_mod.convert_office_file(root / "b" / "report.xlsx", out_dir, root=root)
     assert out_a is not None and out_b is not None
@@ -2737,9 +2737,9 @@ def test_convert_office_file_outside_root_falls_back(tmp_path, monkeypatch):
     absolute-path hash without raising, and stays deterministic."""
     monkeypatch.setattr(detect_mod, "docx_to_markdown", lambda p: "body")
     root = tmp_path / "repo"
-    (root / "graphify-out" / "converted").mkdir(parents=True)
+    (root / ".graph" / "converted").mkdir(parents=True)
     outside = tmp_path / "elsewhere" / "doc.docx"
-    out_dir = root / "graphify-out" / "converted"
+    out_dir = root / ".graph" / "converted"
     out1 = detect_mod.convert_office_file(outside, out_dir, root=root)
     out2 = detect_mod.convert_office_file(outside, out_dir, root=root)
     assert out1 is not None and out1.name == out2.name
@@ -2763,7 +2763,7 @@ def test_detect_office_conversion_respects_cache_root(tmp_path, monkeypatch):
 
     # 1. Scanned corpus tree must not be mutated
     assert not (corpus / detect_mod.GRAPHIFY_OUT).exists(), (
-        "detect() must not write graphify-out into the scanned corpus tree when cache_root is provided (#2787)"
+        "detect() must not write .graph into the scanned corpus tree when cache_root is provided (#2787)"
     )
 
     # 2. Converted sidecar must exist under cache_root
@@ -2841,7 +2841,7 @@ def test_detect_prunes_venv_names_without_markers(tmp_path):
 @pytest.mark.parametrize(
     ("configured_out", "absolute", "symlink_target"),
     [
-        pytest.param("graphify-out/nlp", False, None, id="default-parent"),
+        pytest.param(".graph/nlp", False, None, id="default-parent"),
         pytest.param("artifacts/nlp", False, None, id="custom-parent"),
         pytest.param("artifacts/nlp", True, None, id="absolute"),
         pytest.param(
@@ -3075,7 +3075,7 @@ def test_save_manifest_full_scan_prunes_excluded_but_alive_row(tmp_path):
     b = tmp_path / "b.py"
     a.write_text("x = 1\n")
     b.write_text("y = 2\n")
-    manifest_path = str(tmp_path / "graphify-out" / "manifest.json")
+    manifest_path = str(tmp_path / ".graph" / "manifest.json")
 
     save_manifest({"code": [str(a), str(b)]}, manifest_path, root=tmp_path)
     raw = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
@@ -3099,7 +3099,7 @@ def test_save_manifest_full_scan_still_prunes_missing_file(tmp_path):
     gone = tmp_path / "gone.py"
     a.write_text("x = 1\n")
     gone.write_text("y = 2\n")
-    manifest_path = str(tmp_path / "graphify-out" / "manifest.json")
+    manifest_path = str(tmp_path / ".graph" / "manifest.json")
     save_manifest({"code": [str(a), str(gone)]}, manifest_path, root=tmp_path)
 
     gone.unlink()
@@ -3119,7 +3119,7 @@ def test_save_manifest_subset_save_preserves_untouched_rows(tmp_path):
     b = tmp_path / "b.py"
     a.write_text("x = 1\n")
     b.write_text("y = 2\n")
-    manifest_path = str(tmp_path / "graphify-out" / "manifest.json")
+    manifest_path = str(tmp_path / ".graph" / "manifest.json")
     save_manifest({"code": [str(a), str(b)]}, manifest_path, root=tmp_path)
 
     # Incremental hook re-stamps only a.py; b.py's row must survive.
@@ -3140,7 +3140,7 @@ def test_save_manifest_full_scan_keeps_out_of_root_rows(tmp_path):
     outside = tmp_path.parent / f"{tmp_path.name}-extern.py"
     outside.write_text("z = 3\n")
     try:
-        manifest_path = str(tmp_path / "graphify-out" / "manifest.json")
+        manifest_path = str(tmp_path / ".graph" / "manifest.json")
         save_manifest(
             {"code": [str(a), str(outside)]}, manifest_path, root=tmp_path
         )
@@ -3164,7 +3164,7 @@ def test_detect_incremental_reports_excluded_not_deleted(tmp_path):
     b = tmp_path / "b.py"
     a.write_text("x = 1\n")
     b.write_text("y = 2\n")
-    manifest_path = str(tmp_path / "graphify-out" / "manifest.json")
+    manifest_path = str(tmp_path / ".graph" / "manifest.json")
     full = detect(tmp_path)
     save_manifest(full["files"], manifest_path, root=tmp_path)
 
@@ -3184,7 +3184,7 @@ def test_detect_incremental_still_reports_real_deletions(tmp_path):
     b = tmp_path / "b.py"
     a.write_text("x = 1\n")
     b.write_text("y = 2\n")
-    manifest_path = str(tmp_path / "graphify-out" / "manifest.json")
+    manifest_path = str(tmp_path / ".graph" / "manifest.json")
     full = detect(tmp_path)
     save_manifest(full["files"], manifest_path, root=tmp_path)
 
@@ -3202,7 +3202,7 @@ def test_detect_incremental_exclusion_stable_across_runs(tmp_path):
     b = tmp_path / "b.py"
     a.write_text("x = 1\n")
     b.write_text("y = 2\n")
-    manifest_path = str(tmp_path / "graphify-out" / "manifest.json")
+    manifest_path = str(tmp_path / ".graph" / "manifest.json")
     full = detect(tmp_path)
     save_manifest(full["files"], manifest_path, root=tmp_path)
 
@@ -3227,7 +3227,7 @@ def test_save_manifest_unchanged_file_preserves_seen(tmp_path):
     import json
     a = tmp_path / "a.py"
     a.write_text("x = 1\n", encoding="utf-8")
-    manifest_path = str(tmp_path / "graphify-out" / "manifest.json")
+    manifest_path = str(tmp_path / ".graph" / "manifest.json")
 
     save_manifest({"code": [str(a)]}, manifest_path, root=tmp_path)
     raw1 = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
@@ -3248,7 +3248,7 @@ def test_save_manifest_changed_file_updates_seen(tmp_path):
     import time
     a = tmp_path / "a.py"
     a.write_text("x = 1\n", encoding="utf-8")
-    manifest_path = str(tmp_path / "graphify-out" / "manifest.json")
+    manifest_path = str(tmp_path / ".graph" / "manifest.json")
 
     save_manifest({"code": [str(a)]}, manifest_path, root=tmp_path)
     raw1 = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
@@ -3268,7 +3268,7 @@ def test_save_manifest_noop_skips_disk_write(tmp_path):
     """#2838: save_manifest does not rewrite manifest.json when payload is identical."""
     a = tmp_path / "a.py"
     a.write_text("x = 1\n", encoding="utf-8")
-    manifest_path = Path(tmp_path / "graphify-out" / "manifest.json")
+    manifest_path = Path(tmp_path / ".graph" / "manifest.json")
 
     save_manifest({"code": [str(a)]}, str(manifest_path), root=tmp_path)
     mtime_1 = manifest_path.stat().st_mtime_ns
@@ -3288,7 +3288,7 @@ def test_save_manifest_ast_kind_noop_then_change(tmp_path):
     import json
     a = tmp_path / "a.py"
     a.write_text("x = 1\n", encoding="utf-8")
-    manifest_path = Path(tmp_path / "graphify-out" / "manifest.json")
+    manifest_path = Path(tmp_path / ".graph" / "manifest.json")
 
     save_manifest({"code": [str(a)]}, str(manifest_path), root=tmp_path, kind="ast")
     bytes_1 = manifest_path.read_bytes()
@@ -3311,7 +3311,7 @@ def test_save_manifest_corrupt_existing_manifest_still_writes(tmp_path):
     import json
     a = tmp_path / "a.py"
     a.write_text("x = 1\n", encoding="utf-8")
-    manifest_path = Path(tmp_path / "graphify-out" / "manifest.json")
+    manifest_path = Path(tmp_path / ".graph" / "manifest.json")
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text("{ this is not valid json", encoding="utf-8")
 

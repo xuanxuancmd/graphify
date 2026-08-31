@@ -51,7 +51,7 @@ def test_extract_exits_nonzero_when_ast_extraction_raises(
         "[graphify extract] AST extraction failed: worker pool failed"
         in capsys.readouterr().err
     )
-    assert not (out_dir / "graphify-out" / "graph.json").exists(), (
+    assert not (out_dir / ".graph" / "graph.json").exists(), (
         "graph.json must not be written when the whole AST pass is lost"
     )
 
@@ -104,7 +104,7 @@ def test_extract_allow_partial_continues_past_ast_failure(
         assert exc.code in (None, 0), f"unexpected exit code {exc.code}"
 
     assert "AST extraction failed" in capsys.readouterr().err
-    assert (out_dir / "graphify-out" / "graph.json").exists(), (
+    assert (out_dir / ".graph" / "graph.json").exists(), (
         "--allow-partial must still write the best-effort graph"
     )
 
@@ -165,7 +165,7 @@ def test_extract_exits_nonzero_when_all_semantic_chunks_fail(
 
     # No graph.json should have been written - the failure must abort before
     # the merge/cluster/write phase, not after.
-    assert not (out_dir / "graphify-out" / "graph.json").exists(), (
+    assert not (out_dir / ".graph" / "graph.json").exists(), (
         "graph.json must not be written when semantic extraction fails"
     )
 
@@ -219,7 +219,7 @@ def test_extract_succeeds_when_at_least_one_chunk_completes(
         assert exc.code in (None, 0), f"unexpected exit code {exc.code}"
 
     # graph.json should exist on the happy path
-    assert (out_dir / "graphify-out" / "graph.json").exists(), (
+    assert (out_dir / ".graph" / "graph.json").exists(), (
         "graph.json must be written on the happy path"
     )
     assert {
@@ -280,7 +280,7 @@ def test_incremental_partial_run_preserves_untouched_semantic_hash(
 
     # Run 1: full scan — both docs dispatched and stamped.
     _run_extract()
-    manifest_path = out_dir / "graphify-out" / "manifest.json"
+    manifest_path = out_dir / ".graph" / "manifest.json"
     m1 = json.loads(manifest_path.read_text())
     assert m1["README.md"].get("semantic_hash")
     assert m1["OTHER.md"].get("semantic_hash")
@@ -338,7 +338,7 @@ def test_truncated_doc_semantic_hash_is_cleared_for_requeue(monkeypatch, tmp_pat
         except SystemExit as exc:
             assert exc.code in (None, 0)
 
-    manifest_path = out_dir / "graphify-out" / "manifest.json"
+    manifest_path = out_dir / ".graph" / "manifest.json"
     _run()  # run 1: complete
     assert json.loads(manifest_path.read_text())["README.md"].get("semantic_hash")
 
@@ -395,7 +395,7 @@ def test_manifest_stamps_freshly_extracted_semantic_docs(monkeypatch, tmp_path):
     except SystemExit as exc:
         assert exc.code in (None, 0), f"unexpected exit code {exc.code}"
 
-    manifest_path = out_dir / "graphify-out" / "manifest.json"
+    manifest_path = out_dir / ".graph" / "manifest.json"
     assert manifest_path.exists()
     manifest = json.loads(manifest_path.read_text())
 
@@ -509,7 +509,7 @@ def test_manifest_stamps_hyperedge_only_docs(monkeypatch, tmp_path):
     except SystemExit as exc:
         assert exc.code in (None, 0), f"unexpected exit code {exc.code}"
 
-    manifest = json.loads((out_dir / "graphify-out" / "manifest.json").read_text())
+    manifest = json.loads((out_dir / ".graph" / "manifest.json").read_text())
     assert manifest.get("README.md", {}).get("semantic_hash"), (
         f"hyperedge-only doc must be stamped (#1920): {sorted(manifest)}"
     )
@@ -557,7 +557,7 @@ def test_extract_mode_deep_dispatches_over_warm_cache(monkeypatch, tmp_path):
                         _recording_extractor(calls))
     monkeypatch.setattr(mainmod, "_check_skill_version", lambda _: None)
 
-    # No --out: the default layout (graphify-out/ beside the sources) keeps the
+    # No --out: the default layout (.graph/ beside the sources) keeps the
     # CLI-level cache write's root anchored at the corpus, so the stub's
     # root-relative source_file resolves (real runs also checkpoint per chunk
     # inside llm.extract_corpus_parallel, which this stub replaces).
@@ -587,7 +587,7 @@ def test_extract_mode_deep_dispatches_over_warm_cache(monkeypatch, tmp_path):
     )
     # The deep entry landed in its own namespace, not cache/semantic/. Entries are
     # nested under a p{prompt-fingerprint}/ subdir (#1939), hence the recursive glob.
-    assert any((corpus / "graphify-out" / "cache" / "semantic-deep").glob("**/*.json"))
+    assert any((corpus / ".graph" / "cache" / "semantic-deep").glob("**/*.json"))
 
 
 def test_extract_force_flag_redispatches_and_stamps_manifest(monkeypatch, tmp_path):
@@ -620,9 +620,9 @@ def test_extract_force_flag_redispatches_and_stamps_manifest(monkeypatch, tmp_pa
 
     # The forced run still wrote the semantic cache and stamped the manifest.
     # Entries nest under a p{prompt-fingerprint}/ subdir (#1939).
-    assert any((corpus / "graphify-out" / "cache" / "semantic").glob("**/*.json"))
+    assert any((corpus / ".graph" / "cache" / "semantic").glob("**/*.json"))
     manifest = json.loads(
-        (corpus / "graphify-out" / "manifest.json").read_text()
+        (corpus / ".graph" / "manifest.json").read_text()
     )
     assert manifest.get("README.md", {}).get("semantic_hash"), (
         "forced re-dispatch must still stamp the manifest"
@@ -718,7 +718,7 @@ def test_extract_codeonly_succeeds_without_api_key(monkeypatch, tmp_path):
     except SystemExit as exc:
         assert exc.code in (None, 0), f"unexpected exit code {exc.code}"
 
-    graph = out_dir / "graphify-out" / "graph.json"
+    graph = out_dir / ".graph" / "graph.json"
     assert graph.exists(), "code-only extract must write graph.json without a key"
     import json
     assert len(json.loads(graph.read_text()).get("nodes", [])) > 0
@@ -736,7 +736,7 @@ def test_missing_manifest_code_only_preserves_semantic_layer(monkeypatch, tmp_pa
     (corpus / "keep.py").write_text("def keep():\n    return 1\n")
     (corpus / "README.md").write_text("# Notes\nCurated docs.\n")
     out_dir = tmp_path / "out"
-    graphify_out = out_dir / "graphify-out"
+    graphify_out = out_dir / ".graph"
     _clear_backend_keys(monkeypatch)
     monkeypatch.setattr(mainmod, "_check_skill_version", lambda _: None)
 
@@ -792,8 +792,8 @@ def test_missing_manifest_code_only_preserves_semantic_layer(monkeypatch, tmp_pa
 
 
 def test_extract_out_keeps_project_root_clean(monkeypatch, tmp_path):
-    """`extract --out DIR` routes every artifact to DIR/graphify-out/ and the
-    scanned project must not grow a graphify-out/ (or anything else) beside
+    """`extract --out DIR` routes every artifact to DIR/.graph/ and the
+    scanned project must not grow a .graph/ (or anything else) beside
     its sources.
 
     Guards the centralized-output workflow: run from the project root with
@@ -817,11 +817,11 @@ def test_extract_out_keeps_project_root_clean(monkeypatch, tmp_path):
     except SystemExit as exc:
         assert exc.code in (None, 0), f"unexpected exit code {exc.code}"
 
-    out = external / "graphify-out"
+    out = external / ".graph"
     assert (out / "graph.json").exists(), "graph.json must land under --out"
     assert (out / "manifest.json").exists(), "manifest.json must land under --out"
-    assert not (corpus / "graphify-out").exists(), (
-        "scanned project must not grow a graphify-out/ when --out is set"
+    assert not (corpus / ".graph").exists(), (
+        "scanned project must not grow a .graph/ when --out is set"
     )
     assert sorted(p.name for p in corpus.iterdir()) == ["auth.py"], (
         "no stray files may appear in the project root"
@@ -853,7 +853,7 @@ def test_extract_without_key_still_errors_when_docs_present(
     err = capsys.readouterr().err
     assert "no LLM API key found" in err
     assert "code-only corpus needs no key" in err
-    assert not (out_dir / "graphify-out" / "graph.json").exists()
+    assert not (out_dir / ".graph" / "graph.json").exists()
 
 
 def test_extract_timing_flag_emits_stage_timings(monkeypatch, tmp_path, capsys):
@@ -918,8 +918,8 @@ def test_pathless_postgres_extract_initializes_empty_detection(
     launcher.mkdir()
     monkeypatch.chdir(launcher)
     out_root = tmp_path / "output"
-    graph_path = out_root / "graphify-out" / "graph.json"
-    manifest = out_root / "graphify-out" / "manifest.json"
+    graph_path = out_root / ".graph" / "graph.json"
+    manifest = out_root / ".graph" / "manifest.json"
     monkeypatch.setattr(mainmod, "_check_skill_version", lambda _: None)
     monkeypatch.setattr("graphify.pg_introspect.introspect_postgres", _introspect)
 
@@ -944,13 +944,13 @@ def test_pathless_postgres_extract_initializes_empty_detection(
     assert manifest.exists()
     assert "app.py" in _node_sources(graph_path)
     manifest_content = manifest.read_text()
-    (out_root / "graphify-out" / ".graphify_semantic_marker").write_text(
+    (out_root / ".graph" / ".graphify_semantic_marker").write_text(
         '{"output_tokens": 1}'
     )
 
     cache_entry = (
         out_root
-        / "graphify-out"
+        / ".graph"
         / "cache"
         / "semantic"
         / "deadbeef.json"
@@ -973,7 +973,7 @@ def test_pathless_postgres_extract_initializes_empty_detection(
     assert "postgresql:/localhost/test" in _node_sources(graph_path)
     backups = [
         path
-        for path in (out_root / "graphify-out").iterdir()
+        for path in (out_root / ".graph").iterdir()
         if path.is_dir() and (path / "manifest.json").exists()
     ]
     assert backups
@@ -1048,8 +1048,8 @@ def test_incremental_extract_prunes_newly_excluded_file_not_in_manifest(
         monkeypatch,
         ["graphify", "extract", str(project), "--out", str(out_dir)],
     )
-    graph_path = out_dir / "graphify-out" / "graph.json"
-    manifest_path = out_dir / "graphify-out" / "manifest.json"
+    graph_path = out_dir / ".graph" / "graph.json"
+    manifest_path = out_dir / ".graph" / "manifest.json"
     assert any("x.py" in s for s in _node_sources(graph_path)), (
         "seed extract must produce nodes for x.py"
     )
@@ -1096,8 +1096,8 @@ def test_incremental_extract_prunes_excluded_file_listed_in_manifest(
         monkeypatch,
         ["graphify", "extract", str(project), "--out", str(out_dir)],
     )
-    graph_path = out_dir / "graphify-out" / "graph.json"
-    manifest_path = out_dir / "graphify-out" / "manifest.json"
+    graph_path = out_dir / ".graph" / "graph.json"
+    manifest_path = out_dir / ".graph" / "manifest.json"
     assert any("x.py" in k for k in json.loads(manifest_path.read_text()))
 
     (project / ".graphifyignore").write_text("x.py\n")
@@ -1143,7 +1143,7 @@ def test_no_cluster_incremental_prunes_newly_excluded_file(
     with pytest.raises(SystemExit) as exc:
         mainmod.main()
     assert exc.value.code == 0
-    graph_path = out_dir / "graphify-out" / "graph.json"
+    graph_path = out_dir / ".graph" / "graph.json"
     assert any("x.py" in s for s in _node_sources(graph_path))
     capsys.readouterr()
 
@@ -1167,7 +1167,7 @@ def test_no_cluster_incremental_prunes_newly_excluded_file(
 # #2543: a code file whose AST extraction FAILED (error result — e.g. missing
 # optional extra — or extractor-present zero nodes) must not be stamped in the
 # incremental manifest, or detect_incremental reports it unchanged forever and
-# only `rm -rf graphify-out` recovers. The extractor is swapped through
+# only `rm -rf .graph` recovers. The extractor is swapped through
 # extract._DISPATCH so the tests run without tree-sitter-sql installed.
 # ---------------------------------------------------------------------------
 
@@ -1215,8 +1215,8 @@ def test_failed_extra_is_retried_and_recovers(monkeypatch, tmp_path, capsys):
     out_dir = tmp_path / "out"
     _clear_backend_keys(monkeypatch)
     monkeypatch.setattr(mainmod, "_check_skill_version", lambda _: None)
-    graph_path = out_dir / "graphify-out" / "graph.json"
-    manifest_path = out_dir / "graphify-out" / "manifest.json"
+    graph_path = out_dir / ".graph" / "graph.json"
+    manifest_path = out_dir / ".graph" / "manifest.json"
     argv = ["graphify", "extract", str(project), "--out", str(out_dir)]
 
     # Run 1: extraction of schema.sql fails.
@@ -1264,8 +1264,8 @@ def test_permanent_failure_does_not_wedge(monkeypatch, tmp_path, capsys):
     _clear_backend_keys(monkeypatch)
     monkeypatch.setattr(mainmod, "_check_skill_version", lambda _: None)
     monkeypatch.setitem(extractmod._DISPATCH, ".sql", _failing_sql)
-    graph_path = out_dir / "graphify-out" / "graph.json"
-    manifest_path = out_dir / "graphify-out" / "manifest.json"
+    graph_path = out_dir / ".graph" / "graph.json"
+    manifest_path = out_dir / ".graph" / "manifest.json"
     argv = ["graphify", "extract", str(project), "--out", str(out_dir)]
 
     _run_extract(monkeypatch, argv)  # seed (full scan)
@@ -1293,7 +1293,7 @@ def test_success_and_unchanged_unaffected(monkeypatch, tmp_path, capsys):
     out_dir = tmp_path / "out"
     _clear_backend_keys(monkeypatch)
     monkeypatch.setattr(mainmod, "_check_skill_version", lambda _: None)
-    manifest_path = out_dir / "graphify-out" / "manifest.json"
+    manifest_path = out_dir / ".graph" / "manifest.json"
     argv = ["graphify", "extract", str(project), "--out", str(out_dir)]
 
     _run_extract(monkeypatch, argv)
@@ -1319,8 +1319,8 @@ def test_poisoned_manifest_is_healed(monkeypatch, tmp_path, capsys):
     _clear_backend_keys(monkeypatch)
     monkeypatch.setattr(mainmod, "_check_skill_version", lambda _: None)
     monkeypatch.setitem(extractmod._DISPATCH, ".sql", _ok_sql)
-    graph_path = out_dir / "graphify-out" / "graph.json"
-    manifest_path = out_dir / "graphify-out" / "manifest.json"
+    graph_path = out_dir / ".graph" / "graph.json"
+    manifest_path = out_dir / ".graph" / "manifest.json"
     argv = ["graphify", "extract", str(project), "--out", str(out_dir)]
 
     _run_extract(monkeypatch, argv)  # healthy seed: schema.sql stamped + in graph
@@ -1444,7 +1444,7 @@ def test_edge_only_semantic_extraction_not_stamped_and_retried(monkeypatch, tmp_
     # --- Run 1: ARCH.md produces only edges ---
     _run_extract(monkeypatch, argv)
 
-    manifest_path = out_dir / "graphify-out" / "manifest.json"
+    manifest_path = out_dir / ".graph" / "manifest.json"
     assert manifest_path.exists()
     m1 = json.loads(manifest_path.read_text(encoding="utf-8"))
 
@@ -1457,7 +1457,7 @@ def test_edge_only_semantic_extraction_not_stamped_and_retried(monkeypatch, tmp_
 
     # Cache check: README.md is cached, ARCH.md is NOT cached
     from graphify.cache import file_hash
-    cache_sem_dir = out_dir / "graphify-out" / "cache" / "semantic"
+    cache_sem_dir = out_dir / ".graph" / "cache" / "semantic"
     arch_h = file_hash(arch, corpus)
     readme_h = file_hash(corpus / "README.md", corpus)
     assert not list(cache_sem_dir.rglob(f"{arch_h}.json")), "ARCH.md must not have a cache file"
@@ -1473,7 +1473,7 @@ def test_edge_only_semantic_extraction_not_stamped_and_retried(monkeypatch, tmp_
         "ARCH.md must now be stamped after successful node extraction"
     )
 
-    graph_path = out_dir / "graphify-out" / "graph.json"
+    graph_path = out_dir / ".graph" / "graph.json"
     g2 = json.loads(graph_path.read_text(encoding="utf-8"))
     node_ids = {n["id"] for n in g2.get("nodes", [])}
     assert "arch_concept" in node_ids, "ARCH.md nodes must be present in graph.json"
@@ -1494,7 +1494,7 @@ def test_stale_poisoned_manifest_semantic_source_healed(monkeypatch, tmp_path, c
     app.write_text("def run(): pass\n", encoding="utf-8")
 
     out_dir = tmp_path / "out"
-    graphify_out = out_dir / "graphify-out"
+    graphify_out = out_dir / ".graph"
     graphify_out.mkdir(parents=True, exist_ok=True)
     graph_path = graphify_out / "graph.json"
     manifest_path = graphify_out / "manifest.json"
@@ -1607,7 +1607,7 @@ def test_incremental_stray_attribution_preserves_undispatched_file(
     _run_extract(monkeypatch, argv)
     capsys.readouterr()
 
-    graph_path = out_dir / "graphify-out" / "graph.json"
+    graph_path = out_dir / ".graph" / "graph.json"
 
     def _node_ids():
         import json

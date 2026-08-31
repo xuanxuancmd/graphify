@@ -29,9 +29,9 @@ def _write(p: Path, directed: bool, multigraph: bool, node_id: str):
 
 
 def test_merge_graphs_mixed_directed_and_multigraph(tmp_path):
-    a = tmp_path / "r1" / "graphify-out" / "graph.json"
-    b = tmp_path / "r2" / "graphify-out" / "graph.json"
-    c = tmp_path / "r3" / "graphify-out" / "graph.json"
+    a = tmp_path / "r1" / ".graph" / "graph.json"
+    b = tmp_path / "r2" / ".graph" / "graph.json"
+    c = tmp_path / "r3" / ".graph" / "graph.json"
     _write(a, directed=True, multigraph=False, node_id="x")    # DiGraph
     _write(b, directed=False, multigraph=False, node_id="y")   # Graph
     _write(c, directed=False, multigraph=True, node_id="z")    # MultiGraph
@@ -49,12 +49,12 @@ def test_merge_graphs_mixed_directed_and_multigraph(tmp_path):
 
 
 def test_merge_graphs_same_named_repo_dirs_do_not_collapse(tmp_path):
-    # #1729: two graphs under a same-named repo dir (src/graphify-out and
-    # frontend/src/graphify-out both → tag "src") share the `src::` prefix, so a
+    # #1729: two graphs under a same-named repo dir (src/.graph and
+    # frontend/src/.graph both → tag "src") share the `src::` prefix, so a
     # bare `app` node from each collapsed into one — silently merging unrelated
     # entities and inventing cross-runtime edges. Distinct tags must keep them apart.
-    a = tmp_path / "src" / "graphify-out" / "graph.json"
-    b = tmp_path / "frontend" / "src" / "graphify-out" / "graph.json"
+    a = tmp_path / "src" / ".graph" / "graph.json"
+    b = tmp_path / "frontend" / "src" / ".graph" / "graph.json"
     a.parent.mkdir(parents=True, exist_ok=True)
     b.parent.mkdir(parents=True, exist_ok=True)
     a.write_text(json.dumps({"directed": False, "multigraph": False, "nodes": [
@@ -76,20 +76,20 @@ def test_distinct_repo_tags_unit(tmp_path):
     from graphify.build import distinct_repo_tags
     # distinct repo dirs pass through unchanged
     assert distinct_repo_tags([
-        Path("backend/graphify-out/graph.json"),
-        Path("web/graphify-out/graph.json"),
+        Path("backend/.graph/graph.json"),
+        Path("web/.graph/graph.json"),
     ]) == ["backend", "web"]
     # same-named repo dirs are widened to stay distinct
     tags = distinct_repo_tags([
-        Path("proj/src/graphify-out/graph.json"),
-        Path("proj/frontend/src/graphify-out/graph.json"),
+        Path("proj/src/.graph/graph.json"),
+        Path("proj/frontend/src/.graph/graph.json"),
     ])
     assert len(set(tags)) == 2, tags
     # a repeated dir name triple still yields all-distinct tags (index fallback)
     tags3 = distinct_repo_tags([
-        Path("a/src/graphify-out/graph.json"),
-        Path("b/src/graphify-out/graph.json"),
-        Path("c/src/graphify-out/graph.json"),
+        Path("a/src/.graph/graph.json"),
+        Path("b/src/.graph/graph.json"),
+        Path("c/src/.graph/graph.json"),
     ])
     assert len(set(tags3)) == 3, tags3
 
@@ -99,8 +99,8 @@ def test_merge_graphs_preserves_import_edge_direction(tmp_path):
     # stashing _src/_tgt directional markers, causing node_link_data to re-serialize
     # edges based on arbitrary node ordering and reversing import edge direction whenever
     # target node index < source node index (turning imports into self-imports/reversed links).
-    a = tmp_path / "repo1" / "graphify-out" / "graph.json"
-    b = tmp_path / "repo2" / "graphify-out" / "graph.json"
+    a = tmp_path / "repo1" / ".graph" / "graph.json"
+    b = tmp_path / "repo2" / ".graph" / "graph.json"
     a.parent.mkdir(parents=True, exist_ok=True)
     b.parent.mkdir(parents=True, exist_ok=True)
 
@@ -189,8 +189,8 @@ def test_merge_graphs_carries_hyperedges_from_all_inputs(tmp_path):
     # list, so at best the LAST graph's hyperedges survived — with stale,
     # unprefixed member ids. Both inputs' hyperedges must reach the output,
     # relabeled to the prefixed node ids, in BOTH persistence slots.
-    a = tmp_path / "alpha" / "graphify-out" / "graph.json"
-    b = tmp_path / "beta" / "graphify-out" / "graph.json"
+    a = tmp_path / "alpha" / ".graph" / "graph.json"
+    b = tmp_path / "beta" / ".graph" / "graph.json"
     _write_with_hyperedges(a, ["x", "y"], [{"id": "h_alpha", "nodes": ["x", "y"]}])
     _write_with_hyperedges(b, ["p", "q"], [{"id": "h_beta", "nodes": ["p", "q"]}])
     out = tmp_path / "merged.json"
@@ -216,8 +216,8 @@ def test_merge_graphs_carries_hyperedges_from_all_inputs(tmp_path):
 def test_merge_graphs_hyperedges_dedup_on_shared_prefixed_id(tmp_path):
     # Idempotence: a duplicated hyperedge id within an input must not produce
     # duplicate entries in the merged output (attach_hyperedges dedups by id).
-    a = tmp_path / "alpha" / "graphify-out" / "graph.json"
-    b = tmp_path / "beta" / "graphify-out" / "graph.json"
+    a = tmp_path / "alpha" / ".graph" / "graph.json"
+    b = tmp_path / "beta" / ".graph" / "graph.json"
     he = {"id": "h_alpha", "nodes": ["x"]}
     _write_with_hyperedges(a, ["x"], [he, dict(he)])
     _write_with_hyperedges(b, ["p"], [{"id": "h_beta", "nodes": ["p"]}])
@@ -234,8 +234,8 @@ def test_merge_graphs_reads_top_level_only_hyperedges(tmp_path):
     # #2485 skew on the input side: node_link_graph restores only the nested
     # graph-attrs slot, so an input whose hyperedges live only at the top
     # level used to lose them entirely.
-    a = tmp_path / "alpha" / "graphify-out" / "graph.json"
-    b = tmp_path / "beta" / "graphify-out" / "graph.json"
+    a = tmp_path / "alpha" / ".graph" / "graph.json"
+    b = tmp_path / "beta" / ".graph" / "graph.json"
     _write_with_hyperedges(a, ["x"], [{"id": "h_top", "nodes": ["x"]}],
                            top_level_only=True)
     _write_with_hyperedges(b, ["p"], [])
@@ -265,8 +265,8 @@ def test_merge_graphs_offsets_communities_so_repos_do_not_fuse(tmp_path):
     # view then fused unrelated communities into one meta-node. Each input's
     # ids must be offset into a shared id space, with the per-repo partition
     # kept in local_community.
-    a = tmp_path / "alpha" / "graphify-out" / "graph.json"
-    b = tmp_path / "beta" / "graphify-out" / "graph.json"
+    a = tmp_path / "alpha" / ".graph" / "graph.json"
+    b = tmp_path / "beta" / ".graph" / "graph.json"
     _write_with_communities(a, [("a0", 0), ("a1", 0), ("a2", 1)])
     _write_with_communities(b, [("b0", 0), ("b1", 1), ("b2", 1), ("b3", 2)])
     out = tmp_path / "merged.json"
@@ -294,8 +294,8 @@ def test_merge_graphs_community_offset_is_byte_reproducible(tmp_path):
     merging the same inputs twice produces byte-identical output. (Offsets are
     position-dependent by design — reordering inputs may renumber — so this pins
     only same-order reproducibility, which is what consumers rely on. #3014.)"""
-    a = tmp_path / "alpha" / "graphify-out" / "graph.json"
-    b = tmp_path / "beta" / "graphify-out" / "graph.json"
+    a = tmp_path / "alpha" / ".graph" / "graph.json"
+    b = tmp_path / "beta" / ".graph" / "graph.json"
     _write_with_communities(a, [("a0", 0), ("a1", 0), ("a2", 1)])
     _write_with_communities(b, [("b0", 0), ("b1", 1), ("b2", 2)])
 

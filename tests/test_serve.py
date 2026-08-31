@@ -683,7 +683,7 @@ def test_load_graph_roundtrip(tmp_path):
     assert G2.number_of_edges() == G.number_of_edges()
 
 def test_load_graph_missing_file(tmp_path):
-    graphify_dir = tmp_path / "graphify-out"
+    graphify_dir = tmp_path / ".graph"
     graphify_dir.mkdir()
     with pytest.raises(SystemExit):
         _load_graph(str(graphify_dir / "nonexistent.json"))
@@ -757,7 +757,7 @@ def test_maybe_reload_detects_graph_change(tmp_path):
     import time
     from unittest.mock import patch
 
-    out = tmp_path / "graphify-out"
+    out = tmp_path / ".graph"
     out.mkdir()
     graph_path = out / "graph.json"
     _write_graph(graph_path, ["alpha", "beta"])
@@ -778,7 +778,7 @@ def test_load_graph_cache_key_changes_with_content(tmp_path):
     """mtime_ns + size uniquely identifies a graph version (#874)."""
     import time
 
-    out = tmp_path / "graphify-out"
+    out = tmp_path / ".graph"
     out.mkdir()
     graph_path = out / "graph.json"
     _write_graph(graph_path, ["a"])

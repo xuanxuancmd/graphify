@@ -1,7 +1,7 @@
 # graphify MCP server as a shared HTTP service (issue #1143).
 #
 # Build:  docker build -t graphify .
-# Run:    docker run -p 8080:8080 -v "$(pwd)/graphify-out:/data" graphify \
+# Run:    docker run -p 8080:8080 -v "$(pwd)/.graph:/data" graphify \
 #             /data/graph.json --transport http --host 0.0.0.0 --api-key "$SECRET"
 #
 # Builds from source so the image includes the Streamable HTTP transport even

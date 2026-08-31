@@ -21,8 +21,8 @@ def _env():
 
 def _run(cwd, *, graph: bool):
     if graph:
-        (cwd / "graphify-out").mkdir(parents=True, exist_ok=True)
-        (cwd / "graphify-out" / "graph.json").write_text("{}", encoding="utf-8")
+        (cwd / ".graph").mkdir(parents=True, exist_ok=True)
+        (cwd / ".graph" / "graph.json").write_text("{}", encoding="utf-8")
     return subprocess.run(
         [sys.executable, "-m", "graphify", "hook-guard", "gemini"],
         input="", capture_output=True, text=True, cwd=cwd, env=_env(),

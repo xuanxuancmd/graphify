@@ -67,10 +67,10 @@ def test_cached_files(tmp_path, cache_root):
 
 
 def test_clear_cache(tmp_file, cache_root):
-    """clear_cache removes all .json files from graphify-out/cache/ (all subdirs)."""
+    """clear_cache removes all .json files from .graph/cache/ (all subdirs)."""
     save_cached(tmp_file, {"nodes": [], "edges": []}, root=cache_root)
     # Since v0.5.3 entries go into cache/ast/, not the flat cache/ dir
-    cache_base = cache_root / "graphify-out" / "cache"
+    cache_base = cache_root / ".graph" / "cache"
     assert len(list(cache_base.rglob("*.json"))) > 0
     clear_cache(cache_root)
     assert len(list(cache_base.rglob("*.json"))) == 0
@@ -190,7 +190,7 @@ def test_md_edit_above_hr_changes_hash(tmp_path):
 
 # --- #777: portable cache source_file fields --------------------------------
 # ``save_cached`` relativizes ``source_file`` entries inside the cache file
-# so a committed ``graphify-out/cache/`` is portable across machines and
+# so a committed ``.graph/cache/`` is portable across machines and
 # CI runners. ``load_cached`` re-absolutizes them so consumers (extract,
 # merge into graph.json) see the same shape that fresh extraction emits.
 
@@ -361,7 +361,7 @@ def _graph_ids(result: dict) -> tuple[list[str], list[tuple]]:
 
 def test_warm_cache_from_another_root_does_not_leak_that_root(tmp_path, monkeypatch):
     """#2257: extract corpus under root A (populating the cache), copy the tree
-    AND graphify-out to root B, extract under B on the warm cache.
+    AND .graph to root B, extract under B on the warm cache.
 
     No node id or edge endpoint may carry root A's slug, and the ids must match
     a cold B extraction exactly.
@@ -384,7 +384,7 @@ def test_warm_cache_from_another_root_does_not_leak_that_root(tmp_path, monkeypa
     # The entries on disk must be portable BY CONSTRUCTION: neither the scan
     # root's slug (ids are casefolded, paths are not — compare case-insensitively)
     # nor any absolute path from root A may be embedded in them.
-    entries = sorted((corpus_a / "graphify-out" / "cache" / "ast").rglob("*.json"))
+    entries = sorted((corpus_a / ".graph" / "cache" / "ast").rglob("*.json"))
     assert entries, "run A should have written AST cache entries"
     for entry in entries:
         blob = entry.read_text(encoding="utf-8")
@@ -394,13 +394,13 @@ def test_warm_cache_from_another_root_does_not_leak_that_root(tmp_path, monkeypa
         )
         assert str(corpus_a) not in blob, f"{entry.name} embeds an absolute scan path"
 
-    # Move the corpus; graphify-out/ (cache + stat index) rides along. copy2
+    # Move the corpus; .graph/ (cache + stat index) rides along. copy2
     # preserves mtime_ns so the stat-index fastpath stays warm.
     corpus_b = tmp_path / b_slug / "corpus"
     corpus_b.parent.mkdir()
     shutil.copytree(corpus_a, corpus_b, copy_function=shutil.copy2)
     paths_b = sorted(p for p in corpus_b.rglob("*") if p.is_file()
-                     and "graphify-out" not in p.parts)
+                     and ".graph" not in p.parts)
 
     # Warmth probe: _safe_extract_with_xaml_root runs only on a cache MISS. If
     # run B silently re-extracts, cold ids come out clean and every assertion
@@ -429,7 +429,7 @@ def test_warm_cache_from_another_root_does_not_leak_that_root(tmp_path, monkeypa
 
     # ...and the replay is not merely clean but IDENTICAL to a cold B run.
     monkeypatch.undo()
-    shutil.rmtree(corpus_b / "graphify-out")
+    shutil.rmtree(corpus_b / ".graph")
     _reset_stat_index()
     cold_b = ex.extract(paths_b, cache_root=corpus_b, root=corpus_b, parallel=False)
     cold_ids, cold_edges = _graph_ids(cold_b)
@@ -1110,13 +1110,13 @@ def test_semantic_cache_deep_mode_roundtrip_under_deep_namespace(tmp_path):
     )
     assert saved == 1
 
-    deep_dir = tmp_path / "graphify-out" / "cache" / "semantic-deep"
+    deep_dir = tmp_path / ".graph" / "cache" / "semantic-deep"
     h = file_hash(f, tmp_path)
     assert (deep_dir / f"{h}.json").exists(), (
         "deep entry must land under cache/semantic-deep/"
     )
     # And NOT in the plain namespace.
-    plain_dir = tmp_path / "graphify-out" / "cache" / "semantic"
+    plain_dir = tmp_path / ".graph" / "cache" / "semantic"
     assert not (plain_dir / f"{h}.json").exists()
 
     nodes, edges, hyper, uncached = check_semantic_cache(
@@ -1165,8 +1165,8 @@ def test_semantic_cache_mode_none_layout_unchanged(tmp_path):
     f.write_text("# Doc\n")
     save_semantic_cache([{"id": "n", "source_file": "doc.md"}], [], root=tmp_path)
     h = file_hash(f, tmp_path)
-    assert (tmp_path / "graphify-out" / "cache" / "semantic" / f"{h}.json").exists()
-    assert not (tmp_path / "graphify-out" / "cache" / "semantic-deep").exists(), (
+    assert (tmp_path / ".graph" / "cache" / "semantic" / f"{h}.json").exists()
+    assert not (tmp_path / ".graph" / "cache" / "semantic-deep").exists(), (
         "mode=None must never create the deep namespace"
     )
     nodes, _, _, uncached = check_semantic_cache([str(f)], root=tmp_path)
@@ -1182,7 +1182,7 @@ def test_clear_cache_removes_deep_namespace(tmp_path):
     save_semantic_cache([{"id": "p", "source_file": "doc.md"}], [], root=tmp_path)
     save_semantic_cache([{"id": "d", "source_file": "doc.md"}], [],
                         root=tmp_path, mode="deep")
-    base = tmp_path / "graphify-out" / "cache"
+    base = tmp_path / ".graph" / "cache"
     assert list((base / "semantic").glob("*.json"))
     assert list((base / "semantic-deep").glob("*.json"))
 
@@ -1223,8 +1223,8 @@ def test_semantic_prune_sweeps_both_namespaces_against_same_live_set(tmp_path):
     save_semantic_cache([{"id": "db", "source_file": "doc.md"}], [],
                         root=tmp_path, mode="deep")
 
-    plain_dir = tmp_path / "graphify-out" / "cache" / "semantic"
-    deep_dir = tmp_path / "graphify-out" / "cache" / "semantic-deep"
+    plain_dir = tmp_path / ".graph" / "cache" / "semantic"
+    deep_dir = tmp_path / ".graph" / "cache" / "semantic-deep"
     for d in (plain_dir, deep_dir):
         assert (d / f"{h_old}.json").exists()
         assert (d / f"{h_live}.json").exists()
@@ -1494,7 +1494,7 @@ def test_semantic_cache_prompt_namespaced_layout(tmp_path):
     save_semantic_cache([{"id": "n", "source_file": "doc.md"}], [],
                         root=tmp_path, prompt="PROMPT V1")
 
-    sem = tmp_path / "graphify-out" / "cache" / "semantic"
+    sem = tmp_path / ".graph" / "cache" / "semantic"
     h = file_hash(f, tmp_path)
     assert (sem / f"p{prompt_fingerprint('PROMPT V1')}" / f"{h}.json").exists()
     assert not (sem / f"{h}.json").exists(), (
@@ -1512,7 +1512,7 @@ def test_semantic_cache_prompt_and_mode_compose(tmp_path):
     save_semantic_cache([{"id": "d", "source_file": "doc.md"}], [],
                         root=tmp_path, mode="deep", prompt="PROMPT V1")
 
-    deep = tmp_path / "graphify-out" / "cache" / "semantic-deep"
+    deep = tmp_path / ".graph" / "cache" / "semantic-deep"
     assert list(deep.glob("p*/*.json")), "deep + prompt must nest under semantic-deep/p{fp}/"
 
     # Right mode, wrong prompt -> miss. Right prompt, wrong mode -> miss.
@@ -1615,7 +1615,7 @@ def test_semantic_prune_and_clear_reach_fingerprint_subdirs(tmp_path):
     save_semantic_cache([{"id": "n", "source_file": "doc.md"}], [],
                         root=tmp_path, prompt="PROMPT V1")
     clear_cache(tmp_path)
-    assert not list((tmp_path / "graphify-out" / "cache" / "semantic").glob("**/*.json"))
+    assert not list((tmp_path / ".graph" / "cache" / "semantic").glob("**/*.json"))
 
 
 def test_semantic_cache_unreadable_prompt_file_warns_and_falls_back(tmp_path):

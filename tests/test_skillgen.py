@@ -258,7 +258,7 @@ def test_audit_coverage_passes_for_codex_and_windows():
 
 UNIFIED_DESCRIPTION = (
     "Use for any question about a codebase, its architecture, file relationships, "
-    "or project content — especially when graphify-out/ exists, where the question "
+    "or project content — especially when .graph/ exists, where the question "
     "should be treated as a graphify query first. Turns any input (code, docs, "
     "papers, images, videos) into a persistent knowledge graph with god nodes, "
     "community detection, and query/path/explain tools."
@@ -400,12 +400,12 @@ def test_powershell_hosts_carry_no_bash_only_shell():
         assert re.search(r"\bfind\b[^\n]*-delete", core) is None, f"[{key}] find -delete survived"
         # The PowerShell invocation pattern replaces $(cat ...) -c "..." everywhere.
         assert "```powershell" in core
-        assert "'@ | & (Get-Content graphify-out\\.graphify_python) -" in core, (
+        assert "'@ | & (Get-Content .graph\\.graphify_python) -" in core, (
             f"[{key}] missing the here-string stdin python invocation"
         )
         # Cleanup went through Remove-Item / Get-ChildItem, not rm/find.
         assert "Remove-Item -Force -ErrorAction SilentlyContinue" in core
-        assert "Get-ChildItem graphify-out -Filter '.graphify_chunk_*.json'" in core
+        assert "Get-ChildItem .graph -Filter '.graphify_chunk_*.json'" in core
 
 
 def test_windows_and_posix_cores_have_step_and_2490_parity():
@@ -416,7 +416,7 @@ def test_windows_and_posix_cores_have_step_and_2490_parity():
     for heading in _STEP_HEADINGS:
         assert heading in claude_core, f"skill.md lost step heading: {heading!r}"
         assert heading in windows_core, f"skill-windows.md lost step heading: {heading!r}"
-    line_2490 = "to_json(G, communities, 'graphify-out/graph.json', community_labels=labels)"
+    line_2490 = "to_json(G, communities, '.graph/graph.json', community_labels=labels)"
     assert line_2490 in claude_core, "skill.md lost the #2490 Step-5 re-export"
     assert line_2490 in windows_core, "skill-windows.md lost the #2490 Step-5 re-export"
 
@@ -454,8 +454,8 @@ def test_powershell_translator_rejects_unknown_bash():
     with pytest.raises(ValueError, match="cannot translate rm -f operand"):
         gen._rm_to_remove_item("rm -f $HOME/danger")
     # And the sanctioned pieces translate exactly.
-    assert gen._rm_to_remove_item("rm -f graphify-out/.needs_update 2>/dev/null || true") == (
-        "Remove-Item -Force -ErrorAction SilentlyContinue graphify-out\\.needs_update"
+    assert gen._rm_to_remove_item("rm -f .graph/.needs_update 2>/dev/null || true") == (
+        "Remove-Item -Force -ErrorAction SilentlyContinue .graph\\.needs_update"
     )
     assert gen._translate_bash_block([gen._FIND_CHUNKS_POSIX]) == [gen._FIND_CHUNKS_PS]
 
@@ -1107,10 +1107,10 @@ def test_windows_skill_writes_marker_files_without_a_bom():
     """
     core, _ = _platform_artifacts("windows")
     for marker in (".graphify_python", ".graphify_root"):
-        assert f"Out-File -FilePath graphify-out\\{marker} -Encoding utf8" not in core, (
+        assert f"Out-File -FilePath .graph\\{marker} -Encoding utf8" not in core, (
             f"the windows render still writes {marker} with a BOM-emitting Out-File"
         )
-        assert f"WriteAllText((Join-Path $PWD 'graphify-out\\{marker}')" in core, (
+        assert f"WriteAllText((Join-Path $PWD '.graph\\{marker}')" in core, (
             f"{marker} must be written through WriteAllText with a BOM-less encoding"
         )
     assert "New-Object System.Text.UTF8Encoding $false" in core, \

@@ -171,15 +171,15 @@ def test_tools_list_over_http(tmp_path):
 
 
 def _project_with_graph(tmp_path, node_count: int, name: str = "proj") -> str:
-    """Create ``<proj>/graphify-out/graph.json`` and return the project dir."""
+    """Create ``<proj>/.graph/graph.json`` and return the project dir."""
     proj = tmp_path / name
-    (proj / "graphify-out").mkdir(parents=True)
+    (proj / ".graph").mkdir(parents=True)
     graph = {
         "directed": True,
         "nodes": [{"id": f"n{i}", "label": f"N{i}", "community": 0} for i in range(node_count)],
         "edges": [],
     }
-    (proj / "graphify-out" / "graph.json").write_text(json.dumps(graph), encoding="utf-8")
+    (proj / ".graph" / "graph.json").write_text(json.dumps(graph), encoding="utf-8")
     return str(proj)
 
 
@@ -269,8 +269,8 @@ def test_project_context_cache_is_lru_and_pins_default_graph(tmp_path, monkeypat
         # The configured default graph stays warm even when project capacity is full.
         assert "Nodes: 2" in _call_tool(client, headers, "graph_stats", {}, rid=7)
 
-    first_graph = str((Path(projects[0]) / "graphify-out" / "graph.json").resolve())
-    second_graph = str((Path(projects[1]) / "graphify-out" / "graph.json").resolve())
+    first_graph = str((Path(projects[0]) / ".graph" / "graph.json").resolve())
+    second_graph = str((Path(projects[1]) / ".graph" / "graph.json").resolve())
     default_graph = str(Path(default_graph).resolve())
     assert loads[first_graph] == 1
     assert loads[second_graph] == 2
@@ -292,7 +292,7 @@ def test_bad_project_path_errors_without_killing_server(tmp_path):
 def test_corrupt_project_graph_is_a_tool_error_without_killing_server(tmp_path):
     """A CLI-style SystemExit from a client graph cannot stop the MCP server."""
     project = Path(_project_with_graph(tmp_path, node_count=3))
-    (project / "graphify-out" / "graph.json").write_text("{not json", encoding="utf-8")
+    (project / ".graph" / "graph.json").write_text("{not json", encoding="utf-8")
     app = serve_mod._build_http_app(_graph_file(tmp_path), json_response=True)
     with _client(app) as client:
         headers = _init_session(client)
@@ -333,8 +333,8 @@ def test_cli_defaults_to_stdio(monkeypatch):
     monkeypatch.setattr(
         serve_mod, "serve_http", lambda *a, **k: calls.setdefault("http", (a, k))
     )
-    serve_mod._main(["graphify-out/graph.json"])
-    assert calls.get("stdio") == "graphify-out/graph.json"
+    serve_mod._main([".graph/graph.json"])
+    assert calls.get("stdio") == ".graph/graph.json"
     assert "http" not in calls
 
 

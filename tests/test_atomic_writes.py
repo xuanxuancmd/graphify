@@ -138,7 +138,7 @@ def test_save_manifest_writes_atomically(tmp_path):
     from graphify.detect import save_manifest
 
     (tmp_path / "a.py").write_text("x = 1\n", encoding="utf-8")
-    mpath = tmp_path / "graphify-out" / "manifest.json"
+    mpath = tmp_path / ".graph" / "manifest.json"
     save_manifest({"code": [str(tmp_path / "a.py")]}, manifest_path=str(mpath),
                   kind="both", root=tmp_path)
     assert json.loads(mpath.read_text())  # non-empty, valid JSON

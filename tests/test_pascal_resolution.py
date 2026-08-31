@@ -66,7 +66,7 @@ def test_single_file_extraction_reports_unresolved_inherited_call():
 
 
 def test_calls_resolve_across_files_via_inherits_chain(tmp_path):
-    # cache_root only controls where graphify-out/cache/ is written -- it has
+    # cache_root only controls where .graph/cache/ is written -- it has
     # no bearing on the Pascal cross-file class lookup, which is keyed off
     # each source path's own project root (see module docstring). Using
     # tmp_path here just keeps cache artifacts out of the repo.

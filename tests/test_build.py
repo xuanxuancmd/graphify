@@ -1272,7 +1272,7 @@ def test_build_merge_root_collapses_convention_drift(tmp_path):
     import networkx as nx
 
     root = tmp_path
-    graph_path = tmp_path / "graphify-out" / "graph.json"
+    graph_path = tmp_path / ".graph" / "graph.json"
     graph_path.parent.mkdir(parents=True)
 
     # Stored graph: nested project-relative convention + a STALE node for the same

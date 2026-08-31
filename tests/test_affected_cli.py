@@ -345,7 +345,7 @@ def test_affected_absolute_seed_resolves_via_graph_root_off_cwd(tmp_path, monkey
     was the analysed repo root. Editors and scripts pass an absolute path from
     anywhere, so `affected` kept answering "nothing depends on this" — the
     maintainer's noted follow-up. The root is now derived from the graph's own
-    location (`<root>/graphify-out/graph.json`).
+    location (`<root>/.graph/graph.json`).
     """
     from graphify.paths import GRAPHIFY_OUT_NAME
 
@@ -400,14 +400,14 @@ def test_affected_absolute_seed_outside_root_misses_cleanly(tmp_path, monkeypatc
 
 def test_affected_absolute_seed_with_graph_not_under_out_dir(tmp_path, monkeypatch, capsys):
     """Fallback layout: when --graph points at a graph.json NOT under the
-    graphify-out dir, the root is the graph's own parent (`else gp.parent`)."""
+    .graph dir, the root is the graph's own parent (`else gp.parent`)."""
     repo_root = tmp_path / "repo"
     repo_root.mkdir(parents=True)
     g = nx.DiGraph()
     g.add_node("target", label="Foo", source_file="pkg/foo.py", source_location="L1")
     g.add_node("caller", label="X()", source_file="app.py", source_location="L4")
     g.add_edge("caller", "target", relation="calls")
-    gp = repo_root / "graph.json"  # directly under repo_root, not graphify-out/
+    gp = repo_root / "graph.json"  # directly under repo_root, not .graph/
     gp.write_text(json.dumps(json_graph.node_link_data(g, edges="links")), encoding="utf-8")
 
     elsewhere = tmp_path / "elsewhere"

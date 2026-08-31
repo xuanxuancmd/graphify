@@ -2,7 +2,7 @@
 #
 # This file ships with the graphify package and provides out-of-the-box
 # defaults for all .graphifyrc-supported options. It is loaded first; a
-# project-level .graphifyrc (in the repo root, next to graphify-out/)
+# project-level .graphifyrc (in the repo root, next to .graph/)
 # then overrides any key it sets, so per-project config wins over defaults.
 #
 # To customize for your project, create a .graphifyrc in your repo root

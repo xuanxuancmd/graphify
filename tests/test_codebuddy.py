@@ -78,7 +78,7 @@ def test_codebuddy_install_project_writes_codebuddy_md(tmp_path):
     assert md.exists()
     content = md.read_text()
     assert "## graphify" in content
-    assert "graphify-out/" in content
+    assert ".graph/" in content
 
 
 def test_codebuddy_install_project_writes_hook(tmp_path):
@@ -132,7 +132,7 @@ def test_codebuddy_install_upgrades_stale_section(tmp_path):
     assert _CODEBUDDY_MD_MARKER in content
     assert "old content" in content
     assert "This is old instructions" not in content
-    assert "graphify-out/" in content
+    assert ".graph/" in content
     assert content.count("## graphify") == 1
 
 
@@ -144,7 +144,7 @@ def test_codebuddy_install_merges_existing_codebuddy_md(tmp_path):
     content = _codebuddy_md_path(tmp_path).read_text()
     assert "# My project rules" in content
     assert "## graphify" in content
-    assert "graphify-out/" in content
+    assert ".graph/" in content
 
 
 def test_codebuddy_install_prints_no_change_on_second_run(tmp_path, capsys):

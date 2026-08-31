@@ -116,7 +116,7 @@ def _project(tmp_path):
     src.mkdir()
     f = src / "mod.py"
     f.write_text("def x():\n    return 1\n", encoding="utf-8")
-    out = tmp_path / "graphify-out"
+    out = tmp_path / ".graph"
     out.mkdir()
     (out / "manifest.json").write_text(
         json.dumps({"src/mod.py": {"mtime": 1}}), encoding="utf-8")

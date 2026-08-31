@@ -96,6 +96,8 @@ When the user types `/graphify`, use the installed graphify skill or instruction
 
 ## 用法
 
+### Skill 命令（在 AI 编码助手里输入）
+
 ```
 /graphify                          # 对当前目录运行
 /graphify ./raw                    # 对指定目录运行
@@ -123,16 +125,146 @@ When the user types `/graphify`, use the installed graphify skill or instruction
 /graphify ./raw --neo4j            # 生成给 Neo4j 用的 cypher.txt
 /graphify ./raw --neo4j-push bolt://localhost:7687    # 直接推送到运行中的 Neo4j
 /graphify ./raw --mcp              # 启动 MCP stdio server
+```
 
-# git hooks - 跨平台，在 commit 和切分支后重建图谱
-graphify hook install
-graphify hook uninstall
-graphify hook status
+### CLI 命令（终端里运行）
 
-# 常驻助手规则 - 按平台区分
+#### 安装与卸载
+
+```
+# 通用安装（自动检测平台）
+graphify install [--platform P]    # P = claude|windows|codeagent|codebuddy|codex|opencode|aider|amp|agents|claw|droid|trae|trae-cn|gemini|cursor|antigravity|hermes|kiro|pi|devin
+graphify uninstall [--purge]       # 从所有已检测平台移除（--purge 同时删除 .graph/）
+
+# 按平台安装（写入对应的 skill + 常驻规则 + hooks）
 graphify claude install            # CLAUDE.md + PreToolUse hook（Claude Code）
 graphify claude uninstall
-graphify opencode install          # AGENTS.md（OpenCode）
+graphify codeagent install         # CLAUDE.md + PreToolUse + SessionStart hook（.cac 目录）
+graphify codeagent uninstall
+graphify codebuddy install         # CODEBUDDY.md + PreToolUse hook（CodeBuddy）
+graphify codebuddy uninstall
+graphify codex install             # AGENTS.md（Codex）
+graphify codex uninstall
+graphify opencode install          # AGENTS.md + plugin（OpenCode）
+graphify opencode uninstall
+graphify gemini install            # GEMINI.md + BeforeTool hook（Gemini CLI）
+graphify gemini uninstall
+graphify cursor install            # .cursor/rules/graphify.mdc（Cursor）
+graphify cursor uninstall
+graphify vscode install            # VS Code Copilot Chat 配置
+graphify vscode uninstall
+graphify kilo install              # Kilo 原生 skill + command + plugin
+graphify kilo uninstall
+graphify aider install             # AGENTS.md（Aider）
+graphify copilot install           # ~/.copilot/skills（GitHub Copilot CLI）
+graphify claw install              # AGENTS.md（OpenClaw）
+graphify droid install             # AGENTS.md（Factory Droid）
+graphify trae install              # AGENTS.md（Trae）
+graphify trae-cn install           # AGENTS.md（Trae CN）
+graphify antigravity install       # .agents/rules + workflows + skill（Google Antigravity）
+graphify hermes install            # ~/.hermes/skills（Hermes）
+graphify kiro install              # .kiro/skills + steering file（Kiro IDE/CLI）
+graphify pi install                # ~/.pi/agent/skills（Pi coding agent）
+graphify devin install             # ~/.config/devin/skills（Devin CLI）
+```
+
+#### Git hooks
+
+```
+graphify hook install              # 安装 post-commit + post-checkout hook（跨平台）
+graphify hook uninstall            # 移除 git hooks
+graphify hook status               # 检查是否已安装
+```
+
+#### 图谱构建与更新
+
+```
+graphify extract <path>            # 完整提取（AST + 语义 LLM），适合 CI/脚本
+graphify update <path>             # 只重提取代码文件并更新图谱（不需要 LLM）
+graphify update <path> --force     # 强制覆盖（即使节点数减少）
+graphify update <path> --no-cluster # 跳过聚类，只写原始提取结果
+graphify cluster-only <path>       # 只重新聚类已有 graph.json
+graphify watch <path>              # 监视文件夹，代码变更时自动重建图谱
+```
+
+#### 查询与分析
+
+```
+graphify query "<question>"        # BFS 遍历图谱回答问题
+graphify query "<question>" --dfs  # 深度优先遍历
+graphify query "<question>" --budget N  # 限制输出 token 数（默认 2000）
+graphify path "A" "B"              # 两节点间最短路径
+graphify explain "X"               # 节点的自然语言解释
+graphify affected "X"              # 反向遍历，查找受 X 影响的节点
+graphify god-nodes                 # 列出连接数最多的节点
+graphify diagnose multigraph       # 检测同端点边折叠风险
+graphify benchmark [graph.json]    # 测量 token 压缩比
+graphify check-update <path>       # 检查是否需要语义重新提取
+```
+
+#### 导出与可视化
+
+```
+graphify export html               # 从 graph.json 生成可交互 HTML
+graphify export callflow-html      # 生成 Mermaid 调用流 HTML
+graphify export obsidian           # 导出 Obsidian vault
+graphify export svg                # 导出 graph.svg
+graphify export graphml            # 导出 graph.graphml（Gephi、yEd）
+graphify export neo4j              # 生成 Neo4j cypher.txt
+graphify export falkordb           # 推送到 FalkorDB
+graphify tree                      # 生成 D3 可折叠树 HTML
+```
+
+#### 全局图谱
+
+```
+graphify global add <graph.json>   # 添加/更新项目图谱到全局图谱
+graphify global add <graph.json> --as <tag>  # 指定 repo 标签
+graphify global remove <tag>       # 从全局图谱移除某 repo
+graphify global list               # 列出全局图谱中的 repo
+graphify global path               # 打印全局图谱文件路径
+```
+
+#### 跨仓库与 URL
+
+```
+graphify clone <github-url>        # 克隆 GitHub repo 供 /graphify 使用
+graphify merge-graphs <g1> <g2>    # 合并多个 graph.json 为跨仓库图谱
+graphify merge-driver <base> <current> <other>  # git merge driver（由 hook install 注册）
+graphify add <url>                 # 拉取 URL 并保存到 ./raw
+graphify add <url> --author "Name"
+graphify add <url> --contributor "Name"
+```
+
+#### 自动维护（内部命令，无需手动调用）
+
+```
+# SessionStart hook 自动调用：检测 embedding 是否过期，过期则后台增量刷新
+graphify check
+
+# install 时自动注册：每天凌晨 0:00~5:59 随机时间全量刷新所有活跃项目
+graphify schedule                  # 注册/查看/卸载计划任务
+graphify schedule --status         # 查看任务是否已注册
+graphify schedule --unregister     # 移除计划任务
+```
+
+#### 反馈与学习
+
+```
+graphify save-result               # 保存 Q&A 结果到 .graph/memory/
+graphify reflect                   # 聚合 .graph/memory/ 生成 lessons 文档
+graphify label <path>              # 用 LLM 为社区命名
+```
+
+#### Embedding 配置
+
+在 `.graph/graphifyrc` 中配置（非环境变量）：
+
+```
+embed_backend=sentence-transformers     # 或 openai/gemini/kimi/deepseek/ollama/azure
+embed_model=paraphrase-multilingual-MiniLM-L12-v2
+embed_base_url=http://localhost:8080/v1  # openai-compatible 后端
+embed_api_key=any-non-empty-value        # 本地服务器
 ```
 
 支持混合文件类型：

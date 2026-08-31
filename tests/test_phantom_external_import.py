@@ -62,7 +62,7 @@ def test_no_phantom_edge_from_tsx_to_unrelated_python_file(tmp_path: Path):
         "export const CHART_COLOR = colors.blue[500];\n",
     )
 
-    result = extract([py, tsx], cache_root=tmp_path / "graphify-out")
+    result = extract([py, tsx], cache_root=tmp_path / ".graph")
     G = build_from_json(result, root=str(tmp_path))
 
     # Find the python file node.
@@ -102,7 +102,7 @@ def test_multiple_tsx_files_do_not_all_alias_onto_one_python_file(tmp_path: Path
         )
 
     paths = list((tmp_path).rglob("*.py")) + list((tmp_path / "frontend").rglob("*.tsx"))
-    result = extract(paths, cache_root=tmp_path / "graphify-out")
+    result = extract(paths, cache_root=tmp_path / ".graph")
     G = build_from_json(result, root=str(tmp_path))
 
     py_ids = {

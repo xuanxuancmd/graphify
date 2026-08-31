@@ -75,7 +75,7 @@ def test_partial_extraction_refuses_to_shrink_existing_graph(monkeypatch, tmp_pa
     err = capsys.readouterr().err
     assert "Refusing to overwrite" in err
     # The manifest must not be stamped for a graph we declined to write.
-    assert not (out_dir / "graphify-out" / "manifest.json").exists()
+    assert not (out_dir / ".graph" / "manifest.json").exists()
 
 
 def test_partial_extraction_writes_when_not_shrinking(monkeypatch, tmp_path):
@@ -123,7 +123,7 @@ def _seed_existing_graph(gout, n):
 def _arm_no_cluster(monkeypatch, tmp_path, *, extra_argv=()):
     corpus = _make_docs_corpus(tmp_path)
     out_dir = tmp_path / "out"
-    gout = out_dir / "graphify-out"
+    gout = out_dir / ".graph"
     _seed_existing_graph(gout, 5)  # existing complete graph
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test-fake-key")
 

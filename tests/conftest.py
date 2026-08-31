@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import os
 
-# graphify's default output dir changed from "graphify-out" to ".graph".
+# graphify's default output dir changed from ".graph" to ".graph".
 # The upstream test suite was written against the old default and hardcodes
-# "graphify-out" in hundreds of assertions. Setting GRAPHIFY_OUT here (before
+# ".graph" in hundreds of assertions. Setting GRAPHIFY_OUT here (before
 # any graphify module is imported) restores the old default for the test
 # process, so upstream tests pass unchanged. End users get ".graph" by
 # default via graphify/paths.py.
-os.environ.setdefault("GRAPHIFY_OUT", "graphify-out")
+os.environ.setdefault("GRAPHIFY_OUT", ".graph")
 
 import tempfile
 from pathlib import Path

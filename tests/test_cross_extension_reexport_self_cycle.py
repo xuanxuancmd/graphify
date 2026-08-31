@@ -300,7 +300,7 @@ def test_target_file_hint_never_written_to_the_ast_cache(tmp_path: Path):
 
     extract([mjs, ts], cache_root=tmp_path)
 
-    ast_dir = tmp_path / "graphify-out" / "cache" / "ast"
+    ast_dir = tmp_path / ".graph" / "cache" / "ast"
     entries = list(ast_dir.rglob("*.json")) if ast_dir.exists() else []
     for entry in entries:
         payload = json.loads(entry.read_text(encoding="utf-8"))

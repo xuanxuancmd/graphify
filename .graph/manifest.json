@@ -6,9 +6,9 @@
     "semantic_hash": ""
   },
   "graphify/__main__.py": {
-    "mtime": 1787986252.3154023,
-    "seen": 1787986929.250364,
-    "ast_hash": "8ba8aae6319aa875436fa0c75536e872",
+    "mtime": 1787992652.6030498,
+    "seen": 1787998354.3836498,
+    "ast_hash": "e9e39aaf225d98f69c85f255558e5719",
     "semantic_hash": ""
   },
   "graphify/_minhash.py": {
@@ -60,9 +60,9 @@
     "semantic_hash": ""
   },
   "graphify/cli.py": {
-    "mtime": 1787986499.9590425,
-    "seen": 1787986929.2518513,
-    "ast_hash": "93031706e5410839bdf8d71bd94ebe37",
+    "mtime": 1787997472.582523,
+    "seen": 1787998354.3846142,
+    "ast_hash": "b3b00296146bafbf1c589a8117f293c3",
     "semantic_hash": ""
   },
   "graphify/cluster.py": {
@@ -108,9 +108,9 @@
     "semantic_hash": ""
   },
   "graphify/embeddings.py": {
-    "mtime": 1787986273.6858459,
-    "seen": 1787986929.2528594,
-    "ast_hash": "306fa4072883a0e1368fefcf5b0f6a31",
+    "mtime": 1787992971.8663263,
+    "seen": 1787998354.3854485,
+    "ast_hash": "17d481175c3a94038d741f1d0d5346d9",
     "semantic_hash": ""
   },
   "graphify/export.py": {
@@ -204,9 +204,9 @@
     "semantic_hash": ""
   },
   "graphify/extractors/custom/swagger.py": {
-    "mtime": 1787825312.8391998,
-    "seen": 1787881633.916407,
-    "ast_hash": "f821ba814434e488aae3d3c0caf52979",
+    "mtime": 1788139389.041418,
+    "seen": 1788139552.4549983,
+    "ast_hash": "50062315781219a884f0348a24726267",
     "semantic_hash": ""
   },
   "graphify/extractors/dart.py": {
@@ -402,9 +402,9 @@
     "semantic_hash": ""
   },
   "graphify/install.py": {
-    "mtime": 1787986219.6138394,
-    "seen": 1787986929.2584605,
-    "ast_hash": "6bb084c049c1cbb3068ef260366a74d8",
+    "mtime": 1787997397.7235744,
+    "seen": 1787998354.3913856,
+    "ast_hash": "a89b3f30ad0941187af060d244b2b738",
     "semantic_hash": ""
   },
   "graphify/llm.py": {
@@ -2562,9 +2562,9 @@
     "semantic_hash": ""
   },
   "tests/test_swagger_extractor.py": {
-    "mtime": 1787820319.2426062,
-    "seen": 1787881633.9624836,
-    "ast_hash": "0fd5b63ee417b533ec99058334ed9f76",
+    "mtime": 1788139475.5537875,
+    "seen": 1788139552.502417,
+    "ast_hash": "76c86a15ed75c899f85d7145a18e23d3",
     "semantic_hash": ""
   },
   "tests/test_swift_builtin_noise.py": {
@@ -2910,9 +2910,9 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1787909113.8290825,
-    "seen": 1787911788.7574947,
-    "ast_hash": "48dcf441f74a6a8dcf42386ac93aae70",
+    "mtime": 1787998239.5807166,
+    "seen": 1787998354.4453528,
+    "ast_hash": "3650d6f937719b9d8045b4b429e9c12f",
     "semantic_hash": ""
   },
   "SECURITY.md": {
@@ -4745,31 +4745,31 @@
     "ast_hash": "b33d000860642c6f4907a877e0387a21",
     "semantic_hash": ""
   },
-  "tests/fixtures/graphify-out/cache/4722d67ec49f51710650249b1f865b6a748d91fb6805f3d385a99143eb950fe7.json": {
+  "tests/fixtures/.graph/cache/4722d67ec49f51710650249b1f865b6a748d91fb6805f3d385a99143eb950fe7.json": {
     "mtime": 1787733086.3591256,
     "seen": 1787881633.9278758,
     "ast_hash": "c2adbc982576a11ef556d90bb366cdd2",
     "semantic_hash": ""
   },
-  "tests/fixtures/graphify-out/cache/6a640d202b5f9a6d68f7b5eb2c05e708d85ba9ee43ad0ff271badfc966a1c06c.json": {
+  "tests/fixtures/.graph/cache/6a640d202b5f9a6d68f7b5eb2c05e708d85ba9ee43ad0ff271badfc966a1c06c.json": {
     "mtime": 1787733086.3591256,
     "seen": 1787881633.9278786,
     "ast_hash": "32ae162b73784b128e38556860a89ad5",
     "semantic_hash": ""
   },
-  "tests/fixtures/graphify-out/cache/a3c5220ed581781e1dc2f4e9a82eeee366881554ec9fce57823e124f7aecd348.json": {
+  "tests/fixtures/.graph/cache/a3c5220ed581781e1dc2f4e9a82eeee366881554ec9fce57823e124f7aecd348.json": {
     "mtime": 1787733086.3591256,
     "seen": 1787881633.9278808,
     "ast_hash": "beb627a14c4a8fdc041463e46a7d624e",
     "semantic_hash": ""
   },
-  "tests/fixtures/graphify-out/cache/f5916299213779311e7162e90a1613bca095b5372f5d269c5941b5237af2d020.json": {
+  "tests/fixtures/.graph/cache/f5916299213779311e7162e90a1613bca095b5372f5d269c5941b5237af2d020.json": {
     "mtime": 1787733086.3591256,
     "seen": 1787881633.9278824,
     "ast_hash": "9fb9f0e1e603fc12ae72b731255778f1",
     "semantic_hash": ""
   },
-  "tests/fixtures/graphify-out/cache/f82cddb8aad2615e0381e57b80857edfd3345213967c815de87e09be80f9f12a.json": {
+  "tests/fixtures/.graph/cache/f82cddb8aad2615e0381e57b80857edfd3345213967c815de87e09be80f9f12a.json": {
     "mtime": 1787733086.3591256,
     "seen": 1787881633.927884,
     "ast_hash": "09325bd92b31b04c9138f825f8712bf6",
@@ -4965,6 +4965,12 @@
     "mtime": 1787986832.8804731,
     "seen": 1787986929.2970629,
     "ast_hash": "3eeb5d0a40f936990ced4591a1adaa4e",
+    "semantic_hash": ""
+  },
+  "tests/test_embedding_incremental.py": {
+    "mtime": 1787997912.7784362,
+    "seen": 1787998354.4200943,
+    "ast_hash": "5a65f7a318a3471038eaa43fb93cccb6",
     "semantic_hash": ""
   }
 }

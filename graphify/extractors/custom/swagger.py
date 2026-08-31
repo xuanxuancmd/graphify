@@ -15,8 +15,14 @@ Design mirrors :mod:`graphify.extractors.custom.ddd`:
   ``cli.py`` stage 3 — doc extraction reuses stage 1's AST nodes +
   graph.json persisted code nodes).
 - ``_build_code_indices``: nameIndex (label -> nodes), fileIndex
-  (basename -> nodes) — same as DDD.
-- ``_match_controller``: ``tags[0]`` -> class node via nameIndex.
+  (basename -> nodes) — same as DDD. Also returns ``main_language``: the
+  backend main language detected by counting code nodes per
+  ``source_file`` extension (see ``_detect_main_language``).
+- ``_match_controller``: ``tags[0]`` -> class node via nameIndex. Java
+  codegen fallback: when no class node matches the bare tag and
+  ``main_language == "java"``, retry with an ``Impl`` suffix
+  (swagger-codegen / openapi-generator emit ``<Name>Impl`` classes for
+  Java).
 - ``_match_handler``: ``operationId`` -> function node, preferring the one
   co-located with the matched controller's ``source_file``
   (PascalCase.method pattern from DDD).
@@ -112,6 +118,41 @@ def _normalize_label(label: str) -> str:
     return s
 
 
+def _detect_main_language(code_nodes: list[dict]) -> str:
+    """Detect the backend main language by counting code nodes per language.
+
+    Walks every ``file_type == "code"`` node, bins by ``source_file``
+    extension (``.java`` -> ``"java"``, ``.ts`` -> ``"ts"``, ...), and
+    returns the language with the most nodes (plurality). Returns ``""``
+    when no code nodes are present or none have a recognisable extension.
+
+    This is a heuristic for mixed-language repos. A project may contain
+    Java backend code, TypeScript frontend, and Python/Shell build scripts
+    simultaneously — but only the backend language matters for swagger
+    controller matching. Build/tooling languages (Shell, Python for
+    scripts) typically have far fewer AST nodes than application code, so
+    they won't dominate the count. In a frontend-heavy repo where TS nodes
+    outnumber Java nodes, ``main_language`` will be ``"ts"`` and the Impl
+    fallback correctly stays off.
+
+    Used by ``_match_controller`` to gate the Java codegen ``Impl`` suffix
+    fallback — only fires when ``main_language == "java"``.
+    """
+    lang_counts: dict[str, int] = {}
+    for node in code_nodes:
+        if not node or node.get("file_type") != "code":
+            continue
+        source_file = node.get("source_file", "")
+        if not source_file or "." not in source_file:
+            continue
+        ext = source_file.rsplit(".", 1)[-1].lower()
+        if ext:
+            lang_counts[ext] = lang_counts.get(ext, 0) + 1
+    if not lang_counts:
+        return ""
+    return max(lang_counts, key=lang_counts.get)
+
+
 def _build_code_indices(code_nodes: list[dict]) -> dict[str, dict]:
     """Build nameIndex / fileIndex from AST-extracted code nodes.
 
@@ -122,6 +163,11 @@ def _build_code_indices(code_nodes: list[dict]) -> dict[str, dict]:
     whose label is ``.handleRegister()``). Normalization is idempotent for
     labels that are already bare (``UserService`` -> ``UserService``), so
     class nodes end up indexed once under their canonical name.
+
+    Also returns ``main_language``: the backend main language detected by
+    counting code nodes per ``source_file`` extension (see
+    :func:`_detect_main_language`). Used by ``_match_controller`` to gate
+    the Java-codegen ``Impl`` suffix fallback.
     """
     name_index: dict[str, list[dict]] = {}
     file_index: dict[str, list[dict]] = {}
@@ -148,7 +194,11 @@ def _build_code_indices(code_nodes: list[dict]) -> dict[str, dict]:
             if norm != label:
                 name_index.setdefault(norm, []).append(node)
 
-    return {"nameIndex": name_index, "fileIndex": file_index}
+    return {
+        "nameIndex": name_index,
+        "fileIndex": file_index,
+        "main_language": _detect_main_language(code_nodes),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -165,14 +215,33 @@ def _match_controller(
       - multiple class matches -> all, ``("AMBIGUOUS", 0.3)``
       - no class match but same-name non-class nodes -> all, ``("AMBIGUOUS", 0.3)``
       - nothing -> ``[]``
+
+    Java codegen fallback: swagger-codegen / openapi-generator for Java emit
+    implementation classes as ``<swaggerName>Impl`` (e.g. swagger tag
+    ``UserController`` -> Java class ``UserControllerImpl``). When the direct
+    ``tag_name`` lookup finds no class node AND the corpus's main backend
+    language is Java (``indices["main_language"] == "java"``), retry the
+    lookup with an ``Impl`` suffix. The fallback is gated on the main
+    language so it never fires for TypeScript / Python backends, avoiding
+    spurious ``XxxImpl`` matches in non-Java stacks.
     """
     if not tag_name:
         return []
     candidates = indices["nameIndex"].get(tag_name, [])
-    if not candidates:
-        return []
     class_nodes = [n for n in candidates if _is_class_node(n)]
+
+    # Java codegen fallback: <swaggerName>Impl (swagger-codegen / openapi-generator).
+    # Only fires when no class node matched the bare tag AND the corpus's main
+    # backend language is Java — see docstring for rationale.
+    if not class_nodes and indices.get("main_language") == "java":
+        impl_candidates = indices["nameIndex"].get(tag_name + "Impl", [])
+        impl_class_nodes = [n for n in impl_candidates if _is_class_node(n)]
+        if impl_class_nodes:
+            class_nodes = impl_class_nodes
+
     matched = class_nodes if class_nodes else candidates
+    if not matched:
+        return []
     if len(matched) == 1:
         return [(matched[0], "EXTRACTED", 1.0)]
     return [(n, "AMBIGUOUS", 0.3) for n in matched]

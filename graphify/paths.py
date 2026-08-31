@@ -1,13 +1,13 @@
 """Single source of truth for the graphify output-directory name.
 
-The output directory is ``graphify-out`` by default and overridable with the
+The output directory is ``.graph`` by default and overridable with the
 ``GRAPHIFY_OUT`` env var (worktrees or shared-output setups, #686). It accepts a
-relative name (``"graphify-out-feature"``) or an absolute path
-(``"/shared/graphify-out"``).
+relative name (``".graph-feature"``) or an absolute path
+(``"/shared/.graph"``).
 
 This used to be duplicated as an identical ``_GRAPHIFY_OUT`` constant in
 ``__main__``, ``cache``, and ``watch``, while ``security`` and ``callflow_html``
-hardcoded the literal ``"graphify-out"`` and silently ignored the override
+hardcoded the literal ``".graph"`` and silently ignored the override
 (#1423). Centralising it here keeps the name in one place. The value is read
 once at import time, matching the previous per-module constants — set
 ``GRAPHIFY_OUT`` before the process starts (the normal worktree/shared-output
@@ -296,7 +296,7 @@ def out_path(*parts: str) -> Path:
     """A path inside the configured output dir, e.g. ``out_path("cache")``.
 
     ``Path(GRAPHIFY_OUT) / ...`` resolves correctly for both a relative name
-    ("graphify-out") and an absolute override ("/shared/graphify-out").
+    (".graph") and an absolute override ("/shared/.graph").
     """
     return Path(GRAPHIFY_OUT, *parts)
 
@@ -368,7 +368,7 @@ def stem_filename_budget(output_dir: "str | Path", *, reserve: int = 0, limit: i
     default). That is the right question on POSIX and the wrong one on Windows,
     where the constraint is on the WHOLE path, not the component: a 200-char
     stem under a perfectly ordinary vault directory such as
-    ``C:\\Users\\me\\projects\\svc\\graphify-out\\obsidian`` exceeds MAX_PATH and
+    ``C:\\Users\\me\\projects\\svc\\.graph\\obsidian`` exceeds MAX_PATH and
     the write dies with ``FileNotFoundError``, aborting the export mid-vault.
 
     Returns ``limit`` unchanged on POSIX, so existing output is byte-for-byte

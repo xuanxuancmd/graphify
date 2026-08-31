@@ -576,7 +576,9 @@ class TestCheckSingleProjectStaleness:
         """BUG coverage: different commit → stale → refresh triggered."""
         tmp_path, graph_path = project_with_sidecar
 
-        # Change graph.json's built_at_commit
+        # Change graph.json's built_at_commit and make it newer than meta
+        import time as _t
+        _t.sleep(0.1)
         data = json.loads(graph_path.read_text(encoding="utf-8"))
         data["built_at_commit"] = "commit_new"
         graph_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
@@ -626,8 +628,7 @@ class TestCheckSingleProjectStaleness:
 
         # Non-git: no built_at_commit
         data = _make_graph_json([_node("A", desc="desc A"), _node("B", desc="desc B")])
-        # Deliberately no built_at_commit
-        del data["built_at_commit"] if "built_at_commit" in data else None
+        data.pop("built_at_commit", None)
         graph_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
         _make_sidecar(graph_dir, ["A", "B"], model="test-model", dim=4, graph_commit="")
@@ -640,7 +641,7 @@ class TestCheckSingleProjectStaleness:
         import time as _t
         _t.sleep(0.1)
         data2 = _make_graph_json([_node("A", desc="CHANGED desc A"), _node("B", desc="desc B")])
-        del data2["built_at_commit"] if "built_at_commit" in data2 else None
+        data2.pop("built_at_commit", None)
         graph_path.write_text(json.dumps(data2, indent=2), encoding="utf-8")
 
         from graphify.cli import _check_single_project
@@ -657,7 +658,7 @@ class TestCheckSingleProjectStaleness:
         graph_path = graph_dir / "graph.json"
 
         data = _make_graph_json([_node("A", desc="desc A")])
-        del data["built_at_commit"] if "built_at_commit" in data else None
+        data.pop("built_at_commit", None)
         graph_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
         _make_sidecar(graph_dir, ["A"], model="test-model", dim=4, graph_commit="")
@@ -761,14 +762,19 @@ class TestLaunchEmbeddingRefresh:
         """Default GRAPHIFY_OUT='.graph' should be passed to child as-is."""
         import graphify.cli as cli_module
 
-        # Ensure clean env
+        # Ensure clean env — previous tests may have set GRAPHIFY_OUT
         monkeypatch.delenv("GRAPHIFY_OUT", raising=False)
+        # Reload paths to pick up the default
+        import importlib
+        import graphify.paths
+        importlib.reload(graphify.paths)
+        importlib.reload(cli_module)
 
         graph_dir = tmp_path / ".graph"
         graph_dir.mkdir(parents=True)
 
-        # Mock _resolve_graphify_exe
-        with patch.object(cli_module, "_resolve_graphify_exe", return_value="graphify"):
+        # Mock _resolve_graphify_exe (imported from install.py into cli.py)
+        with patch("graphify.install._resolve_graphify_exe", return_value="graphify"):
             cli_module._launch_embedding_refresh(graph_dir)
 
         # Check the Popen call
@@ -788,7 +794,7 @@ class TestLaunchEmbeddingRefresh:
         graph_dir = tmp_path / "custom_graph"
         graph_dir.mkdir(parents=True)
 
-        with patch.object(cli_module, "_resolve_graphify_exe", return_value="graphify"):
+        with patch("graphify.install._resolve_graphify_exe", return_value="graphify"):
             cli_module._launch_embedding_refresh(graph_dir)
 
         assert mock_popen.called
@@ -808,7 +814,7 @@ class TestLaunchEmbeddingRefresh:
         graph_dir = project_root / ".graph"
         graph_dir.mkdir(parents=True)
 
-        with patch.object(cli_module, "_resolve_graphify_exe", return_value="graphify"):
+        with patch("graphify.install._resolve_graphify_exe", return_value="graphify"):
             cli_module._launch_embedding_refresh(graph_dir)
 
         assert mock_popen.called

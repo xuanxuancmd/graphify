@@ -97,7 +97,7 @@ class TestRebuildCodeProcessesSwaggerYaml:
         """
         from graphify.watch import _rebuild_code
 
-        graph_out = project / "graphify-out"
+        graph_out = project / ".graph"
         graph_json = graph_out / "graph.json"
 
         # Simulate a commit that touched both the code and the yaml
@@ -197,7 +197,7 @@ class TestRebuildCodeProcessesSwaggerYaml:
         assert ok
 
         graph = json.loads(
-            (project / "graphify-out" / "graph.json").read_text(encoding="utf-8")
+            (project / ".graph" / "graph.json").read_text(encoding="utf-8")
         )
         eps = [n for n in graph.get("nodes", []) if n.get("node_kind") == "rest_endpoint"]
         # Should now have 2 endpoints (GET + POST)
@@ -233,7 +233,7 @@ class TestRebuildCodeProcessesSwaggerYaml:
         assert ok
 
         graph = json.loads(
-            (project / "graphify-out" / "graph.json").read_text(encoding="utf-8")
+            (project / ".graph" / "graph.json").read_text(encoding="utf-8")
         )
         # Only the swagger yaml should produce swagger_doc/rest_endpoint nodes
         doc_nodes = [n for n in graph.get("nodes", []) if n.get("node_kind") == "swagger_doc"]

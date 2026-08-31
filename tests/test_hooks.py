@@ -203,7 +203,7 @@ def test_install_fallback_is_loud_not_silent(tmp_path):
 def test_hook_check_no_additionalContext(tmp_path):
     """graphify hook-check must not emit additionalContext — Codex Desktop rejects it."""
     import sys
-    out = tmp_path / "graphify-out"
+    out = tmp_path / ".graph"
     out.mkdir()
     (out / "graph.json").write_text("{}", encoding="utf-8")
 
@@ -315,7 +315,7 @@ def test_rebuild_bodies_read_graphify_root(name, body):
     recovered root to _rebuild_code instead of the bare Path('.')."""
     assert ".graphify_root" in body, f"{name} ignores .graphify_root (#1173)"
     # The output dir is resolved from GRAPHIFY_OUT at hook-run time, not hardcoded
-    # to graphify-out/, so a renamed output dir is still found (#1423).
+    # to .graph/, so a renamed output dir is still found (#1423).
     assert "GRAPHIFY_OUT" in body, f"{name} ignores the GRAPHIFY_OUT override (#1423)"
     # The recovered root is what gets rebuilt, not a hardcoded cwd.
     assert "_rebuild_code(_root" in body, f"{name} does not pass the recovered root"
@@ -768,7 +768,7 @@ def test_checkout_hook_skips_same_head_noop_at_runtime():
     guard = '[ "$PREV_HEAD" = "$NEW_HEAD" ] && exit 0'
     assert guard in _CHECKOUT_SCRIPT, "guard missing from the checkout script"
     # Real script through the same-head guard, then a sentinel — stops before the
-    # graphify-out check / detached launch so nothing is actually rebuilt.
+    # .graph check / detached launch so nothing is actually rebuilt.
     prefix = _CHECKOUT_SCRIPT.split(guard)[0] + guard + "\necho RAN\n"
 
     def run(prev, new, flag):

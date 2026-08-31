@@ -45,8 +45,8 @@ def _write(p: Path, nodes: list[dict]):
 
 
 def _merge(tmp_path, left: list[dict], right: list[dict]):
-    a = tmp_path / "svc_a" / "graphify-out" / "graph.json"
-    b = tmp_path / "svc_b" / "graphify-out" / "graph.json"
+    a = tmp_path / "svc_a" / ".graph" / "graph.json"
+    b = tmp_path / "svc_b" / ".graph" / "graph.json"
     _write(a, left)
     _write(b, right)
     out = tmp_path / "merged.json"

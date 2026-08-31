@@ -294,8 +294,8 @@ def test_merge_graphs_prefixes_ids(tmp_path):
     G1 = _make_graph([{"id": "userservice", "label": "UserService", "source_file": "src/user.py"}])
     G2 = _make_graph([{"id": "userservice", "label": "UserService", "source_file": "src/user.py"}])
 
-    repo1 = tmp_path / "repo1" / "graphify-out"
-    repo2 = tmp_path / "repo2" / "graphify-out"
+    repo1 = tmp_path / "repo1" / ".graph"
+    repo2 = tmp_path / "repo2" / ".graph"
     repo1.mkdir(parents=True)
     repo2.mkdir(parents=True)
 
