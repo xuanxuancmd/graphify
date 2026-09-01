@@ -413,7 +413,7 @@ def _render_frontmatter(platform: Platform) -> str:
 # untranslated bash to the Windows variant. ``_POWERSHELL_BANNED_TOKENS`` is the
 # belt-and-braces post-check on the final body.
 
-_PY_INVOKE_POSIX = '$(cat .graph/.graphify_python) -c "'
+_PY_INVOKE_POSIX = '"$(cat .graph/.graphify_python)" -c "'
 _PY_INVOKE_PS_OPEN = "@'"
 _PY_INVOKE_PS_CLOSE = "'@ | & (Get-Content .graph\\.graphify_python) -"
 _MKDIR_POSIX = "mkdir -p .graph"

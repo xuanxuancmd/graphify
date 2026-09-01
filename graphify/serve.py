@@ -14,7 +14,7 @@ import networkx as nx
 from networkx.readwrite import json_graph
 from graphify.security import sanitize_label, check_graph_file_size_cap
 from graphify.build import edge_data, edge_datas
-from graphify.hybrid_scorer import HybridScorer, _VECTOR_SIMILARITY_BONUS
+from graphify.hybrid_scorer import HybridScorer, _vector_tier_weight, _DEFAULT_VECTOR_SIM_TIERS
 from graphify.paths import default_graph_json as _default_graph_json
 
 try:
@@ -713,10 +713,22 @@ def _score_query(
         # fresh entry. This is the AC1 rescue path: "login" -> AuthService
         # when cosine sim says they're semantically related.
         if query_embedding_scores:
+            # Get the tier config from the hybrid scorer if available,
+            # otherwise fall back to defaults.
+            tiers = (
+                hybrid_scorer._vector_sim_tiers
+                if hybrid_scorer is not None
+                else _DEFAULT_VECTOR_SIM_TIERS
+            )
             for nid, vec_sim in query_embedding_scores.items():
                 if vec_sim <= 0:
                     continue
-                bonus = _VECTOR_SIMILARITY_BONUS * vec_sim
+                # Confidence-gated: tier_weight × sim (see
+                # docs/retrieval-overall-design/vector-tier-redesign-spec.md)
+                tier_weight = _vector_tier_weight(vec_sim, tiers)
+                if tier_weight <= 0:
+                    continue  # T5 noise: sim below lowest threshold → skip
+                bonus = tier_weight * vec_sim
                 score_by_nid[nid] = score_by_nid.get(nid, 0.0) + bonus
         # Rebuild as (score, nid) tuples — the order the downstream sort
         # lambda `(-s[0], ...)` and _pick_seeds expect.

@@ -1,0 +1,87 @@
+- generic [active] [ref=f1e1]:
+  - navigation [ref=f1e2]:
+    - generic [ref=f1e3]: G
+    - button "14 审核队列" [ref=f1e5] [cursor=pointer]:
+      - generic [ref=f1e8]: "14"
+      - generic: 审核队列
+    - button "学习模式" [ref=f1e9] [cursor=pointer]
+    - button "图谱浏览" [ref=f1e12] [cursor=pointer]
+    - button "路径查找" [ref=f1e21] [cursor=pointer]
+    - button "建议提问" [ref=f1e24] [cursor=pointer]
+    - button "主题" [ref=f1e28] [cursor=pointer]
+    - button "设置" [ref=f1e32] [cursor=pointer]
+  - generic [ref=f1e36]:
+    - banner [ref=f1e37]:
+      - generic [ref=f1e38]:
+        - generic [ref=f1e39]: rsl-siege-manager
+        - generic [ref=f1e40]: 193 nodes · 312 edges · 7 communities
+      - generic [ref=f1e41]:
+        - button "概览" [ref=f1e42] [cursor=pointer]
+        - button "学习" [ref=f1e43] [cursor=pointer]
+        - button "深挖" [ref=f1e44] [cursor=pointer]
+      - textbox "搜索节点、关系、社区…" [ref=f1e49]
+    - generic [ref=f1e50]:
+      - generic [ref=f1e171]:
+        - generic [ref=f1e174]: "4"
+        - generic [ref=f1e175]: /
+        - generic [ref=f1e176]: "8"
+        - generic [ref=f1e177]: ·
+        - generic [ref=f1e178]: Combat System 核心入口
+      - complementary [ref=f1e179]:
+        - generic [ref=f1e180]:
+          - button "漫游" [ref=f1e181] [cursor=pointer]
+          - button "节点信息" [ref=f1e182] [cursor=pointer]
+          - button "文件树" [ref=f1e183] [cursor=pointer]
+        - generic [ref=f1e184]:
+          - generic [ref=f1e185]:
+            - generic [ref=f1e186]: 项目结构漫游
+            - generic [ref=f1e187]: 8 步 · 引导式架构 walkthrough
+          - generic [ref=f1e190]:
+            - generic [ref=f1e191]: Combat System 核心入口
+            - generic [ref=f1e192]:
+              - strong [ref=f1e193]: CombatResolver
+              - text: 是战斗系统的入口点，所有伤害计算最终汇聚到这里。它依赖
+              - code [ref=f1e194]: DamageCalc
+              - text: 做数值计算，通过
+              - code [ref=f1e195]: EventManager
+              - text: 广播战斗事件。注意这里有一条
+              - strong [ref=f1e196]: INFERRED
+              - text: 边连向
+              - code [ref=f1e197]: Pathfinder
+              - text: —— 两者结构上没有直接调用，但语义上都处理"目标选择"问题。
+            - generic [ref=f1e198]:
+              - generic [ref=f1e199]: 概念 · 事件驱动架构
+              - generic [ref=f1e200]: EventManager 采用发布-订阅模式：combat 模块触发事件，UI 和 AI 模块各自订阅。这种解耦让战斗逻辑不需要知道谁在监听 —— 这也是为什么 EventManager 是 god node（连接数最多的节点）。
+            - generic [ref=f1e201]: 相关组件
+            - generic [ref=f1e202]:
+              - generic [ref=f1e203] [cursor=pointer]: CombatResolver
+              - generic [ref=f1e204] [cursor=pointer]: DamageCalc
+              - generic [ref=f1e205] [cursor=pointer]: EventManager
+              - generic [ref=f1e206] [cursor=pointer]: Pathfinder
+          - generic [ref=f1e207]:
+            - generic [ref=f1e208]:
+              - generic [ref=f1e209] [cursor=pointer]
+              - generic [ref=f1e210] [cursor=pointer]
+              - generic [ref=f1e211] [cursor=pointer]
+              - generic [ref=f1e212] [cursor=pointer]
+              - generic [ref=f1e213] [cursor=pointer]
+              - generic [ref=f1e214] [cursor=pointer]
+              - generic [ref=f1e215] [cursor=pointer]
+              - generic [ref=f1e216] [cursor=pointer]
+            - generic [ref=f1e217]:
+              - button "← 上一步" [ref=f1e218] [cursor=pointer]
+              - button "下一步 →" [ref=f1e219] [cursor=pointer]
+    - contentinfo [ref=f1e220]:
+      - generic [ref=f1e221]: 类型
+      - generic [ref=f1e222] [cursor=pointer]: python
+      - generic [ref=f1e224] [cursor=pointer]: markdown
+      - generic [ref=f1e226] [cursor=pointer]: yaml
+      - generic [ref=f1e228] [cursor=pointer]: json
+      - generic [ref=f1e230] [cursor=pointer]: text
+      - generic [ref=f1e232]: 标签
+      - generic [ref=f1e233] [cursor=pointer]: domain_event
+      - generic [ref=f1e234] [cursor=pointer]: invariant
+      - generic [ref=f1e235] [cursor=pointer]: tech_constraint
+      - generic [ref=f1e236] [cursor=pointer]: contract
+      - generic [ref=f1e237] [cursor=pointer]: 仅低置信度
+      - generic [ref=f1e239]: 184 / 193 节点 · 312 边 · 7 社区

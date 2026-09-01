@@ -28,7 +28,9 @@ from graphify.fuzzy import fuzzy_score
 from graphify.hybrid_scorer import (
     HybridScorer,
     _FUZZY_MATCH_BONUS,
-    _VECTOR_SIMILARITY_BONUS,
+    _vector_tier_weight,
+    _DEFAULT_VECTOR_SIM_TIERS,
+    _VECTOR_TIER_WEIGHTS,
 )
 from graphify.serve import _query_graph_text, _score_query
 
@@ -195,7 +197,7 @@ class TestScoreQueryVectorTier:
         )
         # UserService still top-1
         assert scored.ranked[0][1] == "userservice"
-        # Score includes EXACT (1000 * idf) + vector bonus (5.0 * 0.95 * idf)
+        # Score includes EXACT (1000 * idf) + vector bonus (T1: 80 * 0.95 = 76)
         # Just verify it's strictly higher than pure lexical
         pure = _score_query(G, ["userservice"], collect_per_term_seeds=False)
         assert scored.ranked[0][0] > pure.ranked[0][0]
@@ -217,8 +219,8 @@ class TestScoreQueryVectorTier:
         )
         assert scored.ranked, "vector tier should have rescued a node"
         assert scored.ranked[0][1] == "authservice"
-        # Score is vector bonus only (5.0 * 0.90 = 4.5)
-        assert scored.ranked[0][0] == pytest.approx(_VECTOR_SIMILARITY_BONUS * 0.90, rel=0.01)
+        # Score is vector bonus only: T1 (sim=0.90 ≥ 0.85) → 80 × 0.90 = 72.0
+        assert scored.ranked[0][0] == pytest.approx(80.0 * 0.90, rel=0.01)
 
     def test_semantic_false_disables_vector_tier(self) -> None:
         """AC2: semantic=False ignores query_embedding_scores entirely."""
@@ -381,25 +383,155 @@ class TestQueryGraphTextSemantic:
 
 
 # ---------------------------------------------------------------------------
-# Bonus constants (spec §4.1)
+# Vector tier: confidence-gated tiered weights
+# (docs/retrieval-overall-design/vector-tier-redesign-spec.md §3)
 # ---------------------------------------------------------------------------
 
 
-class TestBonusConstants:
-    def test_vector_bonus_between_substring_and_prefix(self) -> None:
-        """Spec §4.1: _VECTOR_SIMILARITY_BONUS is between SUBSTRING(1) and
-        PREFIX(100) so a precise query stays EXACT-dominated."""
-        from graphify.serve import _SUBSTRING_MATCH_BONUS, _PREFIX_MATCH_BONUS
-        assert _SUBSTRING_MATCH_BONUS < _VECTOR_SIMILARITY_BONUS < _PREFIX_MATCH_BONUS
+class TestVectorTierWeights:
+    """The _vector_tier_weight function maps sim → tier_weight via 5
+    confidence bands, replacing the old flat _VECTOR_SIMILARITY_BONUS=5.0."""
 
-    def test_fuzzy_bonus_above_substring_below_vector(self) -> None:
-        """Spec §4.1: _FUZZY_MATCH_BONUS is above SUBSTRING(1) but below
-        VECTOR(5) so fuzzy never outscores a real vector hit."""
+    def test_t1_high_confidence(self) -> None:
+        """T1: sim ≥ 0.85 → 80 (PREFIX-level)."""
+        assert _vector_tier_weight(0.90) == _VECTOR_TIER_WEIGHTS[0]  # 80.0
+        assert _vector_tier_weight(0.85) == _VECTOR_TIER_WEIGHTS[0]  # boundary
+        assert _vector_tier_weight(1.00) == _VECTOR_TIER_WEIGHTS[0]
+
+    def test_t2_medium_confidence(self) -> None:
+        """T2: 0.70 ≤ sim < 0.85 → 20."""
+        assert _vector_tier_weight(0.80) == _VECTOR_TIER_WEIGHTS[1]  # 20.0
+        assert _vector_tier_weight(0.70) == _VECTOR_TIER_WEIGHTS[1]  # boundary
+
+    def test_t3_weak_confidence(self) -> None:
+        """T3: 0.55 ≤ sim < 0.70 → 5."""
+        assert _vector_tier_weight(0.60) == _VECTOR_TIER_WEIGHTS[2]  # 5.0
+        assert _vector_tier_weight(0.55) == _VECTOR_TIER_WEIGHTS[2]  # boundary
+
+    def test_t4_marginal(self) -> None:
+        """T4: 0.40 ≤ sim < 0.55 → 1."""
+        assert _vector_tier_weight(0.45) == _VECTOR_TIER_WEIGHTS[3]  # 1.0
+        assert _vector_tier_weight(0.40) == _VECTOR_TIER_WEIGHTS[3]  # boundary
+
+    def test_t5_noise_discarded(self) -> None:
+        """T5: sim < 0.40 → 0 (noise, no contribution)."""
+        assert _vector_tier_weight(0.30) == _VECTOR_TIER_WEIGHTS[4]  # 0.0
+        assert _vector_tier_weight(0.0) == _VECTOR_TIER_WEIGHTS[4]
+
+    def test_t1_below_prefix(self) -> None:
+        """Spec §3.1: T1 weight (80) stays below PREFIX (100) so precise
+        queries remain EXACT/PREFIX-dominated."""
+        from graphify.serve import _PREFIX_MATCH_BONUS
+        assert _VECTOR_TIER_WEIGHTS[0] < _PREFIX_MATCH_BONUS
+
+    def test_fuzzy_bonus_above_substring_below_vector_t3(self) -> None:
+        """Spec §4.1: _FUZZY_MATCH_BONUS (2.0) is above SUBSTRING(1) but
+        below VECTOR T3 weight (5) so fuzzy never outscores a real vector hit."""
         from graphify.serve import _SUBSTRING_MATCH_BONUS
-        assert _SUBSTRING_MATCH_BONUS < _FUZZY_MATCH_BONUS < _VECTOR_SIMILARITY_BONUS
+        assert _SUBSTRING_MATCH_BONUS < _FUZZY_MATCH_BONUS < _VECTOR_TIER_WEIGHTS[2]
 
-    def test_vector_bonus_static_method(self) -> None:
-        """The vector_bonus static helper matches the spec formula."""
-        assert HybridScorer.vector_bonus(0.9) == pytest.approx(_VECTOR_SIMILARITY_BONUS * 0.9)
+
+class TestVectorBonusFormula:
+    """The vector_bonus = tier_weight × sim (not tier_weight alone)."""
+
+    def test_t1_bonus(self) -> None:
+        """T1: 80 × sim."""
+        assert HybridScorer.vector_bonus(0.90) == pytest.approx(80.0 * 0.90)
+        assert HybridScorer.vector_bonus(0.85) == pytest.approx(80.0 * 0.85)
+
+    def test_t2_bonus(self) -> None:
+        """T2: 20 × sim."""
+        assert HybridScorer.vector_bonus(0.75) == pytest.approx(20.0 * 0.75)
+
+    def test_t3_bonus(self) -> None:
+        """T3: 5 × sim."""
+        assert HybridScorer.vector_bonus(0.60) == pytest.approx(5.0 * 0.60)
+
+    def test_t4_bonus(self) -> None:
+        """T4: 1 × sim."""
+        assert HybridScorer.vector_bonus(0.45) == pytest.approx(1.0 * 0.45)
+
+    def test_t5_zero_bonus(self) -> None:
+        """T5: sim < 0.40 → bonus = 0."""
+        assert HybridScorer.vector_bonus(0.30) == 0.0
         assert HybridScorer.vector_bonus(0.0) == 0.0
-        assert HybridScorer.vector_bonus(1.0) == pytest.approx(_VECTOR_SIMILARITY_BONUS)
+
+    def test_boundary_jump_is_deliberate(self) -> None:
+        """Spec §3.3: there's a deliberate jump at tier boundaries
+        (confidence-level transitions), e.g. 0.85→0.84 drops from T1 to T2."""
+        # sim=0.85 → T1: 80 × 0.85 = 68.0
+        # sim=0.84 → T2: 20 × 0.84 = 16.8
+        high = HybridScorer.vector_bonus(0.85)
+        low = HybridScorer.vector_bonus(0.84)
+        assert high > low * 3  # significant drop at boundary
+
+
+class TestScoreQueryVectorTiered:
+    """Integration tests for the tiered vector bonus inside _score_query."""
+
+    def test_high_confidence_vector_dominates(self) -> None:
+        """Spec §3.5 场景 2: semantic query where vector (sim=0.90, T1)
+        should dominate with a large bonus (72.0), not the old 4.5."""
+        G = _build_small_graph()
+        query_emb = {"authservice": 0.90, "userservice": 0.30, "throttleservice": 0.05}
+        scored = _score_query(
+            G, ["login"],
+            collect_per_term_seeds=False,
+            query_embedding_scores=query_emb, semantic=True,
+        )
+        assert scored.ranked[0][1] == "authservice"
+        # T1: 80 × 0.90 = 72.0
+        assert scored.ranked[0][0] == pytest.approx(72.0, rel=0.01)
+
+    def test_medium_confidence_vector_t2(self) -> None:
+        """sim=0.75 → T2: 20 × 0.75 = 15.0."""
+        G = _build_small_graph()
+        query_emb = {"authservice": 0.75}
+        scored = _score_query(
+            G, ["login"],
+            collect_per_term_seeds=False,
+            query_embedding_scores=query_emb, semantic=True,
+        )
+        assert scored.ranked[0][0] == pytest.approx(15.0, rel=0.01)
+
+    def test_noise_sim_does_not_contribute(self) -> None:
+        """Spec §3.1 T5: sim < 0.40 contributes 0 → no results."""
+        G = _build_small_graph()
+        query_emb = {"authservice": 0.35, "userservice": 0.20}
+        scored = _score_query(
+            G, ["login"],
+            collect_per_term_seeds=False,
+            query_embedding_scores=query_emb, semantic=True,
+        )
+        assert not scored.ranked  # all below T4 threshold → 0 bonus
+
+    def test_precise_query_still_exact_dominated(self) -> None:
+        """Spec §3.5 场景 1: EXACT(1000) still dominates VECTOR T1(80)."""
+        G = _build_small_graph()
+        query_emb = {"userservice": 0.95, "authservice": 0.10}
+        scored = _score_query(
+            G, ["userservice"],
+            collect_per_term_seeds=False,
+            query_embedding_scores=query_emb, semantic=True,
+        )
+        assert scored.ranked[0][1] == "userservice"
+        # Score = EXACT(1000×IDF) + T1(80×0.95=76) > pure lexical
+        pure = _score_query(G, ["userservice"], collect_per_term_seeds=False)
+        assert scored.ranked[0][0] > pure.ranked[0][0]
+
+    def test_agreement_boost_preserved(self) -> None:
+        """Spec §3.5 场景 3: lexical + vector double-hit scores higher
+        than either alone (agreement boost)."""
+        G = _build_small_graph()
+        # 'user' matches 'userservice' via PREFIX(100×IDF)
+        # AND vector sim=0.90 (T1: 80×0.90=72)
+        query_emb = {"userservice": 0.90, "authservice": 0.10}
+        scored = _score_query(
+            G, ["user"],
+            collect_per_term_seeds=False,
+            query_embedding_scores=query_emb, semantic=True,
+        )
+        assert scored.ranked[0][1] == "userservice"
+        # Score includes both PREFIX + T1 vector (agreement boost)
+        pure = _score_query(G, ["user"], collect_per_term_seeds=False)
+        assert scored.ranked[0][0] > pure.ranked[0][0]

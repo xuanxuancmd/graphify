@@ -1,0 +1,167 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]: G
+      - generic [ref=e5]: graphify
+      - generic [ref=e6]: / rsl-siege-manager
+    - navigation [ref=e8]:
+      - button "审核 14" [ref=e9] [cursor=pointer]:
+        - text: 审核
+        - generic [ref=e12]: "14"
+      - button "学习" [ref=e13] [cursor=pointer]
+      - button "图谱" [ref=e16] [cursor=pointer]
+    - generic [ref=e25]:
+      - button "概览" [ref=e26] [cursor=pointer]
+      - button "学习" [ref=e27] [cursor=pointer]
+      - button "深挖" [ref=e28] [cursor=pointer]
+    - generic [ref=e29]:
+      - textbox "搜索节点、关系、社区…" [ref=e33]
+      - generic [ref=e34]: /
+    - button "路径查找" [ref=e35] [cursor=pointer]
+    - button "主题" [ref=e38] [cursor=pointer]
+    - button "快捷键 ?" [ref=e42] [cursor=pointer]
+  - main [ref=e45]:
+    - complementary [ref=e238]:
+      - generic [ref=e239]:
+        - generic [ref=e240]: 过滤
+        - button [ref=e241] [cursor=pointer]
+      - generic [ref=e244]:
+        - generic [ref=e245]:
+          - generic [ref=e246]: 数据类型
+          - generic [ref=e247] [cursor=pointer]:
+            - generic [ref=e249]: python
+            - generic [ref=e250]: "142"
+          - generic [ref=e251] [cursor=pointer]:
+            - generic [ref=e253]: markdown
+            - generic [ref=e254]: "28"
+          - generic [ref=e255] [cursor=pointer]:
+            - generic [ref=e257]: yaml
+            - generic [ref=e258]: "12"
+          - generic [ref=e259] [cursor=pointer]:
+            - generic [ref=e261]: json
+            - generic [ref=e262]: "8"
+          - generic [ref=e263] [cursor=pointer]:
+            - generic [ref=e265]: text
+            - generic [ref=e266]: "3"
+        - generic [ref=e267]:
+          - generic [ref=e268]: 标签
+          - generic [ref=e269] [cursor=pointer]:
+            - generic [ref=e271]: domain_event
+            - generic [ref=e272]: "9"
+          - generic [ref=e273] [cursor=pointer]:
+            - generic [ref=e275]: invariant
+            - generic [ref=e276]: "5"
+          - generic [ref=e277] [cursor=pointer]:
+            - generic [ref=e279]: tech_constraint
+            - generic [ref=e280]: "7"
+          - generic [ref=e281] [cursor=pointer]:
+            - generic [ref=e283]: contract
+            - generic [ref=e284]: "4"
+        - generic [ref=e285]:
+          - generic [ref=e286]: 社区
+          - generic [ref=e287] [cursor=pointer]:
+            - generic [ref=e289]: Combat System
+            - generic [ref=e290]: "38"
+          - generic [ref=e291] [cursor=pointer]:
+            - generic [ref=e293]: AI Behaviour
+            - generic [ref=e294]: "27"
+          - generic [ref=e295] [cursor=pointer]:
+            - generic [ref=e297]: Siege Logic
+            - generic [ref=e298]: "31"
+          - generic [ref=e299] [cursor=pointer]:
+            - generic [ref=e301]: Pathfinding
+            - generic [ref=e302]: "19"
+          - generic [ref=e303] [cursor=pointer]:
+            - generic [ref=e305]: Save / Load
+            - generic [ref=e306]: "22"
+          - generic [ref=e307] [cursor=pointer]:
+            - generic [ref=e309]: UI / HUD
+            - generic [ref=e310]: "15"
+          - generic [ref=e311] [cursor=pointer]:
+            - generic [ref=e313]: Config
+            - generic [ref=e314]: "14"
+    - complementary [ref=e315]:
+      - generic [ref=e316]:
+        - generic [ref=e317]:
+          - text: 待审核队列
+          - generic [ref=e318]: "14"
+        - button [ref=e319] [cursor=pointer]
+      - generic [ref=e322]:
+        - generic [ref=e323] [cursor=pointer]:
+          - text: 孤岛
+          - generic [ref=e325]: "3"
+        - generic [ref=e326] [cursor=pointer]:
+          - text: 多匹配
+          - generic [ref=e328]: "5"
+        - generic [ref=e329] [cursor=pointer]:
+          - text: 推断
+          - generic [ref=e331]: "4"
+        - generic [ref=e332] [cursor=pointer]:
+          - text: LLM缺失
+          - generic [ref=e334]: "2"
+      - generic [ref=e335]:
+        - generic [ref=e336] [cursor=pointer]:
+          - generic [ref=e337]:
+            - generic [ref=e338]: 多匹配
+            - generic [ref=e339]: EventManager → handle_event
+          - generic [ref=e340]: calls [AMBIGUOUS] · 3 candidates matched
+          - generic [ref=e341]: combat/event_manager.py:42
+        - generic [ref=e342] [cursor=pointer]:
+          - generic [ref=e343]:
+            - generic [ref=e344]: 孤岛
+            - generic [ref=e345]: SiegeTower.attack_pattern
+          - generic [ref=e346]: unmatched anchor · no inbound edges
+          - generic [ref=e347]: units/siege_tower.py:118
+        - generic [ref=e348] [cursor=pointer]:
+          - generic [ref=e349]:
+            - generic [ref=e350]: 推断
+            - generic [ref=e351]: Pathfinder ↔ AStarNode
+          - generic [ref=e352]: semantically_similar_to [INFERRED] · 0.72
+          - generic [ref=e353]: ai/pathfinder.py
+        - generic [ref=e354] [cursor=pointer]:
+          - generic [ref=e355]:
+            - generic [ref=e356]: 多匹配
+            - generic [ref=e357]: SaveGame.serialize → write
+          - generic [ref=e358]: calls [AMBIGUOUS] · 2 candidates matched
+          - generic [ref=e359]: save/save_game.py:67
+        - generic [ref=e360] [cursor=pointer]:
+          - generic [ref=e361]:
+            - generic [ref=e362]: 推断
+            - generic [ref=e363]: CombatResolver → DamageCalc
+          - generic [ref=e364]: calls [INFERRED] · 0.81
+          - generic [ref=e365]: combat/resolver.py:24
+        - generic [ref=e366] [cursor=pointer]:
+          - generic [ref=e367]:
+            - generic [ref=e368]: 孤岛
+            - generic [ref=e369]: config.difficulty_curve
+          - generic [ref=e370]: unmatched anchor · swagger island
+          - generic [ref=e371]: config/difficulty.yaml
+      - generic [ref=e372]:
+        - generic [ref=e373]: 编辑关系
+        - generic [ref=e374]:
+          - generic [ref=e375]: 关系类型
+          - combobox [ref=e376]:
+            - option "calls" [selected]
+            - option "imports"
+            - option "uses"
+            - option "defines"
+            - option "semantically_similar_to"
+        - generic [ref=e377]:
+          - generic [ref=e378]: 置信度
+          - combobox [ref=e379]:
+            - option "EXTRACTED"
+            - option "AMBIGUOUS" [selected]
+            - option "INFERRED"
+        - generic [ref=e380]:
+          - generic [ref=e381]: 修正说明（写入错误报告）
+          - textbox "描述问题与期望的修正…" [ref=e382]: 3 个 handle_event 候选，应指向 combat.EventHandler.handle_event 而非 ui.EventListener。
+        - generic [ref=e383]:
+          - button "跳过" [ref=e384] [cursor=pointer]
+          - button "提交修正" [ref=e385] [cursor=pointer]
+        - generic [ref=e386]: → 写入 .graph/error-report/2026-08-31-event-manager.json
+    - generic [ref=e387]:
+      - generic [ref=e388]: 184 / 193 节点
+      - generic [ref=e389]: ·
+      - generic [ref=e390]: 312 条边
+      - generic [ref=e391]: ·
+      - generic [ref=e392]: 7 个社区

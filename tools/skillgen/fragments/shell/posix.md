@@ -36,4 +36,4 @@ echo "$(cd INPUT_PATH && pwd)" > .graph/.graphify_root
 
 If the import succeeds, print nothing and move straight to Step 2.
 
-**In every subsequent bash block, replace `python3` with `$(cat .graph/.graphify_python)` to use the correct interpreter.**
+**In every subsequent bash block, replace `python3` with `"$(cat .graph/.graphify_python)"` to use the correct interpreter.**

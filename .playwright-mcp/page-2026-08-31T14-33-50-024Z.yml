@@ -1,0 +1,117 @@
+- generic [active] [ref=f2e1]:
+  - banner [ref=f2e2]:
+    - generic [ref=f2e3]:
+      - generic [ref=f2e4]: G
+      - generic [ref=f2e5]: graphify
+      - generic [ref=f2e6]: / rsl-siege-manager
+    - generic [ref=f2e7]:
+      - textbox "搜索节点、关系、社区…" [ref=f2e11]
+      - generic [ref=f2e12]: /
+    - generic [ref=f2e13]:
+      - button "概览" [ref=f2e14] [cursor=pointer]
+      - button "学习" [ref=f2e15] [cursor=pointer]
+      - button "深挖" [ref=f2e16] [cursor=pointer]
+    - button "主题" [ref=f2e17] [cursor=pointer]
+    - button "快捷键" [ref=f2e21] [cursor=pointer]
+  - main [ref=f2e24]:
+    - generic [ref=f2e274]:
+      - generic [ref=f2e275]:
+        - generic [ref=f2e276]:
+          - generic [ref=f2e277]: 过滤
+          - button "收起" [ref=f2e278] [cursor=pointer]
+        - generic [ref=f2e281]:
+          - generic [ref=f2e282]:
+            - generic [ref=f2e283]: 类型
+            - generic [ref=f2e284] [cursor=pointer]:
+              - generic [ref=f2e286]: python
+              - generic [ref=f2e287]: "142"
+            - generic [ref=f2e288] [cursor=pointer]:
+              - generic [ref=f2e290]: markdown
+              - generic [ref=f2e291]: "28"
+            - generic [ref=f2e292] [cursor=pointer]:
+              - generic [ref=f2e294]: yaml
+              - generic [ref=f2e295]: "12"
+            - generic [ref=f2e296] [cursor=pointer]:
+              - generic [ref=f2e298]: json
+              - generic [ref=f2e299]: "8"
+          - generic [ref=f2e300]:
+            - generic [ref=f2e301]: 标签
+            - generic [ref=f2e302] [cursor=pointer]:
+              - generic [ref=f2e304]: domain_event
+              - generic [ref=f2e305]: "9"
+            - generic [ref=f2e306] [cursor=pointer]:
+              - generic [ref=f2e308]: invariant
+              - generic [ref=f2e309]: "5"
+            - generic [ref=f2e310] [cursor=pointer]:
+              - generic [ref=f2e312]: tech_constraint
+              - generic [ref=f2e313]: "7"
+            - generic [ref=f2e314] [cursor=pointer]:
+              - generic [ref=f2e316]: contract
+              - generic [ref=f2e317]: "4"
+          - generic [ref=f2e318]:
+            - generic [ref=f2e319]: 社区
+            - generic [ref=f2e320] [cursor=pointer]:
+              - generic [ref=f2e322]: Combat System
+              - generic [ref=f2e323]: "38"
+            - generic [ref=f2e324] [cursor=pointer]:
+              - generic [ref=f2e326]: AI Behaviour
+              - generic [ref=f2e327]: "27"
+            - generic [ref=f2e328] [cursor=pointer]:
+              - generic [ref=f2e330]: Siege Logic
+              - generic [ref=f2e331]: "31"
+            - generic [ref=f2e332] [cursor=pointer]:
+              - generic [ref=f2e334]: Pathfinding
+              - generic [ref=f2e335]: "19"
+            - generic [ref=f2e336] [cursor=pointer]:
+              - generic [ref=f2e338]: Save / Load
+              - generic [ref=f2e339]: "22"
+      - generic [ref=f2e340]:
+        - button "过滤" [ref=f2e341] [cursor=pointer]
+        - button "图例" [ref=f2e344] [cursor=pointer]
+        - generic [ref=f2e349]: 过滤
+    - generic [ref=f2e350]:
+      - generic [ref=f2e351]:
+        - generic [ref=f2e352]: CombatResolver
+        - generic [ref=f2e353]:
+          - generic [ref=f2e354]: class
+          - generic [ref=f2e355]: python · combat/resolver.py:24
+      - generic [ref=f2e356]:
+        - generic [ref=f2e357]:
+          - generic [ref=f2e358]: 社区
+          - generic [ref=f2e359]: Combat System
+        - generic [ref=f2e360]:
+          - generic [ref=f2e361]: 连接数
+          - generic [ref=f2e362]: "12"
+        - generic [ref=f2e363]:
+          - generic [ref=f2e364]: 置信度
+          - generic [ref=f2e365]: INFERRED · 0.81
+        - generic [ref=f2e366]:
+          - generic [ref=f2e367]: domain_event
+          - generic [ref=f2e368]: contract
+      - generic [ref=f2e369]:
+        - generic [ref=f2e370]: 相邻节点 (12)
+        - generic [ref=f2e371] [cursor=pointer]:
+          - generic [ref=f2e373]: DamageCalc
+          - generic [ref=f2e374]: calls
+        - generic [ref=f2e375] [cursor=pointer]:
+          - generic [ref=f2e377]: EventManager
+          - generic [ref=f2e378]: uses
+        - generic [ref=f2e379] [cursor=pointer]:
+          - generic [ref=f2e381]: Pathfinder
+          - generic [ref=f2e382]: sim · 0.72
+        - generic [ref=f2e383] [cursor=pointer]:
+          - generic [ref=f2e385]: AIController
+          - generic [ref=f2e386]: calls
+        - generic [ref=f2e387] [cursor=pointer]:
+          - generic [ref=f2e389]: SiegeTower
+          - generic [ref=f2e390]: uses
+      - generic [ref=f2e391]:
+        - button "路径" [ref=f2e392] [cursor=pointer]
+        - button "解释" [ref=f2e393] [cursor=pointer]
+    - navigation [ref=f2e394]:
+      - button "审核 14" [ref=f2e395] [cursor=pointer]:
+        - text: 审核
+        - generic [ref=f2e398]: "14"
+      - button "学习" [ref=f2e400] [cursor=pointer]
+      - button "探索" [ref=f2e404] [cursor=pointer]
+    - generic [ref=f2e412]: 184/193 · 312边 · 7社区

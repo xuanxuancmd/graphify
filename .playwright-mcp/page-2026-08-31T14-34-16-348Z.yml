@@ -1,0 +1,167 @@
+- generic [active] [ref=f3e1]:
+  - banner [ref=f3e2]:
+    - generic [ref=f3e3]:
+      - generic [ref=f3e4]: G
+      - generic [ref=f3e5]: graphify
+      - generic [ref=f3e6]: / rsl-siege-manager
+    - navigation [ref=f3e8]:
+      - button "审核 14" [ref=f3e9] [cursor=pointer]:
+        - text: 审核
+        - generic [ref=f3e12]: "14"
+      - button "学习" [ref=f3e13] [cursor=pointer]
+      - button "图谱" [ref=f3e16] [cursor=pointer]
+    - generic [ref=f3e25]:
+      - button "概览" [ref=f3e26] [cursor=pointer]
+      - button "学习" [ref=f3e27] [cursor=pointer]
+      - button "深挖" [ref=f3e28] [cursor=pointer]
+    - generic [ref=f3e29]:
+      - textbox "搜索节点、关系、社区…" [ref=f3e33]
+      - generic [ref=f3e34]: /
+    - button "路径查找" [ref=f3e35] [cursor=pointer]
+    - button "主题" [ref=f3e38] [cursor=pointer]
+    - button "快捷键 ?" [ref=f3e42] [cursor=pointer]
+  - main [ref=f3e45]:
+    - complementary [ref=f3e238]:
+      - generic [ref=f3e239]:
+        - generic [ref=f3e240]: 过滤
+        - button [ref=f3e241] [cursor=pointer]
+      - generic [ref=f3e244]:
+        - generic [ref=f3e245]:
+          - generic [ref=f3e246]: 数据类型
+          - generic [ref=f3e247] [cursor=pointer]:
+            - generic [ref=f3e249]: python
+            - generic [ref=f3e250]: "142"
+          - generic [ref=f3e251] [cursor=pointer]:
+            - generic [ref=f3e253]: markdown
+            - generic [ref=f3e254]: "28"
+          - generic [ref=f3e255] [cursor=pointer]:
+            - generic [ref=f3e257]: yaml
+            - generic [ref=f3e258]: "12"
+          - generic [ref=f3e259] [cursor=pointer]:
+            - generic [ref=f3e261]: json
+            - generic [ref=f3e262]: "8"
+          - generic [ref=f3e263] [cursor=pointer]:
+            - generic [ref=f3e265]: text
+            - generic [ref=f3e266]: "3"
+        - generic [ref=f3e267]:
+          - generic [ref=f3e268]: 标签
+          - generic [ref=f3e269] [cursor=pointer]:
+            - generic [ref=f3e271]: domain_event
+            - generic [ref=f3e272]: "9"
+          - generic [ref=f3e273] [cursor=pointer]:
+            - generic [ref=f3e275]: invariant
+            - generic [ref=f3e276]: "5"
+          - generic [ref=f3e277] [cursor=pointer]:
+            - generic [ref=f3e279]: tech_constraint
+            - generic [ref=f3e280]: "7"
+          - generic [ref=f3e281] [cursor=pointer]:
+            - generic [ref=f3e283]: contract
+            - generic [ref=f3e284]: "4"
+        - generic [ref=f3e285]:
+          - generic [ref=f3e286]: 社区
+          - generic [ref=f3e287] [cursor=pointer]:
+            - generic [ref=f3e289]: Combat System
+            - generic [ref=f3e290]: "38"
+          - generic [ref=f3e291] [cursor=pointer]:
+            - generic [ref=f3e293]: AI Behaviour
+            - generic [ref=f3e294]: "27"
+          - generic [ref=f3e295] [cursor=pointer]:
+            - generic [ref=f3e297]: Siege Logic
+            - generic [ref=f3e298]: "31"
+          - generic [ref=f3e299] [cursor=pointer]:
+            - generic [ref=f3e301]: Pathfinding
+            - generic [ref=f3e302]: "19"
+          - generic [ref=f3e303] [cursor=pointer]:
+            - generic [ref=f3e305]: Save / Load
+            - generic [ref=f3e306]: "22"
+          - generic [ref=f3e307] [cursor=pointer]:
+            - generic [ref=f3e309]: UI / HUD
+            - generic [ref=f3e310]: "15"
+          - generic [ref=f3e311] [cursor=pointer]:
+            - generic [ref=f3e313]: Config
+            - generic [ref=f3e314]: "14"
+    - complementary [ref=f3e315]:
+      - generic [ref=f3e316]:
+        - generic [ref=f3e317]:
+          - text: 待审核队列
+          - generic [ref=f3e318]: "14"
+        - button [ref=f3e319] [cursor=pointer]
+      - generic [ref=f3e322]:
+        - generic [ref=f3e323] [cursor=pointer]:
+          - text: 孤岛
+          - generic [ref=f3e325]: "3"
+        - generic [ref=f3e326] [cursor=pointer]:
+          - text: 多匹配
+          - generic [ref=f3e328]: "5"
+        - generic [ref=f3e329] [cursor=pointer]:
+          - text: 推断
+          - generic [ref=f3e331]: "4"
+        - generic [ref=f3e332] [cursor=pointer]:
+          - text: LLM缺失
+          - generic [ref=f3e334]: "2"
+      - generic [ref=f3e335]:
+        - generic [ref=f3e336] [cursor=pointer]:
+          - generic [ref=f3e337]:
+            - generic [ref=f3e338]: 多匹配
+            - generic [ref=f3e339]: EventManager → handle_event
+          - generic [ref=f3e340]: calls [AMBIGUOUS] · 3 candidates matched
+          - generic [ref=f3e341]: combat/event_manager.py:42
+        - generic [ref=f3e342] [cursor=pointer]:
+          - generic [ref=f3e343]:
+            - generic [ref=f3e344]: 孤岛
+            - generic [ref=f3e345]: SiegeTower.attack_pattern
+          - generic [ref=f3e346]: unmatched anchor · no inbound edges
+          - generic [ref=f3e347]: units/siege_tower.py:118
+        - generic [ref=f3e348] [cursor=pointer]:
+          - generic [ref=f3e349]:
+            - generic [ref=f3e350]: 推断
+            - generic [ref=f3e351]: Pathfinder ↔ AStarNode
+          - generic [ref=f3e352]: semantically_similar_to [INFERRED] · 0.72
+          - generic [ref=f3e353]: ai/pathfinder.py
+        - generic [ref=f3e354] [cursor=pointer]:
+          - generic [ref=f3e355]:
+            - generic [ref=f3e356]: 多匹配
+            - generic [ref=f3e357]: SaveGame.serialize → write
+          - generic [ref=f3e358]: calls [AMBIGUOUS] · 2 candidates matched
+          - generic [ref=f3e359]: save/save_game.py:67
+        - generic [ref=f3e360] [cursor=pointer]:
+          - generic [ref=f3e361]:
+            - generic [ref=f3e362]: 推断
+            - generic [ref=f3e363]: CombatResolver → DamageCalc
+          - generic [ref=f3e364]: calls [INFERRED] · 0.81
+          - generic [ref=f3e365]: combat/resolver.py:24
+        - generic [ref=f3e366] [cursor=pointer]:
+          - generic [ref=f3e367]:
+            - generic [ref=f3e368]: 孤岛
+            - generic [ref=f3e369]: config.difficulty_curve
+          - generic [ref=f3e370]: unmatched anchor · swagger island
+          - generic [ref=f3e371]: config/difficulty.yaml
+      - generic [ref=f3e372]:
+        - generic [ref=f3e373]: 编辑关系
+        - generic [ref=f3e374]:
+          - generic [ref=f3e375]: 关系类型
+          - combobox [ref=f3e376]:
+            - option "calls" [selected]
+            - option "imports"
+            - option "uses"
+            - option "defines"
+            - option "semantically_similar_to"
+        - generic [ref=f3e377]:
+          - generic [ref=f3e378]: 置信度
+          - combobox [ref=f3e379]:
+            - option "EXTRACTED"
+            - option "AMBIGUOUS" [selected]
+            - option "INFERRED"
+        - generic [ref=f3e380]:
+          - generic [ref=f3e381]: 修正说明（写入错误报告）
+          - textbox "描述问题与期望的修正…" [ref=f3e382]: 3 个 handle_event 候选，应指向 combat.EventHandler.handle_event 而非 ui.EventListener。
+        - generic [ref=f3e383]:
+          - button "跳过" [ref=f3e384] [cursor=pointer]
+          - button "提交修正" [ref=f3e385] [cursor=pointer]
+        - generic [ref=f3e386]: → 写入 .graph/error-report/2026-08-31-event-manager.json
+    - generic [ref=f3e387]:
+      - generic [ref=f3e388]: 184 / 193 节点
+      - generic [ref=f3e389]: ·
+      - generic [ref=f3e390]: 312 条边
+      - generic [ref=f3e391]: ·
+      - generic [ref=f3e392]: 7 个社区

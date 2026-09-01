@@ -102,12 +102,12 @@ echo "$(cd INPUT_PATH && pwd)" > .graph/.graphify_root
 
 If the import succeeds, print nothing and move straight to Step 2.
 
-**In every subsequent bash block, replace `python3` with `$(cat .graph/.graphify_python)` to use the correct interpreter.**
+**In every subsequent bash block, replace `python3` with `"$(cat .graph/.graphify_python)"` to use the correct interpreter.**
 
 ### Step 2 - Detect files
 
 ```bash
-$(cat .graph/.graphify_python) -c "
+"$(cat .graph/.graphify_python)" -c "
 import json
 from graphify.detect import detect
 from pathlib import Path
@@ -172,7 +172,7 @@ Note: Parallelizing AST + semantic saves 5-15s on large corpora. AST is determin
 For any code files detected, run AST extraction in parallel with Part B subagents:
 
 ```bash
-$(cat .graph/.graphify_python) -c "
+"$(cat .graph/.graphify_python)" -c "
 import sys, json
 from graphify.extract import collect_files, extract
 from pathlib import Path
@@ -198,7 +198,7 @@ else:
 **Fast path:** If detection found zero docs, papers, and images (code-only corpus), skip Part B entirely and go straight to Part C. AST handles code - there is nothing for semantic subagents to do. **First write an empty semantic file** so Part C's merge has its input (it reads `.graphify_semantic.json` unconditionally; without this a code-only run hits `FileNotFoundError`):
 
 ```bash
-$(cat .graph/.graphify_python) -c "
+"$(cat .graph/.graphify_python)" -c "
 import json
 from pathlib import Path
 Path('.graph/.graphify_semantic.json').write_text(json.dumps({'nodes':[],'edges':[],'hyperedges':[],'input_tokens':0,'output_tokens':0}), encoding='utf-8')
@@ -220,7 +220,7 @@ Before dispatching any subagents, check which files already have cached extracti
 SPEC_PATH below is the **absolute** path of the `references/extraction-spec.md` that ships beside this SKILL.md — the same file Step B2 loads and hands to every subagent. It is the extraction prompt, so cache entries are attributed to it: when a graphify upgrade changes the prompt, entries produced by the old one are re-extracted instead of replayed, and unchanged prompts keep their entries (#1939). Substitute the real path in both Step B0 and Step B3 — pass the same one to each, and do not drop the argument.
 
 ```bash
-$(cat .graph/.graphify_python) -c "
+"$(cat .graph/.graphify_python)" -c "
 import json
 from graphify.cache import check_semantic_cache
 from pathlib import Path
@@ -280,7 +280,7 @@ If more than half the chunks failed or are missing, stop and tell the user to re
 
 Merge all chunk files into `.graphify_semantic_new.json`. **After each Agent call completes, read the real token counts from the Agent tool result's `usage` field and write them back into the chunk JSON before merging** — the chunk JSON itself always has placeholder zeros. Then run:
 ```bash
-$(cat .graph/.graphify_python) -c "
+"$(cat .graph/.graphify_python)" -c "
 import json, glob
 from pathlib import Path
 
@@ -304,7 +304,7 @@ print(f'Merged {len(chunks)} chunks: {total_in:,} in / {total_out:,} out tokens'
 
 Save new results to cache. Pass the same SPEC_PATH as Step B0 — it stamps each entry with the prompt that produced it, and a write under a different prompt than the read lands where the next run won't look (#1939):
 ```bash
-$(cat .graph/.graphify_python) -c "
+"$(cat .graph/.graphify_python)" -c "
 import json
 from graphify.cache import save_semantic_cache
 from pathlib import Path
@@ -318,7 +318,7 @@ print(f'Cached {saved} files')
 
 Merge cached + new results into `.graph/.graphify_semantic.json`:
 ```bash
-$(cat .graph/.graphify_python) -c "
+"$(cat .graph/.graphify_python)" -c "
 import json
 from pathlib import Path
 
@@ -351,7 +351,7 @@ Clean up temp files: `rm -f .graph/.graphify_cached.json .graph/.graphify_uncach
 #### Part C - Merge AST + semantic into final extraction
 
 ```bash
-$(cat .graph/.graphify_python) -c "
+"$(cat .graph/.graphify_python)" -c "
 import sys, json
 from pathlib import Path
 
@@ -388,7 +388,7 @@ print(f'Merged: {total} nodes, {edges} edges ({len(ast[\"nodes\"])} AST + {len(s
 
 ```bash
 mkdir -p .graph
-$(cat .graph/.graphify_python) -c "
+"$(cat .graph/.graphify_python)" -c "
 import sys, json
 from graphify.build import build_from_json
 from graphify.cluster import cluster, score_all
@@ -450,7 +450,7 @@ Replace INPUT_PATH with the actual path.
 A non-destructive diagnostic on the extraction, before labeling. It surfaces edge collapse, dangling/missing endpoints, and self-loops — the silent-corruption modes of incremental updates and AST/LLM id mismatches. Read-only; never aborts.
 
 ```bash
-$(cat .graph/.graphify_python) -c "
+"$(cat .graph/.graphify_python)" -c "
 import json
 from pathlib import Path
 from graphify.diagnostics import diagnose_extraction, format_diagnostic_report
@@ -478,7 +478,7 @@ Read `.graph/.graphify_analysis.json`. For each community key, look at its node 
 Then regenerate the report and save the labels for the visualizer:
 
 ```bash
-$(cat .graph/.graphify_python) -c "
+"$(cat .graph/.graphify_python)" -c "
 import sys, json
 from graphify.build import build_from_json
 from graphify.cluster import score_all
@@ -541,7 +541,7 @@ This is the same function the CLI and the git post-commit hook call, so all
 three paths (skill / CLI / hook) produce identical embedding output:
 
 ```bash
-$(cat .graph/.graphify_python) -c "
+"$(cat .graph/.graphify_python)" -c "
 from graphify.embeddings import build_embeddings
 from pathlib import Path
 build_embeddings(Path('.graph/graph.json'), log_prefix='[graphify skill]')
@@ -581,7 +581,7 @@ These run only when their flag is present (`--wiki`, `--neo4j`/`--neo4j-push`, `
 ### Step 9 - Save manifest, update cost tracker, clean up, and report
 
 ```bash
-$(cat .graph/.graphify_python) -c "
+"$(cat .graph/.graphify_python)" -c "
 import json
 from pathlib import Path
 from datetime import datetime, timezone
@@ -685,7 +685,7 @@ The graph is the map. Your job after the pipeline is to be the guide.
 After a successful graph build, inject a `## graphify` section into the project's `AGENTS.md` so future agent sessions know the graph exists and prefer it over raw grep. Idempotent: if the section already exists, it is replaced in place; otherwise appended.
 
 ```bash
-$(cat .graph/.graphify_python) -c "
+"$(cat .graph/.graphify_python)" -c "
 from pathlib import Path
 from graphify.install import _always_on, _replace_or_append_section, _AGENTS_MD_MARKER
 

@@ -44,101 +44,201 @@ def _viz_node_limit() -> int:
 
 def _html_styles() -> str:
     return """<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0f0f1a; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; display: flex; height: 100vh; overflow: hidden; }
-  #graph { flex: 1; }
-  #sidebar { width: 280px; background: #1a1a2e; border-left: 1px solid #2a2a4e; display: flex; flex-direction: column; overflow: hidden; }
-  #search-wrap { padding: 12px; border-bottom: 1px solid #2a2a4e; }
-  #search { width: 100%; background: #0f0f1a; border: 1px solid #3a3a5e; color: #e0e0e0; padding: 7px 10px; border-radius: 6px; font-size: 13px; outline: none; }
-  #search:focus { border-color: #4E79A7; }
-  #search-results { max-height: 140px; overflow-y: auto; padding: 4px 12px; border-bottom: 1px solid #2a2a4e; display: none; }
-  .search-item { padding: 4px 6px; cursor: pointer; border-radius: 4px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .search-item:hover { background: #2a2a4e; }
-  #info-panel { padding: 14px; border-bottom: 1px solid #2a2a4e; min-height: 140px; }
-  #info-panel h3 { font-size: 13px; color: #aaa; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
-  #info-content { font-size: 13px; color: #ccc; line-height: 1.6; }
-  #info-content .field { margin-bottom: 5px; }
-  #info-content .field b { color: #e0e0e0; }
-  #info-content .empty { color: #555; font-style: italic; }
-  .neighbor-link { display: block; padding: 2px 6px; margin: 2px 0; border-radius: 3px; cursor: pointer; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid #333; }
-  .neighbor-link:hover { background: #2a2a4e; }
-  #neighbors-list { max-height: 160px; overflow-y: auto; margin-top: 4px; }
-  #legend-wrap { flex: 1; overflow-y: auto; padding: 12px; }
-  #legend-wrap h3 { font-size: 13px; color: #aaa; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
-  .legend-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; border-radius: 4px; font-size: 12px; }
-  .legend-item:hover { background: #2a2a4e; padding-left: 4px; }
-  .legend-item.dimmed { opacity: 0.35; }
-  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
-  .legend-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .legend-count { color: #666; font-size: 11px; }
-  #stats { padding: 10px 14px; border-top: 1px solid #2a2a4e; font-size: 11px; color: #555; }
-  #legend-controls { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 4px 0; }
-  #legend-controls label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: #aaa; user-select: none; }
-  #legend-controls label:hover { color: #e0e0e0; }
-  .legend-cb, #select-all-cb { appearance: none; -webkit-appearance: none; width: 14px; height: 14px; border: 1.5px solid #3a3a5e; border-radius: 3px; background: #0f0f1a; cursor: pointer; position: relative; flex-shrink: 0; }
-  .legend-cb:checked, #select-all-cb:checked { background: #4E79A7; border-color: #4E79A7; }
-  .legend-cb:checked::after, #select-all-cb:checked::after { content: ''; position: absolute; left: 3.5px; top: 1px; width: 4px; height: 7px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
-  #select-all-cb:indeterminate { background: #4E79A7; border-color: #4E79A7; }
-  #select-all-cb:indeterminate::after { content: ''; position: absolute; left: 2px; top: 5px; width: 8px; height: 2px; background: #fff; border: none; transform: none; }
-  /* Type/Tag filter panels */
-  #type-filter-wrap, #tag-filter-wrap { border-bottom: 1px solid #2a2a4e; }
-  .filter-section-header { display: flex; align-items: center; gap: 6px; padding: 10px 14px; cursor: pointer; user-select: none; }
-  .filter-section-header:hover { background: #1e1e36; }
-  .filter-section-header h3 { font-size: 13px; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; flex: 1; }
-  .filter-chevron { color: #666; font-size: 10px; transition: transform 0.15s; display: inline-block; }
-  .filter-wrap.collapsed .filter-chevron { transform: rotate(-90deg); }
-  .filter-wrap.collapsed .filter-body { display: none; }
-  .filter-body { max-height: 200px; overflow-y: auto; padding: 4px 12px 8px; }
-  .filter-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; border-radius: 4px; font-size: 12px; }
-  .filter-item:hover { background: #2a2a4e; padding-left: 4px; }
-  .filter-cb { appearance: none; -webkit-appearance: none; width: 14px; height: 14px; border: 1.5px solid #3a3a5e; border-radius: 3px; background: #0f0f1a; cursor: pointer; position: relative; flex-shrink: 0; }
-  .filter-cb:checked { background: #4E79A7; border-color: #4E79A7; }
-  .filter-cb:checked::after { content: ''; position: absolute; left: 3.5px; top: 1px; width: 4px; height: 7px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
-  .filter-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .filter-count { color: #666; font-size: 11px; }
-  .filter-empty { padding: 8px 0; font-size: 12px; color: #555; font-style: italic; text-align: center; }
-  #only-tagged-wrap { padding: 4px 12px 8px; }
-  #only-tagged-wrap label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 11px; color: #aaa; user-select: none; }
-  #only-tagged-wrap label:hover { color: #e0e0e0; }
-  #only-tagged-wrap input { appearance: none; -webkit-appearance: none; width: 14px; height: 14px; border: 1.5px solid #3a3a5e; border-radius: 3px; background: #0f0f1a; cursor: pointer; position: relative; flex-shrink: 0; }
-  #only-tagged-wrap input:checked { background: #4E79A7; border-color: #4E79A7; }
-  #only-tagged-wrap input:checked::after { content: ''; position: absolute; left: 3.5px; top: 1px; width: 4px; height: 7px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
-  /* Review Queue panel */
-  #review-wrap { border-bottom: 1px solid #2a2a4e; }
-  #review-header { display: flex; align-items: center; gap: 6px; padding: 10px 14px; cursor: pointer; user-select: none; }
-  #review-header:hover { background: #1e1e36; }
-  #review-header h3 { font-size: 13px; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; flex: 1; }
-  .review-chevron { color: #666; font-size: 10px; transition: transform 0.15s; display: inline-block; }
-  #review-wrap.collapsed .review-chevron { transform: rotate(-90deg); }
-  #review-wrap.collapsed #review-body { display: none; }
-  .review-badge { font-size: 11px; padding: 1px 7px; border-radius: 10px; font-weight: 600; min-width: 18px; text-align: center; }
-  .review-badge-zero { background: #1a3a1a; color: #4ade80; }
-  .review-badge-low { background: #3a3a1a; color: #fbbf24; }
-  .review-badge-high { background: #3a1a1a; color: #f87171; }
-  #review-body { max-height: 320px; overflow-y: auto; }
-  #review-filters { padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 6px; }
-  .review-filter-chip { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #aaa; cursor: pointer; padding: 2px 6px; border-radius: 4px; background: #0f0f1a; border: 1px solid #2a2a4e; user-select: none; }
-  .review-filter-chip:hover { border-color: #4E79A7; }
-  .review-filter-chip input { appearance: none; -webkit-appearance: none; width: 12px; height: 12px; border: 1.5px solid #3a3a5e; border-radius: 2px; background: #0f0f1a; cursor: pointer; position: relative; flex-shrink: 0; }
-  .review-filter-chip input:checked { background: #4E79A7; border-color: #4E79A7; }
-  .review-filter-chip input:checked::after { content: ''; position: absolute; left: 2.5px; top: 0px; width: 3px; height: 6px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
-  .review-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-  #review-file-filter-wrap { padding: 0 12px 8px; }
-  #review-file-filter { width: 100%; background: #0f0f1a; border: 1px solid #3a3a5e; color: #ccc; padding: 4px 6px; border-radius: 4px; font-size: 11px; outline: none; max-width: 100%; }
-  #review-file-filter:focus { border-color: #4E79A7; }
-  #review-list { padding: 0; }
-  .review-item { padding: 8px 14px; border-top: 1px solid #1f1f3a; cursor: pointer; }
-  .review-item:hover { background: #1e1e36; }
-  .review-item-row { display: flex; align-items: center; gap: 6px; }
-  .review-item-title { font-size: 12px; color: #e0e0e0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-  .review-item-detail { font-size: 11px; color: #777; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .review-item-file { font-size: 10px; color: #555; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; }
-  .review-type-badge { font-size: 9px; padding: 0 5px; border-radius: 3px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; flex-shrink: 0; }
-  .rt-island { background: #3a1a1a; color: #f87171; }
-  .rt-ambiguous_edge { background: #3a2a1a; color: #fbbf24; }
-  .rt-inferred_edge { background: #1a2a3a; color: #60a5fa; }
-  .rt-semantic_gap { background: #2a2a2a; color: #aaa; }
-  .review-empty { padding: 16px 14px; font-size: 12px; color: #555; font-style: italic; text-align: center; }
+  /* == Light theme tokens == */
+  :root {
+    --gf-root: #eef0f5; --gf-surface: #ffffff; --gf-elevated: #f4f6fa; --gf-panel: #e8ebf1;
+    --gf-accent: #4E79A7; --gf-accent-bright: #3d6491; --gf-accent-dim: #6b94c0;
+    --gf-accent-glow: rgba(78,121,167,0.12);
+    --gf-text-primary: #1a1d2e; --gf-text-secondary: #4a4e64; --gf-text-muted: #7a7f96; --gf-text-faint: #a8adbf;
+    --gf-border-subtle: rgba(78,121,167,0.08); --gf-border-medium: rgba(78,121,167,0.16); --gf-border-strong: #d4d8e2;
+    --gf-status-island: #dc4444; --gf-status-ambiguous: #d97706; --gf-status-inferred: #2563eb; --gf-status-gap: #6b7280; --gf-status-extracted: #16a34a;
+    --gf-status-island-bg: rgba(220,68,68,0.08); --gf-status-ambiguous-bg: rgba(217,119,6,0.08); --gf-status-inferred-bg: rgba(37,99,235,0.08); --gf-status-gap-bg: rgba(107,114,128,0.08); --gf-status-extracted-bg: rgba(22,163,74,0.08);
+    --gf-glass-bg: rgba(255,255,255,0.88); --gf-glass-border: rgba(78,121,167,0.10); --gf-glass-blur: 16px;
+    --gf-shadow-sm: 0 1px 3px rgba(26,29,46,0.08); --gf-shadow-md: 0 4px 12px rgba(26,29,46,0.10); --gf-shadow-lg: 0 8px 28px rgba(26,29,46,0.12);
+    --gf-topbar-h: 48px; --gf-bottombar-h: 44px; --gf-sidebar-w: 380px; --gf-detail-w: 320px;
+    --gf-font-heading: 'Space Grotesk','Segoe UI',sans-serif; --gf-font-body: 'IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; --gf-font-mono: 'JetBrains Mono','Cascadia Code',Consolas,monospace;
+    --gf-transition: 120ms ease-out;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+  *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+  html { font-size:16px; -webkit-font-smoothing:antialiased; }
+  body { font-family:var(--gf-font-body); background:var(--gf-root); color:var(--gf-text-primary); font-size:0.8125rem; overflow:hidden; height:100vh; display:flex; flex-direction:column; }
+  .font-heading { font-family:var(--gf-font-heading); }
+  .font-mono { font-family:var(--gf-font-mono); }
+
+  /* == Topbar == */
+  .topbar { height:var(--gf-topbar-h); background:var(--gf-surface); border-bottom:1px solid var(--gf-border-subtle); display:flex; align-items:center; padding:0 20px; gap:16px; flex-shrink:0; z-index:100; box-shadow:var(--gf-shadow-sm); }
+  .brand { display:flex; align-items:center; gap:8px; font-family:var(--gf-font-heading); font-size:0.875rem; font-weight:600; color:var(--gf-text-primary); }
+  .brand-mark { width:20px; height:20px; border-radius:4px; background:var(--gf-accent); display:flex; align-items:center; justify-content:center; font-family:var(--gf-font-mono); font-size:11px; font-weight:700; color:#fff; }
+  .brand-sub { font-size:0.75rem; color:var(--gf-text-muted); font-weight:400; }
+  .divider-v { width:1px; height:22px; background:var(--gf-border-subtle); }
+  .mode-tabs { display:flex; gap:2px; }
+  .mode-tab { display:flex; align-items:center; gap:4px; padding:6px 12px; border:none; background:transparent; color:var(--gf-text-muted); font-size:0.75rem; font-weight:500; border-radius:6px; cursor:pointer; transition:all var(--gf-transition); }
+  .mode-tab:hover { background:var(--gf-elevated); color:var(--gf-text-secondary); }
+  .mode-tab.active { color:var(--gf-accent-bright); background:rgba(78,121,167,0.08); }
+  .mode-tab .badge { font-size:9px; font-weight:700; padding:1px 5px; border-radius:10px; background:var(--gf-status-ambiguous-bg); color:var(--gf-status-ambiguous); min-width:16px; text-align:center; }
+  .search-box { flex:1; max-width:320px; display:flex; align-items:center; gap:8px; background:var(--gf-panel); border:1px solid var(--gf-border-medium); border-radius:8px; padding:5px 12px; }
+  .search-box:focus-within { border-color:var(--gf-accent); box-shadow:0 0 0 2px var(--gf-accent-glow); }
+  .search-box svg { width:14px; height:14px; color:var(--gf-text-muted); flex-shrink:0; }
+  #search { flex:1; border:none; background:transparent; color:var(--gf-text-primary); font-size:0.75rem; outline:none; font-family:var(--gf-font-body); }
+  #search::placeholder { color:var(--gf-text-faint); }
+  .report-link { display:flex; align-items:center; gap:4px; padding:5px 8px; border:1px solid var(--gf-border-medium); border-radius:8px; font-size:0.6875rem; color:var(--gf-text-muted); cursor:pointer; font-weight:500; }
+  .report-link:hover { border-color:var(--gf-accent); color:var(--gf-accent-bright); }
+  .report-link svg { width:12px; height:12px; }
+  .persona-switch { display:flex; align-items:center; background:var(--gf-panel); border-radius:8px; padding:2px; }
+  .persona-btn { padding:4px 8px; border:none; background:transparent; color:var(--gf-text-muted); font-size:0.6875rem; font-weight:500; border-radius:6px; cursor:pointer; text-transform:uppercase; letter-spacing:0.04em; }
+  .persona-btn.active { background:var(--gf-surface); color:var(--gf-accent-bright); box-shadow:var(--gf-shadow-sm); }
+
+  /* == Workspace (three columns) == */
+  .workspace { flex:1; display:flex; min-height:0; }
+
+  /* Left sidebar */
+  .sidebar { width:var(--gf-sidebar-w); background:var(--gf-surface); border-right:1px solid var(--gf-border-subtle); display:flex; flex-direction:column; flex-shrink:0; overflow:hidden; }
+  .sidebar-header { padding:16px 16px 12px; border-bottom:1px solid var(--gf-border-subtle); flex-shrink:0; }
+  .sidebar-title { font-family:var(--gf-font-heading); font-size:1.0625rem; font-weight:600; color:var(--gf-text-primary); }
+  .sidebar-meta { font-size:0.6875rem; color:var(--gf-text-muted); margin-top:3px; }
+  .filter-section { padding:8px 16px; border-bottom:1px solid var(--gf-border-subtle); flex-shrink:0; }
+  .filter-section-label { font-size:0.6875rem; color:var(--gf-text-muted); text-transform:uppercase; letter-spacing:0.08em; font-weight:600; margin-bottom:4px; }
+  .filter-chip-row { display:flex; flex-wrap:wrap; gap:4px; }
+  .filter-chip { display:flex; align-items:center; gap:4px; padding:3px 7px; border-radius:12px; font-size:0.6875rem; font-weight:500; color:var(--gf-text-secondary); background:var(--gf-panel); border:1px solid var(--gf-border-medium); cursor:pointer; white-space:nowrap; user-select:none; }
+  .filter-chip:hover { border-color:var(--gf-accent); }
+  .filter-chip:not(.active) { opacity:0.45; text-decoration:line-through; }
+  .filter-chip-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .filter-chip-count { font-size:9px; color:var(--gf-text-faint); font-family:var(--gf-font-mono); }
+  .sidebar-list { flex:1; overflow-y:auto; padding:4px; }
+  .node-item { padding:12px; border-radius:8px; cursor:pointer; transition:background var(--gf-transition); margin-bottom:2px; }
+  .node-item:hover { background:var(--gf-elevated); }
+  .node-item.selected { background:var(--gf-elevated); }
+  .node-item-head { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+  .node-status-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .node-type-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .node-badge { font-size:9px; font-weight:600; padding:1px 6px; border-radius:4px; text-transform:uppercase; letter-spacing:0.04em; flex-shrink:0; }
+  .nb-island { background:var(--gf-status-island-bg); color:var(--gf-status-island); }
+  .nb-ambiguous { background:var(--gf-status-ambiguous-bg); color:var(--gf-status-ambiguous); }
+  .nb-inferred { background:var(--gf-status-inferred-bg); color:var(--gf-status-inferred); }
+  .nb-gap { background:var(--gf-status-gap-bg); color:var(--gf-status-gap); }
+  .node-title { font-size:0.75rem; font-weight:500; color:var(--gf-text-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
+  .node-detail { font-size:0.6875rem; color:var(--gf-text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .node-file { font-family:var(--gf-font-mono); font-size:10px; color:var(--gf-text-faint); margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  /* Center graph */
+  .graph-area { flex:1; position:relative; overflow:hidden; background:var(--gf-root); min-width:0; }
+  #graph { width:100%; height:100%; }
+  .graph-stats { position:absolute; bottom:12px; left:12px; font-family:var(--gf-font-mono); font-size:0.6875rem; color:var(--gf-text-muted); }
+  .graph-stats b { color:var(--gf-text-secondary); }
+
+  /* Right detail panel */
+  .detail-panel { width:var(--gf-detail-w); background:var(--gf-surface); border-left:1px solid var(--gf-border-subtle); display:flex; flex-direction:column; flex-shrink:0; overflow:hidden; }
+  .detail-header { padding:16px; border-bottom:1px solid var(--gf-border-subtle); flex-shrink:0; }
+  .detail-name { font-family:var(--gf-font-heading); font-size:0.875rem; font-weight:600; color:var(--gf-text-primary); margin-bottom:4px; }
+  .detail-meta { display:flex; align-items:center; gap:8px; font-size:0.6875rem; color:var(--gf-text-muted); }
+  .kind-badge { padding:1px 6px; border-radius:4px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; font-size:10px; }
+  .kb-extracted { background:var(--gf-status-extracted-bg); color:var(--gf-status-extracted); }
+  .kb-ambiguous { background:var(--gf-status-ambiguous-bg); color:var(--gf-status-ambiguous); }
+  .kb-inferred { background:var(--gf-status-inferred-bg); color:var(--gf-status-inferred); }
+  .kb-island { background:var(--gf-status-island-bg); color:var(--gf-status-island); }
+  .detail-body { flex:1; overflow-y:auto; padding:12px 16px; }
+  .detail-field { display:flex; justify-content:space-between; padding:5px 0; font-size:0.75rem; border-bottom:1px solid var(--gf-border-subtle); }
+  .detail-field-label { color:var(--gf-text-muted); }
+  .detail-field-value { color:var(--gf-text-secondary); font-family:var(--gf-font-mono); font-size:0.6875rem; }
+  .detail-tags { display:flex; flex-wrap:wrap; gap:4px; padding:8px 0; }
+  .detail-tag { font-size:10px; padding:2px 7px; border-radius:12px; background:rgba(78,121,167,0.08); color:var(--gf-accent-bright); border:1px solid rgba(78,121,167,0.15); font-family:var(--gf-font-mono); }
+  .detail-nav { display:flex; gap:8px; padding:12px 16px; border-top:1px solid var(--gf-border-subtle); flex-shrink:0; }
+  .detail-nav-btn { flex:1; display:flex; align-items:center; justify-content:center; gap:4px; padding:6px; border:1px solid var(--gf-border-medium); border-radius:6px; font-size:0.6875rem; font-weight:600; cursor:pointer; text-transform:uppercase; letter-spacing:0.04em; color:var(--gf-text-muted); transition:all var(--gf-transition); background:var(--gf-surface); }
+  .detail-nav-btn:hover { border-color:var(--gf-accent); color:var(--gf-accent-bright); }
+  .detail-nav-btn svg { width:12px; height:12px; }
+
+  /* Edit section (only for low-confidence) */
+  .edit-section { border-top:1px solid var(--gf-border-subtle); flex-shrink:0; }
+  .edit-header { padding:12px 16px 8px; display:flex; align-items:center; gap:8px; font-family:var(--gf-font-heading); font-size:0.75rem; font-weight:600; color:var(--gf-text-primary); background:var(--gf-elevated); }
+  .edit-header svg { width:13px; height:13px; color:var(--gf-status-ambiguous); }
+  .edit-body { padding:0 16px 12px; background:var(--gf-elevated); }
+  .edit-tab-row { display:flex; gap:2px; margin-bottom:12px; background:var(--gf-surface); border-radius:8px; padding:2px; }
+  .edit-tab { flex:1; padding:5px; border:none; background:transparent; font-size:0.6875rem; font-weight:600; color:var(--gf-text-muted); border-radius:6px; cursor:pointer; text-transform:uppercase; letter-spacing:0.04em; }
+  .edit-tab.active { background:var(--gf-accent); color:#fff; }
+  .edit-field { margin-bottom:12px; }
+  .edit-label { display:block; font-size:0.6875rem; color:var(--gf-text-muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.04em; font-weight:600; }
+  .edit-input, .edit-select { width:100%; background:var(--gf-surface); border:1px solid var(--gf-border-medium); color:var(--gf-text-primary); font-family:var(--gf-font-body); font-size:0.75rem; padding:6px 8px; border-radius:6px; outline:none; }
+  .edit-input:focus, .edit-select:focus { border-color:var(--gf-accent); }
+  .edit-input[readonly] { background:var(--gf-panel); color:var(--gf-text-muted); }
+  .edit-textarea { width:100%; min-height:50px; resize:vertical; background:var(--gf-surface); border:1px solid var(--gf-border-medium); color:var(--gf-text-primary); font-family:var(--gf-font-body); font-size:0.75rem; padding:6px 8px; border-radius:6px; outline:none; line-height:1.5; }
+  .edit-textarea:focus { border-color:var(--gf-accent); }
+  .edit-actions { display:flex; gap:8px; }
+  .btn { flex:1; padding:7px 12px; border:none; border-radius:6px; font-family:var(--gf-font-body); font-size:0.75rem; font-weight:600; cursor:pointer; }
+  .btn-primary { background:var(--gf-accent); color:#fff; }
+  .btn-primary:hover { background:var(--gf-accent-bright); }
+  .btn-ghost { background:var(--gf-surface); color:var(--gf-text-secondary); border:1px solid var(--gf-border-medium); }
+  .edit-note { font-size:0.6875rem; color:var(--gf-text-faint); margin-top:8px; font-family:var(--gf-font-mono); }
+
+  /* No-edit hint (for high-confidence nodes) */
+  .no-edit-hint { padding:16px; text-align:center; font-size:0.6875rem; color:var(--gf-text-muted); background:var(--gf-elevated); border-top:1px solid var(--gf-border-subtle); }
+  .no-edit-hint svg { width:24px; height:24px; color:var(--gf-status-extracted); margin-bottom:8px; }
+
+  /* Bottom filter bar */
+  .bottom-bar { height:var(--gf-bottombar-h); background:var(--gf-surface); border-top:1px solid var(--gf-border-subtle); display:flex; align-items:center; padding:0 16px; gap:8px; flex-shrink:0; overflow-x:auto; }
+  .bottom-divider { width:1px; height:18px; background:var(--gf-border-subtle); margin:0 4px; }
+  .bottom-stats { margin-left:auto; font-family:var(--gf-font-mono); font-size:0.6875rem; color:var(--gf-text-muted); white-space:nowrap; }
+  .bottom-stats b { color:var(--gf-text-secondary); }
+
+  /* Legend (community filter, kept in bottom bar) */
+  .legend-item { display:flex; align-items:center; gap:6px; padding:2px 0; cursor:pointer; font-size:0.6875rem; color:var(--gf-text-secondary); white-space:nowrap; user-select:none; }
+  .legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .legend-count { color:var(--gf-text-muted); font-size:0.6875rem; font-family:var(--gf-font-mono); }
+  .legend-item.dimmed { opacity:0.35; }
+
+  /* Search results dropdown */
+  #search-results { position:absolute; top:100%; left:0; right:0; background:var(--gf-surface); border:1px solid var(--gf-border-medium); border-radius:0 0 8px 8px; box-shadow:var(--gf-shadow-md); max-height:200px; overflow-y:auto; z-index:200; display:none; }
+  .search-item { padding:6px 12px; cursor:pointer; font-size:0.75rem; color:var(--gf-text-secondary); display:flex; align-items:center; gap:6px; }
+  .search-item:hover { background:var(--gf-elevated); }
+  .search-item-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .search-wrap { position:relative; flex:1; max-width:320px; }
+
+  /* Neighbor links (delegated click, no inline onclick - #1838) */
+  .neighbor-link { display:block; padding:3px 6px; margin:2px 0; border-radius:4px; cursor:pointer; font-size:0.75rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--gf-text-secondary); }
+  .neighbor-link:hover { background:var(--gf-elevated); color:var(--gf-text-primary); }
+
+  /* Overview tab content */
+  .overview-page { flex:1; overflow-y:auto; padding:24px 32px; background:var(--gf-root); }
+  .ovw-max { max-width:100%; margin:0; }
+  .ovw-hero { display:flex; align-items:baseline; gap:12px; margin-bottom:4px; }
+  .ovw-hero h1 { font-family:var(--gf-font-heading); font-size:1.75rem; font-weight:700; color:var(--gf-text-primary); letter-spacing:-0.01em; }
+  .ovw-hero p { font-size:0.8125rem; color:var(--gf-text-muted); }
+  .ovw-subtitle { font-size:0.8125rem; color:var(--gf-text-secondary); margin-bottom:24px; line-height:1.7; max-width:600px; }
+  .stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:32px; }
+  .stat-card { background:var(--gf-surface); border:1px solid var(--gf-border-subtle); border-radius:12px; padding:20px; box-shadow:var(--gf-shadow-sm); position:relative; overflow:hidden; }
+  .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--stat-color,var(--gf-accent)); border-radius:12px 12px 0 0; }
+  .stat-value { font-family:var(--gf-font-heading); font-size:2rem; font-weight:700; color:var(--gf-text-primary); line-height:1; margin-bottom:4px; }
+  .stat-label { font-size:0.6875rem; color:var(--gf-text-muted); text-transform:uppercase; letter-spacing:0.08em; font-weight:600; }
+  .stat-trend { font-size:0.6875rem; color:var(--gf-text-faint); margin-top:8px; font-family:var(--gf-font-mono); }
+  .chart-grid { display:grid; grid-template-columns:1.4fr 1fr; gap:16px; margin-bottom:32px; }
+  .chart-card { background:var(--gf-surface); border:1px solid var(--gf-border-subtle); border-radius:12px; padding:20px; box-shadow:var(--gf-shadow-sm); }
+  .chart-title { font-family:var(--gf-font-heading); font-size:0.8125rem; font-weight:600; color:var(--gf-text-primary); margin-bottom:16px; }
+  .bar-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+  .bar-label { width:80px; font-size:0.75rem; color:var(--gf-text-secondary); font-family:var(--gf-font-mono); text-align:right; flex-shrink:0; display:flex; align-items:center; gap:4px; }
+  .bar-track { flex:1; height:22px; background:var(--gf-panel); border-radius:4px; overflow:hidden; }
+  .bar-fill { height:100%; border-radius:4px; display:flex; align-items:center; justify-content:flex-end; padding-right:8px; }
+  .bar-count { font-size:0.6875rem; color:#fff; font-weight:600; font-family:var(--gf-font-mono); }
+  .comm-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .comm-card { background:var(--gf-surface); border:1px solid var(--gf-border-subtle); border-radius:12px; padding:16px; box-shadow:var(--gf-shadow-sm); cursor:pointer; transition:all var(--gf-transition); border-top:3px solid var(--comm-color,var(--gf-accent)); }
+  .comm-card:hover { box-shadow:var(--gf-shadow-md); transform:translateY(-1px); }
+  .comm-head { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .comm-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+  .comm-name { font-family:var(--gf-font-heading); font-size:0.8125rem; font-weight:600; color:var(--gf-text-primary); }
+  .comm-count { font-size:0.6875rem; color:var(--gf-text-muted); font-family:var(--gf-font-mono); margin-left:auto; }
+  .comm-desc { font-size:0.75rem; color:var(--gf-text-secondary); line-height:1.5; margin-bottom:12px; }
+  .comm-stats { display:flex; gap:16px; font-size:0.6875rem; color:var(--gf-text-muted); }
+  .comm-stat b { color:var(--gf-text-secondary); font-weight:500; }
+
+  /* Tab pages visibility */
+  .tab-page { display:none; flex:1; min-height:0; }
+  .tab-page.active { display:flex; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width:6px; height:6px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:rgba(78,121,167,0.15); border-radius:6px; }
+  ::-webkit-scrollbar-thumb:hover { background:rgba(78,121,167,0.28); }
+  :focus-visible { outline:2px solid var(--gf-accent); outline-offset:2px; }
 </style>"""
 
 def _hyperedge_script(hyperedges_json: str) -> str:
@@ -146,7 +246,7 @@ def _hyperedge_script(hyperedges_json: str) -> str:
 // Render hyperedges as shaded regions
 const hyperedges = {hyperedges_json};
 // afterDrawing passes ctx already transformed to network coordinate space.
-// Draw node positions raw — no manual pan/zoom/DPR math needed.
+// Draw node positions raw - no manual pan/zoom/DPR math needed.
 
 // Andrew's monotone chain. Returns the hull in counter-clockwise order, which
 // is what the perimeter must be traced in. Collinear and duplicate points
@@ -209,158 +309,27 @@ network.on('afterDrawing', function(ctx) {{
 </script>"""
 
 def _review_queue_script(review_json: str) -> str:
-    return f"""<script>
-// Review Queue — items needing human verification.
-// Types: island (unmatched anchor), ambiguous_edge (multi-match, score 0.3),
-//        inferred_edge (framework-inferred), semantic_gap (LLM failed).
-const REVIEW = {review_json};
-const REVIEW_TYPE_META = {{
-    island:          {{ label: '孤岛',       dot: '#f87171', badge: 'rt-island' }},
-  ambiguous_edge:  {{ label: '多匹配',     dot: '#fbbf24', badge: 'rt-ambiguous_edge' }},
-  inferred_edge:   {{ label: '推断',       dot: '#60a5fa', badge: 'rt-inferred_edge' }},
-  semantic_gap:    {{ label: 'LLM缺失',   dot: '#aaa',    badge: 'rt-semantic_gap' }},
-}};
-const REVIEW_ACTIVE = {{ island: true, ambiguous_edge: true, inferred_edge: true, semantic_gap: true }};
-let REVIEW_FILE_FILTER = '';
-
-function toggleReview() {{
-  document.getElementById('review-wrap').classList.toggle('collapsed');
-}}
-
-function reviewTypeOf(item) {{
-  if (item.type) return item.type;
-  if (item.anchorKind) return 'island';   // swagger/ddd island record
-  if (item.reason && item.reason.includes('LLM')) return 'semantic_gap';
-  return 'island';
-}}
-
-function reviewTitleOf(item) {{
-  if (item.title) return item.title;
-  if (item.anchor) return item.anchor;
-  if (item.endpointLabel) return item.endpointLabel;
-  if (item.file) return item.file.split('/').pop();
-  return '(unnamed)';
-}}
-
-function reviewDetailOf(item) {{
-  if (item.detail) return item.detail;
-  if (item.reason) return item.reason;
-  if (item.anchorKind) return item.anchorKind;
-  return '';
-}}
-
-function reviewFileOf(item) {{
-  return item.source_file || item.docPath || item.file || '';
-}}
-
-function reviewNodeIdOf(item) {{
-  return item.node_id || item.endpointId || null;
-}}
-
-function renderReviewBadge() {{
-  const badge = document.getElementById('review-badge');
-  const n = REVIEW.length;
-  badge.textContent = n;
-  badge.className = 'review-badge ' + (n === 0 ? 'review-badge-zero' : (n <= 10 ? 'review-badge-low' : 'review-badge-high'));
-}}
-
-function renderReviewFilters() {{
-  const container = document.getElementById('review-filters');
-  const counts = {{}};
-  REVIEW.forEach(item => {{ const t = reviewTypeOf(item); counts[t] = (counts[t] || 0) + 1; }});
-  container.innerHTML = '';
-  Object.keys(REVIEW_TYPE_META).forEach(type => {{
-    const meta = REVIEW_TYPE_META[type];
-    const count = counts[type] || 0;
-    const chip = document.createElement('label');
-    chip.className = 'review-filter-chip';
-    chip.innerHTML = `<input type="checkbox" ${{REVIEW_ACTIVE[type] ? 'checked' : ''}}>` +
-      `<span class="review-dot" style="background:${{meta.dot}}"></span>` +
-      `<span>${{meta.label}} (${{count}})</span>`;
-    const cb = chip.querySelector('input');
-    cb.addEventListener('change', () => {{
-      REVIEW_ACTIVE[type] = cb.checked;
-      renderReviewList();
-    }});
-    container.appendChild(chip);
-  }});
-}}
-
-function renderReviewFileFilter() {{
-  const sel = document.getElementById('review-file-filter');
-  const files = new Set();
-  REVIEW.forEach(item => {{ const f = reviewFileOf(item); if (f) files.add(f); }});
-  const sorted = Array.from(files).sort();
-  sel.innerHTML = '<option value="">全部文件</option>';
-  sorted.forEach(f => {{
-    const opt = document.createElement('option');
-    opt.value = f;
-    opt.textContent = f.length > 42 ? '...' + f.slice(-42) : f;
-    sel.appendChild(opt);
-  }});
-  sel.value = REVIEW_FILE_FILTER;
-  sel.onchange = () => {{ REVIEW_FILE_FILTER = sel.value; renderReviewList(); }};
-}}
-
-function renderReviewList() {{
-  const list = document.getElementById('review-list');
-  const filtered = REVIEW.filter(item => {{
-    if (!REVIEW_ACTIVE[reviewTypeOf(item)]) return false;
-    if (REVIEW_FILE_FILTER && reviewFileOf(item) !== REVIEW_FILE_FILTER) return false;
-    return true;
-  }});
-  if (!filtered.length) {{
-    list.innerHTML = '<div class="review-empty">暂无待审核项</div>';
-    return;
-  }}
-  list.innerHTML = '';
-  filtered.forEach(item => {{
-    const type = reviewTypeOf(item);
-    const meta = REVIEW_TYPE_META[type];
-    const el = document.createElement('div');
-    el.className = 'review-item';
-    const title = esc(reviewTitleOf(item));
-    const detail = esc(reviewDetailOf(item));
-    const file = esc(reviewFileOf(item));
-    const nodeId = reviewNodeIdOf(item);
-    el.innerHTML =
-      `<div class="review-item-row">` +
-        `<span class="review-type-badge ${{meta.badge}}">${{meta.label}}</span>` +
-        `<span class="review-item-title" title="${{title}}">${{title}}</span>` +
-      `</div>` +
-      (detail ? `<div class="review-item-detail">${{detail}}</div>` : '') +
-      (file ? `<div class="review-item-file">${{file}}</div>` : '');
-    el.style.borderLeft = `3px solid ${{meta.dot}}`;
-    el.addEventListener('click', () => {{
-      if (nodeId && nodesDS.get(nodeId)) {{
-        focusNode(nodeId);
-      }}
-    }});
-    list.appendChild(el);
-  }});
-}}
-
-renderReviewBadge();
-renderReviewFilters();
-renderReviewFileFilter();
-renderReviewList();
-</script>"""
+    """Retained for API compatibility but now returns empty — review logic
+    is unified into _html_script which has access to all node data."""
+    return ""
 
 
-def _html_script(nodes_json: str, edges_json: str, legend_json: str, type_index_json: str, tag_index_json: str) -> str:
+def _html_script(nodes_json: str, edges_json: str, legend_json: str, type_index_json: str, tag_index_json: str, review_json: str = "[]") -> str:
     return f"""<script>
 const RAW_NODES = {nodes_json};
 const RAW_EDGES = {edges_json};
 const LEGEND = {legend_json};
 const TYPE_INDEX = {type_index_json};
 const TAG_INDEX = {tag_index_json};
+const REVIEW = {review_json};
+const COMMUNITY_COLORS = ["#4E79A7","#F28E2B","#E15759","#76B7B2","#59A14F","#EDC948","#B07AA1","#FF9DA7","#9C755F","#BAB0AC"];
 
-// HTML-escape helper — prevents XSS when injecting graph data into innerHTML
+// HTML-escape helper - prevents XSS when injecting graph data into innerHTML
 function esc(s) {{
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }}
 
-// Build vis datasets
+// == Build vis datasets ==
 const nodesDS = new vis.DataSet(RAW_NODES.map(n => ({{
   id: n.id, label: n.label, color: n.color, size: n.size,
   font: n.font, title: n.title,
@@ -409,34 +378,108 @@ network.once('stabilizationIterationsDone', () => {{
   network.setOptions({{ physics: {{ enabled: false }} }});
 }});
 
+// == Tab switching ==
+const tabs = document.querySelectorAll('.mode-tab');
+const tabPages = document.querySelectorAll('.tab-page');
+const graphEl = document.getElementById('graph');
+const reviewGraphArea = document.querySelector('#page-review .graph-area');
+const learnGraphArea = document.getElementById('learn-graph-area');
+const bottomBar = document.querySelector('.bottom-bar');
+
+function moveToTab(target) {{
+  tabs.forEach(t => t.classList.remove('active'));
+  document.querySelector('.mode-tab[data-tab="' + target + '"]').classList.add('active');
+  tabPages.forEach(p => p.classList.remove('active'));
+  const page = document.getElementById('page-' + target);
+  if (page) page.classList.add('active');
+  // Move graph element to the active tab's graph area (review or learn)
+  if (target === 'review' && reviewGraphArea) {{
+    reviewGraphArea.insertBefore(graphEl, reviewGraphArea.firstChild);
+    if (bottomBar) bottomBar.style.display = 'flex';
+    setTimeout(() => network.redraw(), 50);
+  }} else if (target === 'learn' && learnGraphArea) {{
+    learnGraphArea.insertBefore(graphEl, learnGraphArea.firstChild);
+    if (bottomBar) bottomBar.style.display = 'flex';
+    setTimeout(() => network.redraw(), 50);
+  }} else {{
+    // Overview tab - hide bottom bar, graph stays in last tab's area (hidden)
+    if (bottomBar) bottomBar.style.display = 'none';
+  }}
+}}
+tabs.forEach(tab => {{
+  tab.addEventListener('click', () => {{
+    moveToTab(tab.dataset.tab);
+  }});
+}});
+
+// == Node detail panel ==
 function showInfo(nodeId) {{
   const n = nodesDS.get(nodeId);
   if (!n) return;
   const neighborIds = network.getConnectedNodes(nodeId);
   const neighborItems = neighborIds.map(nid => {{
     const nb = nodesDS.get(nid);
-    const color = nb ? nb.color.background : '#555';
-    return `<span class="neighbor-link" style="border-left-color:${{esc(color)}}" data-nid="${{esc(nid)}}">${{esc(nb ? nb.label : nid)}}</span>`;
+    const color = nb ? nb.color.background : '#7a7f96';
+    return `<span class="neighbor-link" style="border-left:3px solid ${{esc(color)}}" data-nid="${{esc(nid)}}">${{esc(nb ? nb.label : nid)}}</span>`;
   }}).join('');
   const tagsHtml = (n._tags && n._tags.length)
-    ? `<div class="field">标签: ${{esc(n._tags.join(', '))}}</div>` : '';
-  const kindHtml = n._node_kind ? `<div class="field">节点种类: ${{esc(n._node_kind)}}</div>` : '';
-  document.getElementById('info-content').innerHTML = `
-    <div class="field"><b>${{esc(n.label)}}</b></div>
-    <div class="field">类型: ${{esc(n._file_type || '未知')}}</div>
-    ${{kindHtml}}
-    ${{tagsHtml}}
-    <div class="field">社区: ${{esc(n._community_name)}}</div>
-    <div class="field">来源: ${{esc(n._source_file || '-')}}</div>
-    <div class="field">连接数: ${{n._degree}}</div>
-    ${{neighborIds.length ? `<div class="field" style="margin-top:8px;color:#aaa;font-size:11px">相邻节点 (${{neighborIds.length}})</div><div id="neighbors-list">${{neighborItems}}</div>` : ''}}
+    ? `<div class="detail-tags">${{n._tags.map(t => `<span class="detail-tag">${{esc(t)}}</span>`).join('')}}</div>` : '';
+  const kindHtml = n._node_kind ? `<span class="kind-badge kb-extracted">${{esc(n._node_kind)}}</span>` : '';
+
+  // Check if this node is in the review queue (low-confidence)
+  const reviewItem = REVIEW.find(r => r.node_id === nodeId || r.endpointId === nodeId);
+  const isLowConf = !!reviewItem;
+
+  // Determine confidence badge
+  let confBadge = '';
+  if (reviewItem) {{
+    const type = reviewItem.type || (reviewItem.anchorKind ? 'island' : 'island');
+    const badgeClass = type === 'island' ? 'kb-island' : (type === 'ambiguous_edge' ? 'kb-ambiguous' : (type === 'inferred_edge' ? 'kb-inferred' : 'kb-island'));
+    confBadge = `<span class="kind-badge ${{badgeClass}}">${{esc(type.replace('_edge','').toUpperCase())}}</span>`;
+  }} else {{
+    confBadge = `<span class="kind-badge kb-extracted">EXTRACTED</span>`;
+  }}
+
+  const detailBody = document.getElementById('detail-body');
+  const detailHeader = document.getElementById('detail-header');
+  const editSection = document.getElementById('edit-section');
+
+  detailHeader.innerHTML = `
+    <div class="detail-name">${{esc(n.label)}}</div>
+    <div class="detail-meta">${{confBadge}} ${{kindHtml}} <span>${{esc(n._file_type || 'unknown')}}</span></div>
   `;
+  detailBody.innerHTML = `
+    <div class="detail-field"><span class="detail-field-label">社区</span><span class="detail-field-value">${{esc(n._community_name)}}</span></div>
+    <div class="detail-field"><span class="detail-field-label">连接数</span><span class="detail-field-value">${{n._degree}}</span></div>
+    <div class="detail-field"><span class="detail-field-label">来源文件</span><span class="detail-field-value">${{esc(n._source_file || '-')}}</span></div>
+    ${{tagsHtml}}
+    ${{neighborIds.length ? `<div class="detail-field" style="border-bottom:none;padding-top:8px"><span class="detail-field-label">相邻节点 (${{neighborIds.length}})</span></div><div id="neighbors-list">${{neighborItems}}</div>` : ''}}
+  `;
+
+  // Show/hide edit section based on confidence
+  if (isLowConf) {{
+    editSection.style.display = 'block';
+    // Pre-fill edit fields if available
+    const detail = reviewItem.detail || reviewItem.reason || '';
+    const file = reviewItem.source_file || reviewItem.file || '';
+    if (detail) document.getElementById('edit-textarea').value = detail;
+    if (file) document.getElementById('edit-file-path').textContent = '→ ' + file;
+  }} else {{
+    editSection.style.display = 'none';
+  }}
 }}
 
 function focusNode(nodeId) {{
   network.focus(nodeId, {{ scale: 1.4, animation: true }});
   network.selectNodes([nodeId]);
   showInfo(nodeId);
+  // Also select in node list
+  document.querySelectorAll('.node-item').forEach(el => el.classList.remove('selected'));
+  const listEl = document.querySelector('.node-item[data-nid="' + nodeId + '"]');
+  if (listEl) {{
+    listEl.classList.add('selected');
+    listEl.scrollIntoView({{ block: 'nearest' }});
+  }}
 }}
 
 // Neighbor links use a data attribute + one delegated listener rather than an
@@ -452,7 +495,7 @@ document.addEventListener('click', e => {{
   if (el && el.dataset.nid !== undefined) focusNode(el.dataset.nid);
 }});
 
-// Track hovered node — hover detection is more reliable than click params
+// Track hovered node - hover detection is more reliable than click params
 let hoveredNodeId = null;
 network.on('hoverNode', params => {{
   hoveredNodeId = params.node;
@@ -471,11 +514,10 @@ container.addEventListener('click', () => {{
 network.on('click', params => {{
   if (params.nodes.length > 0) {{
     showInfo(params.nodes[0]);
-  }} else if (hoveredNodeId === null) {{
-    document.getElementById('info-content').innerHTML = '<span class="empty">点击节点查看详情</span>';
   }}
 }});
 
+// == Search ==
 const searchInput = document.getElementById('search');
 const searchResults = document.getElementById('search-results');
 searchInput.addEventListener('input', () => {{
@@ -488,13 +530,9 @@ searchInput.addEventListener('input', () => {{
   matches.forEach(n => {{
     const el = document.createElement('div');
     el.className = 'search-item';
-    el.textContent = n.label;
-    el.style.borderLeft = `3px solid ${{n.color.background}}`;
-    el.style.paddingLeft = '8px';
+    el.innerHTML = `<span class="search-item-dot" style="background:${{n.color.background}}"></span><span>${{esc(n.label)}}</span>`;
     el.onclick = () => {{
-      network.focus(n.id, {{ scale: 1.5, animation: true }});
-      network.selectNodes([n.id]);
-      showInfo(n.id);
+      focusNode(n.id);
       searchResults.style.display = 'none';
       searchInput.value = '';
     }};
@@ -502,18 +540,14 @@ searchInput.addEventListener('input', () => {{
   }});
 }});
 document.addEventListener('click', e => {{
-  if (!searchResults.contains(e.target) && e.target !== searchInput)
+  if (searchResults && !searchResults.contains(e.target) && e.target !== searchInput)
     searchResults.style.display = 'none';
 }});
 
-// ── Unified filter system ──────────────────────────────────────────
-// Three filter dimensions (file_type, tags, community) intersect: a node
-// is visible only if it passes ALL three. Each works as exclusion
-// (uncheck = hide). Additionally, "仅显示带标签节点" hides all
-// tagless nodes so tagged subsets (ddd, swagger) are isolatable.
+// == Unified filter system ==
 const hiddenCommunities = new Set();
-const TYPE_ACTIVE = {{}};   // file_type -> bool
-const TAG_ACTIVE = {{}};      // tag -> bool
+const TYPE_ACTIVE = {{}};
+const TAG_ACTIVE = {{}};
 let tagOnlyTagged = false;
 
 TYPE_INDEX.forEach(t => {{ TYPE_ACTIVE[t.type] = true; }});
@@ -532,145 +566,176 @@ function applyFilters() {{
   const updates = RAW_NODES.map(n => ({{ id: n.id, hidden: isNodeHidden(n) }}));
   nodesDS.update(updates);
   updateStats();
+  renderNodeList();
 }}
 
 function updateStats() {{
   const visible = RAW_NODES.filter(n => !isNodeHidden(n)).length;
   const el = document.getElementById('stats');
-  if (el) el.textContent = visible + ' / ' + RAW_NODES.length
-    + ' 节点 &middot; ' + RAW_EDGES.length + ' 条边 &middot; '
-    + LEGEND.length + ' 个社区';
+  if (el) el.innerHTML = `<b>${{visible}}</b>/${{RAW_NODES.length}} · <b>${{RAW_EDGES.length}}</b>边 · <b>${{LEGEND.length}}</b>社区`;
 }}
 
-// ── Type filter panel ──
-function renderTypePanel() {{
-  const container = document.getElementById('type-filter');
-  if (!container) return;
-  container.innerHTML = '';
-  TYPE_INDEX.forEach(t => {{
-    const item = document.createElement('div');
-    item.className = 'filter-item';
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.className = 'filter-cb';
-    cb.checked = TYPE_ACTIVE[t.type];
-    cb.addEventListener('change', (e) => {{
-      e.stopPropagation();
-      TYPE_ACTIVE[t.type] = cb.checked;
-      applyFilters();
+// == Filter chip rendering (type, tag, community) ==
+function renderFilterChips() {{
+  // Type filter chips
+  const typeContainer = document.getElementById('filter-type');
+  if (typeContainer) {{
+    typeContainer.innerHTML = '';
+    TYPE_INDEX.forEach(t => {{
+      const chip = document.createElement('span');
+      chip.className = 'filter-chip active';
+      chip.innerHTML = `<span class="filter-chip-dot" style="background:${{COMMUNITY_COLORS[t.type.charCodeAt(0) % 10] || '#4E79A7'}}"></span>${{esc(t.type)}} <span class="filter-chip-count">${{t.count}}</span>`;
+      chip.addEventListener('click', () => {{
+        TYPE_ACTIVE[t.type] = !TYPE_ACTIVE[t.type];
+        chip.classList.toggle('active', TYPE_ACTIVE[t.type]);
+        applyFilters();
+      }});
+      typeContainer.appendChild(chip);
     }});
-    item.innerHTML = `<span class="filter-label">${{t.type}}</span><span class="filter-count">${{t.count}}</span>`;
-    item.prepend(cb);
-    item.onclick = (e) => {{
-      if (e.target === cb) return;
-      cb.checked = !cb.checked;
-      cb.dispatchEvent(new Event('change'));
-    }};
-    container.appendChild(item);
-  }});
-}}
-
-// ── Tag filter panel ──
-function renderTagPanel() {{
-  const container = document.getElementById('tag-filter');
-  if (!container) return;
-  container.innerHTML = '';
-  if (TAG_INDEX.length === 0) {{
-    container.innerHTML = '<div class="filter-empty">暂无标签</div>';
-    return;
   }}
-  TAG_INDEX.forEach(t => {{
-    const item = document.createElement('div');
-    item.className = 'filter-item';
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.className = 'filter-cb';
-    cb.checked = TAG_ACTIVE[t.tag];
-    cb.addEventListener('change', (e) => {{
-      e.stopPropagation();
-      TAG_ACTIVE[t.tag] = cb.checked;
-      applyFilters();
-    }});
-    item.innerHTML = `<span class="filter-label">${{t.tag}}</span><span class="filter-count">${{t.count}}</span>`;
-    item.prepend(cb);
-    item.onclick = (e) => {{
-      if (e.target === cb) return;
-      cb.checked = !cb.checked;
-      cb.dispatchEvent(new Event('change'));
-    }};
-    container.appendChild(item);
-  }});
-}}
-
-// ── "Only tagged nodes" toggle ──
-const onlyTaggedCb = document.getElementById('only-tagged-cb');
-if (onlyTaggedCb) {{
-  onlyTaggedCb.addEventListener('change', () => {{
-    tagOnlyTagged = onlyTaggedCb.checked;
-    applyFilters();
-  }});
-}}
-
-// ── Community filter (refactored to use applyFilters) ──
-const selectAllCb = document.getElementById('select-all-cb');
-
-function updateSelectAllState() {{
-  const total = LEGEND.length;
-  const hidden = hiddenCommunities.size;
-  selectAllCb.checked = hidden === 0;
-  selectAllCb.indeterminate = hidden > 0 && hidden < total;
-}}
-
-function toggleAllCommunities(hide) {{
-  document.querySelectorAll('.legend-item').forEach(item => {{
-    hide ? item.classList.add('dimmed') : item.classList.remove('dimmed');
-  }});
-  document.querySelectorAll('.legend-cb').forEach(cb => {{
-    cb.checked = !hide;
-  }});
-  LEGEND.forEach(c => {{
-    if (hide) hiddenCommunities.add(c.cid); else hiddenCommunities.delete(c.cid);
-  }});
-  applyFilters();
-  updateSelectAllState();
-}}
-
-const legendEl = document.getElementById('legend');
-LEGEND.forEach(c => {{
-  const item = document.createElement('div');
-  item.className = 'legend-item';
-  const cb = document.createElement('input');
-  cb.type = 'checkbox';
-  cb.className = 'legend-cb';
-  cb.checked = true;
-  cb.addEventListener('change', (e) => {{
-    e.stopPropagation();
-    if (cb.checked) {{
-      hiddenCommunities.delete(c.cid);
-      item.classList.remove('dimmed');
+  // Tag filter chips
+  const tagContainer = document.getElementById('filter-tags');
+  if (tagContainer) {{
+    tagContainer.innerHTML = '';
+    if (!TAG_INDEX.length) {{
+      tagContainer.innerHTML = '<span style="font-size:0.6875rem;color:var(--gf-text-faint)">暂无标签</span>';
     }} else {{
-      hiddenCommunities.add(c.cid);
-      item.classList.add('dimmed');
+      TAG_INDEX.forEach(t => {{
+        const chip = document.createElement('span');
+        chip.className = 'filter-chip active';
+        chip.innerHTML = `${{esc(t.tag)}} <span class="filter-chip-count">${{t.count}}</span>`;
+        chip.addEventListener('click', () => {{
+          TAG_ACTIVE[t.tag] = !TAG_ACTIVE[t.tag];
+          chip.classList.toggle('active', TAG_ACTIVE[t.tag]);
+          applyFilters();
+        }});
+        tagContainer.appendChild(chip);
+      }});
     }}
-    applyFilters();
-    updateSelectAllState();
+  }}
+  // Community filter chips (in bottom bar)
+  const commContainer = document.getElementById('filter-community');
+  if (commContainer) {{
+    commContainer.innerHTML = '';
+    LEGEND.forEach(c => {{
+      const chip = document.createElement('span');
+      chip.className = 'legend-item active';
+      chip.dataset.cid = c.cid;
+      chip.innerHTML = `<span class="legend-dot" style="background:${{c.color}}"></span><span>${{esc(c.label)}}</span><span class="legend-count">${{c.count}}</span>`;
+      chip.addEventListener('click', () => {{
+        if (hiddenCommunities.has(c.cid)) {{
+          hiddenCommunities.delete(c.cid);
+          chip.classList.add('active');
+          chip.classList.remove('dimmed');
+        }} else {{
+          hiddenCommunities.add(c.cid);
+          chip.classList.remove('active');
+          chip.classList.add('dimmed');
+        }}
+        applyFilters();
+      }});
+      commContainer.appendChild(chip);
+    }});
+  }}
+}}
+
+// == Node list rendering (all nodes, with status indicators) ==
+const REVIEW_NODE_IDS = new Set(REVIEW.map(r => r.node_id || r.endpointId).filter(Boolean));
+const REVIEW_META = {{
+  island: {{ label: '孤岛', dot: '#dc4444', badge: 'nb-island' }},
+  ambiguous_edge: {{ label: '多匹配', dot: '#d97706', badge: 'nb-ambiguous' }},
+  inferred_edge: {{ label: '推断', dot: '#2563eb', badge: 'nb-inferred' }},
+  semantic_gap: {{ label: 'LLM缺失', dot: '#6b7280', badge: 'nb-gap' }},
+}};
+
+function reviewTypeOf(item) {{
+  if (item.type) return item.type;
+  if (item.anchorKind) return 'island';
+  if (item.reason && item.reason.includes('LLM')) return 'semantic_gap';
+  return 'island';
+}}
+
+function renderNodeList() {{
+  const container = document.getElementById('node-list');
+  if (!container) return;
+  const visibleNodes = RAW_NODES.filter(n => !isNodeHidden(n));
+  const showLimit = 100;
+  container.innerHTML = '';
+  visibleNodes.slice(0, showLimit).forEach(n => {{
+    const isReview = REVIEW_NODE_IDS.has(n.id);
+    const reviewItem = isReview ? REVIEW.find(r => (r.node_id || r.endpointId) === n.id) : null;
+    const el = document.createElement('div');
+    el.className = 'node-item';
+    el.dataset.nid = n.id;
+    if (isReview && reviewItem) {{
+      const type = reviewTypeOf(reviewItem);
+      const meta = REVIEW_META[type] || REVIEW_META.island;
+      el.innerHTML = `
+        <div class="node-item-head">
+          <span class="node-status-dot" style="background:${{meta.dot}}"></span>
+          <span class="node-badge ${{meta.badge}}">${{esc(meta.label)}}</span>
+          <span class="node-title">${{esc(n.label)}}</span>
+        </div>
+        <div class="node-detail">${{esc(reviewItem.detail || reviewItem.reason || '')}}</div>
+        <div class="node-file">${{esc(n._source_file || '')}}</div>
+      `;
+    }} else {{
+      el.innerHTML = `
+        <div class="node-item-head">
+          <span class="node-type-dot" style="background:${{n.color.background}}"></span>
+          <span class="node-title">${{esc(n.label)}}</span>
+        </div>
+        <div class="node-detail">${{esc(n._node_kind || n._file_type || '')}} · ${{n._degree}} 连接</div>
+        <div class="node-file">${{esc(n._source_file || '')}}</div>
+      `;
+    }}
+    el.addEventListener('click', () => {{
+      focusNode(n.id);
+    }});
+    container.appendChild(el);
   }});
-  item.innerHTML = `<div class="legend-dot" style="background:${{c.color}}"></div>
-    <span class="legend-label">${{c.label}}</span>
-    <span class="legend-count">${{c.count}}</span>`;
-  item.prepend(cb);
-  item.onclick = (e) => {{
-    if (e.target === cb) return;
-    cb.checked = !cb.checked;
-    cb.dispatchEvent(new Event('change'));
-  }};
-  legendEl.appendChild(item);
+  // Show count hint if truncated
+  if (visibleNodes.length > showLimit) {{
+    const hint = document.createElement('div');
+    hint.style.cssText = 'padding:8px 16px;text-align:center;font-size:0.6875rem;color:var(--gf-text-muted);border-top:1px solid var(--gf-border-subtle)';
+    hint.textContent = '显示前 ' + showLimit + ' 个 / 共 ' + visibleNodes.length + ' 个节点';
+    container.appendChild(hint);
+  }}
+  // Update review badge count
+  const badge = document.getElementById('review-badge');
+  if (badge) {{
+    badge.textContent = REVIEW.length;
+  }}
+}}
+
+// == Edit tab switching ==
+document.addEventListener('click', e => {{
+  const tab = e.target.closest('.edit-tab');
+  if (tab) {{
+    tab.parentElement.querySelectorAll('.edit-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+  }}
 }});
 
-// ── Initialize panels ──
-renderTypePanel();
-renderTagPanel();
+// == Initialize ==
+renderFilterChips();
+renderNodeList();
 updateStats();
+// Render overview community cards
+const ovwComm = document.getElementById('overview-communities');
+if (ovwComm) {{
+  LEGEND.slice(0, 6).forEach(c => {{
+    const card = document.createElement('div');
+    card.className = 'comm-card';
+    card.style.setProperty('--comm-color', c.color);
+    card.innerHTML = `<div class="comm-head"><span class="comm-dot" style="background:${{c.color}}"></span><span class="comm-name">${{esc(c.label)}}</span><span class="comm-count">${{c.count}} 节点</span></div><div class="comm-desc">点击进入审核模式查看该社区详情</div>`;
+    card.addEventListener('click', () => {{
+      const tab = document.querySelector('.mode-tab[data-tab="review"]');
+      if (tab) tab.click();
+    }});
+    ovwComm.appendChild(card);
+  }});
+}}
 </script>"""
 
 
@@ -907,7 +972,7 @@ def to_html(
             else:
                 lesson = f"Lesson: {status} ({entry.get('uses', 0)} useful)"
             if stale:
-                lesson += " [code changed — re-verify]"
+                lesson += " [code changed - re-verify]"
             node["title"] = _html.escape(label) + "\n" + _html.escape(sanitize_label(lesson))
         vis_nodes.append(node)
 
@@ -1001,62 +1066,169 @@ def to_html(
 {_html_styles()}
 </head>
 <body>
-<div id="graph"></div>
-<div id="sidebar">
-  <div id="search-wrap">
-    <input id="search" type="text" placeholder="搜索节点..." autocomplete="off">
+<!-- Topbar -->
+<header class="topbar">
+  <div class="brand"><div class="brand-mark">G</div><span>graphify</span><span class="brand-sub">{title}</span></div>
+  <div class="divider-v"></div>
+  <nav class="mode-tabs">
+    <button class="mode-tab" data-tab="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>概览</button>
+    <button class="mode-tab active" data-tab="review"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>审核<span class="badge" id="review-badge">0</span></button>
+    <button class="mode-tab" data-tab="learn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253"/></svg>学习</button>
+  </nav>
+  <div class="search-wrap">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4-4"/></svg>
+      <input id="search" type="text" placeholder="搜索节点..." autocomplete="off">
+    </div>
     <div id="search-results"></div>
   </div>
-  <div id="info-panel">
-    <h3>节点信息</h3>
-    <div id="info-content"><span class="empty">点击节点查看详情</span></div>
-  </div>
-  <div id="type-filter-wrap" class="filter-wrap">
-    <div class="filter-section-header" onclick="document.getElementById('type-filter-wrap').classList.toggle('collapsed')">
-      <span class="filter-chevron">&#9660;</span>
-      <h3>数据类型</h3>
-    </div>
-    <div class="filter-body">
-      <div id="type-filter"></div>
-    </div>
-  </div>
-  <div id="tag-filter-wrap" class="filter-wrap">
-    <div class="filter-section-header" onclick="document.getElementById('tag-filter-wrap').classList.toggle('collapsed')">
-      <span class="filter-chevron">&#9660;</span>
-      <h3>标签</h3>
-    </div>
-    <div class="filter-body">
-      <div id="only-tagged-wrap">
-        <label><input type="checkbox" id="only-tagged-cb">仅显示带标签节点</label>
+  <a class="report-link" href="GRAPH_REPORT.md"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>报告 ↗</a>
+</header>
+
+<!-- Overview tab -->
+<div id="page-overview" class="tab-page">
+  <div class="overview-page">
+    <div class="ovw-max">
+      <div class="ovw-hero">
+        <h1>{title}</h1>
+        <p>{G.number_of_nodes()} nodes · {G.number_of_edges()} edges · {len(communities)} communities</p>
       </div>
-      <div id="tag-filter"></div>
-    </div>
-  </div>
-  <div id="review-wrap">
-    <div id="review-header" onclick="toggleReview()">
-      <span class="review-chevron">&#9660;</span>
-      <h3>待审核队列</h3>
-      <span id="review-badge" class="review-badge review-badge-zero">0</span>
-    </div>
-    <div id="review-body">
-      <div id="review-filters"></div>
-      <div id="review-file-filter-wrap">
-        <select id="review-file-filter"><option value="">全部文件</option></select>
+      <p class="ovw-subtitle">知识图谱总体概览-节点统计、代码分布与社区结构。</p>
+      <div class="stat-grid">
+        <div class="stat-card" style="--stat-color:#4E79A7">
+          <div class="stat-value">{G.number_of_nodes()}</div>
+          <div class="stat-label">节点</div>
+          <div class="stat-trend">across {len(communities)} communities</div>
+        </div>
+        <div class="stat-card" style="--stat-color:#F28E2B">
+          <div class="stat-value">{G.number_of_edges()}</div>
+          <div class="stat-label">关系边</div>
+          <div class="stat-trend">calls · imports · uses · similar</div>
+        </div>
+        <div class="stat-card" style="--stat-color:#59A14F">
+          <div class="stat-value">{len(communities)}</div>
+          <div class="stat-label">社区 / 模块</div>
+          <div class="stat-trend">Leiden clustering</div>
+        </div>
+        <div class="stat-card" style="--stat-color:#B07AA1">
+          <div class="stat-value">{len(review_items)}</div>
+          <div class="stat-label">待审核项</div>
+          <div class="stat-trend">low-confidence items</div>
+        </div>
       </div>
-      <div id="review-list"></div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div class="chart-title">代码分布</div>
+          {''.join(f'<div class="bar-row"><span class="bar-label">{t["type"]}</span><div class="bar-track"><div class="bar-fill" style="width:{min(100, t["count"] * 100 // max(1, max(tt["count"] for tt in type_index)))}%;background:#4E79A7"><span class="bar-count">{t["count"]}</span></div></div></div>' for t in type_index)}
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">社区规模</div>
+          {''.join(f'<div class="bar-row"><span class="bar-label"><span class="legend-dot" style="width:8px;height:8px;background:{c["color"]};display:inline-block"></span> {c["label"]}</span><div class="bar-track"><div class="bar-fill" style="width:{min(100, c["count"] * 100 // max(1, max(cc["count"] for cc in legend_data)))}%;background:{c["color"]}"><span class="bar-count">{c["count"]}</span></div></div></div>' for c in legend_data)}
+        </div>
+      </div>
+      <div class="chart-card" style="margin-top:16px">
+        <div class="chart-title">社区 / 模块</div>
+        <div class="comm-grid" id="overview-communities"></div>
+      </div>
     </div>
   </div>
-  <div id="legend-wrap">
-    <h3>社区</h3>
-    <div id="legend-controls">
-      <label><input type="checkbox" id="select-all-cb" checked onchange="toggleAllCommunities(!this.checked)">全选</label>
-    </div>
-    <div id="legend"></div>
-  </div>
-  <div id="stats">{stats}</div>
 </div>
-{_html_script(nodes_json, edges_json, legend_json, _js_safe(type_index), _js_safe(tag_index))}
-{_review_queue_script(review_json)}
+
+<!-- Review tab (active by default) -->
+<div id="page-review" class="tab-page active">
+  <div class="workspace">
+    <!-- Left: node list with filters -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title">节点列表</div>
+        <div class="sidebar-meta">{G.number_of_nodes()} 节点 · {len(review_items)} 项待审核</div>
+      </div>
+      <div class="filter-section">
+        <div class="filter-section-label">数据类型</div>
+        <div class="filter-chip-row" id="filter-type"></div>
+      </div>
+      <div class="filter-section">
+        <div class="filter-section-label">标签</div>
+        <div class="filter-chip-row" id="filter-tags"></div>
+      </div>
+      <div class="sidebar-list" id="node-list"></div>
+    </aside>
+    <!-- Center: graph -->
+    <div class="graph-area">
+      <div id="graph"></div>
+      <div class="graph-stats" id="stats">{stats}</div>
+    </div>
+    <!-- Right: detail + edit -->
+    <aside class="detail-panel">
+      <div class="detail-header" id="detail-header">
+        <div class="detail-name">点击节点查看详情</div>
+        <div class="detail-meta"></div>
+      </div>
+      <div class="detail-body" id="detail-body">
+        <div style="color:var(--gf-text-muted);font-size:0.75rem;text-align:center;padding:20px 0">选择左侧列表中的节点或点击图谱中的节点</div>
+      </div>
+      <div class="detail-nav">
+        <button class="detail-nav-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>源文件 ↗</button>
+        <button class="detail-nav-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>路径</button>
+        <button class="detail-nav-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>解释</button>
+      </div>
+      <div class="edit-section" id="edit-section" style="display:none">
+        <div class="edit-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>审核修正</div>
+        <div class="edit-body">
+          <div class="edit-tab-row"><button class="edit-tab active">关系</button><button class="edit-tab">节点</button></div>
+          <div class="edit-field"><label class="edit-label">关系类型</label><select class="edit-select"><option>calls</option><option>imports</option><option>uses</option><option>defines</option><option>semantically_similar_to</option></select></div>
+          <div class="edit-field"><label class="edit-label">置信度</label><select class="edit-select"><option>EXTRACTED</option><option>AMBIGUOUS</option><option>INFERRED</option></select></div>
+          <div class="edit-field"><label class="edit-label">修正说明（写入错误报告）</label><textarea class="edit-textarea" id="edit-textarea" placeholder="描述问题与期望的修正..."></textarea></div>
+          <div class="edit-actions"><button class="btn btn-ghost">跳过</button><button class="btn btn-primary">提交修正</button></div>
+          <div class="edit-note" id="edit-file-path">→ .graph/error-report/</div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- Learn tab -->
+<div id="page-learn" class="tab-page">
+  <div class="workspace">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title">引导漫游</div>
+        <div class="sidebar-meta">按依赖顺序浏览架构</div>
+      </div>
+      <div class="sidebar-list" id="tour-list">
+        <div style="padding:20px 16px;color:var(--gf-text-muted);font-size:0.75rem">漫游功能需要运行 <code style="font-family:var(--gf-font-mono);background:var(--gf-panel);padding:1px 4px;border-radius:3px">graphify --learn</code> 生成。</div>
+      </div>
+    </aside>
+    <div class="graph-area" id="learn-graph-area">
+      <!-- graph container will be moved here by JS when learn tab is active -->
+      <div class="graph-stats">{stats}</div>
+    </div>
+    <aside class="detail-panel">
+      <div class="detail-header">
+        <div class="detail-name">学习模式</div>
+        <div class="detail-meta">点击图谱节点查看详情</div>
+      </div>
+      <div class="detail-body" id="learn-detail">
+        <div style="color:var(--gf-text-muted);font-size:0.75rem;text-align:center;padding:20px 0">选择图谱中的节点查看信息</div>
+      </div>
+      <div class="detail-nav">
+        <button class="detail-nav-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>源文件 ↗</button>
+        <button class="detail-nav-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>路径</button>
+        <button class="detail-nav-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>解释</button>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- Bottom filter bar (community filter) - hidden on overview, shown on review/learn -->
+<footer class="bottom-bar" id="bottom-bar" style="display:none">
+  <span style="font-size:0.6875rem;color:var(--gf-text-muted);text-transform:uppercase;letter-spacing:0.08em;font-weight:600">社区</span>
+  <div id="filter-community" style="display:flex;gap:6px;overflow-x:auto"></div>
+  <div class="bottom-divider"></div>
+  <div class="bottom-stats" id="stats-bottom">{stats}</div>
+</footer>
+
+{_html_script(nodes_json, edges_json, legend_json, _js_safe(type_index), _js_safe(tag_index), review_json)}
 {_hyperedge_script(hyperedges_json)}
 </body>
 </html>"""

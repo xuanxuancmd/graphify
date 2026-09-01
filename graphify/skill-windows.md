@@ -688,7 +688,7 @@ The graph is the map. Your job after the pipeline is to be the guide.
 After a successful graph build, inject a `## graphify` section into the project's `CLAUDE.md` so future agent sessions know the graph exists and prefer it over raw grep. Idempotent: if the section already exists, it is replaced in place; otherwise appended.
 
 ```bash
-$(cat .graph/.graphify_python) -c "
+"$(cat .graph/.graphify_python)" -c "
 from pathlib import Path
 from graphify.install import _always_on, _replace_or_append_section, _CLAUDE_MD_MARKER
 

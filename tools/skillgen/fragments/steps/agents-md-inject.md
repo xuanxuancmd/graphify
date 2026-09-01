@@ -3,7 +3,7 @@
 After a successful graph build, inject a `## graphify` section into the project's `AGENTS.md` so future agent sessions in this project know the graph exists and prefer it over raw grep. Idempotent: if the section already exists (matched by the `## graphify` marker), it is replaced in place; otherwise the section is appended. This step is skipped on `--update` and `--cluster-only` runs (those are rebuilds, not first-builds — the section is already there).
 
 ```bash
-$(cat .graph/.graphify_python) -c "
+"$(cat .graph/.graphify_python)" -c "
 from pathlib import Path
 from graphify.install import _always_on, _replace_or_append_section, _AGENTS_MD_MARKER
 

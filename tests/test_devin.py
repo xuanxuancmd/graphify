@@ -240,14 +240,17 @@ def test_devin_skill_file_uses_python_c_syntax():
     """Devin skill must use inline python -c syntax (cross-platform, no bash heredocs).
 
     All mature graphify skills use the interpreter-detection pattern
-    ``$(cat .graph/.graphify_python) -c "..."`` rather than bare
+    ``"$(cat .graph/.graphify_python)" -c "..."`` rather than bare
     ``python -c "..."`` so they work in pipx / venv environments.
+    The outer double-quotes are required so paths with spaces (common on
+    Windows, e.g. ``D:\\Tools\\Program Files (x86)\\python\\python.exe``)
+    survive bash word-splitting (#2).
     """
     import graphify
     skill = (Path(graphify.__file__).parent / "skill-devin.md").read_text()
-    assert '.graphify_python) -c "' in skill, (
-        "skill-devin.md must use the interpreter-detection pattern "
-        "'$(cat .graph/.graphify_python) -c \"...\"'"
+    assert '.graphify_python)" -c "' in skill, (
+        "skill-devin.md must use the quoted interpreter-detection pattern "
+        '\'$(cat .graph/.graphify_python)" -c "...\''
     )
     assert "#!/bin/bash" not in skill
 

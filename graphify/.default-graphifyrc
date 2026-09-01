@@ -56,3 +56,23 @@
 # Default (unset / false): embedding requests connect directly to
 # embed_base_url, ignoring HTTP_PROXY/HTTPS_PROXY env vars and the Windows
 # system proxy registry.
+
+# --- Vector Tier Confidence-Gated Weighting ---------------------------------
+# Sim thresholds for the 5 confidence tiers of vector retrieval. The vector
+# bonus is tier_weight × sim (not a flat multiplier), so high-confidence
+# semantic matches (sim ≥ 0.85) get PREFIX-level weight (80) and can
+# genuinely influence ranking on semantic queries, while low-confidence
+# matches get little or no weight. See
+# docs/retrieval-overall-design/vector-tier-redesign-spec.md
+#
+# Format: t1,t2,t3,t4 (descending, 0 < t4 < t3 < t2 < t1 ≤ 1.0)
+#   T1 [t1, 1.0]     → weight 80  (PREFIX-level, high-confidence semantic)
+#   T2 [t2, t1)      → weight 20  (medium semantic)
+#   T3 [t3, t2)      → weight 5   (SUBSTRING-level, weak semantic)
+#   T4 [t4, t3)      → weight 1   (FUZZY-level, marginal)
+#   T5 [0, t4)       → weight 0   (noise, discarded)
+#
+# Defaults below suit OpenAI-compatible models (text-embedding-3-small etc).
+# For sentence-transformers / BGE models, lower thresholds, e.g.:
+#   vector_sim_tiers = 0.65,0.50,0.35,0.20
+# vector_sim_tiers = 0.85,0.70,0.55,0.40

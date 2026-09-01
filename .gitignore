@@ -13,6 +13,7 @@ build/
 .omo
 node_modules
 .codegraph
+opendesign
 *.so
 *.egg
 .graphify/

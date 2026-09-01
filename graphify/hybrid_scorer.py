@@ -6,9 +6,32 @@ the lexical tiers — the vector and fuzzy bonuses are added on top so a
 precise query stays EXACT-dominated and a fuzzy/semantic query gets
 rescued from a 0 lexical score.
 
-Bonus constants (see spec §4.1):
-    _VECTOR_SIMILARITY_BONUS = 5.0   (between SUBSTRING=1 and PREFIX=100)
-    _FUZZY_MATCH_BONUS       = 2.0   (above SUBSTRING=1, below VECTOR=5)
+Vector tier uses confidence-gated tiered weighting (see
+docs/retrieval-overall-design/vector-tier-redesign-spec.md):
+
+    bonus = _vector_tier_weight(sim) × sim
+
+The tier_weight is a piecewise constant selected by the cosine similarity
+value, mapping each confidence band into the lexical scoring hierarchy:
+
+    T1  sim ≥ 0.85     → 80.0   (PREFIX-level, high-confidence semantic)
+    T2  0.70 ≤ sim < 0.85 → 20.0   (between SUBSTRING and PREFIX)
+    T3  0.55 ≤ sim < 0.70 → 5.0    (SUBSTRING-level)
+    T4  0.40 ≤ sim < 0.55 → 1.0    (FUZZY/SOURCE-level)
+    T5  sim < 0.40     → 0.0    (noise, discarded)
+
+This replaces the old flat ``_VECTOR_SIMILARITY_BONUS = 5.0`` linear
+multiplier which was "decorative" (0.5% of EXACT=1000) and effectively
+rescue-only. The tiered approach lets a high-confidence vector match
+(sim ≥ 0.85, bonus up to 80) genuinely influence ranking on semantic
+queries while still staying below EXACT(1000) and PREFIX(100) on precise
+queries. The bonus is ``tier_weight × sim`` (not tier_weight alone) so
+magnitude is preserved within each tier and there's a deliberate jump at
+tier boundaries (confidence-level transitions).
+
+Thresholds are configurable via ``vector_sim_tiers`` in graphifyrc.
+
+    _FUZZY_MATCH_BONUS = 2.0   (above SUBSTRING=1, below VECTOR T3=5)
 
 The vector tier is computed in one numpy matrix multiply over the whole
 graph (sub-ms for 10k nodes); the fuzzy tier is computed per
@@ -30,8 +53,78 @@ from graphify.embeddings import (
 )
 from graphify.fuzzy import fuzzy_score
 
-_VECTOR_SIMILARITY_BONUS = 5.0
+# --- Vector tier: confidence-gated piecewise weights ----------------------
+#
+# Default sim thresholds (configurable via graphifyrc vector_sim_tiers).
+# Adapted for OpenAI-compatible embedding models. Lower these for
+# sentence-transformers / BGE models (see spec §4.2).
+#
+# Each tier maps to a band in the lexical scoring hierarchy:
+#   T1 [t1, 1.0]      → 80.0  (PREFIX-level, high-confidence semantic)
+#   T2 [t2, t1)        → 20.0  (between SUBSTRING and PREFIX)
+#   T3 [t3, t2)        → 5.0   (SUBSTRING-level, weak semantic)
+#   T4 [t4, t3)        → 1.0   (FUZZY/SOURCE-level, marginal)
+#   T5 [0, t4)         → 0.0   (noise, discarded)
+#
+# The bonus is tier_weight × sim (not tier_weight alone) so magnitude
+# is preserved within each tier.
+_DEFAULT_VECTOR_SIM_TIERS: tuple[float, ...] = (0.85, 0.70, 0.55, 0.40)
+_VECTOR_TIER_WEIGHTS: tuple[float, ...] = (80.0, 20.0, 5.0, 1.0, 0.0)
+
 _FUZZY_MATCH_BONUS = 2.0
+
+
+def _vector_tier_weight(
+    sim: float,
+    tiers: tuple[float, ...] = _DEFAULT_VECTOR_SIM_TIERS,
+) -> float:
+    """Return the tier_weight for a cosine similarity value.
+
+    Tiers (configurable via graphifyrc vector_sim_tiers):
+        sim ≥ tiers[0]          → 80.0  (T1: high-confidence, PREFIX-level)
+        tiers[1] ≤ sim < tiers[0] → 20.0  (T2: medium, SUBSTRING~PREFIX)
+        tiers[2] ≤ sim < tiers[1] → 5.0   (T3: weak, SUBSTRING-level)
+        tiers[3] ≤ sim < tiers[2] → 1.0   (T4: marginal, FUZZY-level)
+        sim < tiers[3]          → 0.0   (T5: noise, discarded)
+
+    The caller multiplies this by sim to get the final bonus::
+
+        bonus = _vector_tier_weight(sim) × sim
+
+    So magnitude is preserved within each tier and there's a deliberate
+    jump at tier boundaries (confidence-level transitions).
+    """
+    if sim >= tiers[0]:
+        return _VECTOR_TIER_WEIGHTS[0]
+    if sim >= tiers[1]:
+        return _VECTOR_TIER_WEIGHTS[1]
+    if sim >= tiers[2]:
+        return _VECTOR_TIER_WEIGHTS[2]
+    if sim >= tiers[3]:
+        return _VECTOR_TIER_WEIGHTS[3]
+    return _VECTOR_TIER_WEIGHTS[4]
+
+
+def _parse_vector_sim_tiers(raw: str) -> tuple[float, ...]:
+    """Parse ``vector_sim_tiers`` from graphifyrc into a 4-tuple.
+
+    Format: comma-separated 4 floats in descending order, e.g.
+    ``"0.85,0.70,0.55,0.40"``. Returns ``_DEFAULT_VECTOR_SIM_TIERS`` on
+    empty input, parse error, or validation failure — never raises, so
+    a config typo never crashes a query.
+    """
+    raw = raw.strip()
+    if not raw:
+        return _DEFAULT_VECTOR_SIM_TIERS
+    try:
+        parts = [float(x.strip()) for x in raw.split(",")]
+        if len(parts) != 4:
+            return _DEFAULT_VECTOR_SIM_TIERS
+        if not (0.0 < parts[3] < parts[2] < parts[1] < parts[0] <= 1.0):
+            return _DEFAULT_VECTOR_SIM_TIERS
+        return (parts[0], parts[1], parts[2], parts[3])
+    except (ValueError, TypeError):
+        return _DEFAULT_VECTOR_SIM_TIERS
 
 
 def _load_embed_config_from_graphifyrc(graph_dir: "str | Path | None" = None) -> dict[str, str]:
@@ -80,12 +173,13 @@ def _load_embed_config_from_graphifyrc(graph_dir: "str | Path | None" = None) ->
     # Extract embed-related keys. ``embed_*`` are the core embedding config
     # (backend/base_url/api_key/model). ``enable_embedding_proxy`` is the
     # proxy bypass switch (default false = direct connect, see embeddings.py
-    # _build_embed_http_client). Other keys like viz_node_limit are not
-    # relevant here.
+    # _build_embed_http_client). ``vector_sim_tiers`` configures the
+    # confidence-gated vector tier thresholds (see _vector_tier_weight).
+    # Other keys like viz_node_limit are not relevant here.
     return {
         k: str(v)
         for k, v in cfg.items()
-        if k.startswith("embed_") or k == "enable_embedding_proxy"
+        if k.startswith("embed_") or k == "enable_embedding_proxy" or k == "vector_sim_tiers"
     }
 
 
@@ -143,6 +237,7 @@ class HybridScorer:
         # the rc_cfg getter — no env vars needed, avoiding "works on my
         # machine" issues where env vars are set in one shell but not visible
         # to a subprocess.
+        self._graph_dir = graph_dir
         self._rc_cfg = _load_embed_config_from_graphifyrc(graph_dir)
         # Backend: explicit arg > .graph/graphifyrc embed_backend.
         self._embed_backend = (
@@ -155,6 +250,12 @@ class HybridScorer:
             embed_model
             or self._rc_cfg.get("embed_model", "").strip()
             or None
+        )
+        # Vector sim tiers: configurable thresholds for confidence-gated
+        # weighting. Falls back to defaults on parse error — don't crash
+        # queries over a config typo.
+        self._vector_sim_tiers = _parse_vector_sim_tiers(
+            self._rc_cfg.get("vector_sim_tiers", "")
         )
         if graph_dir is not None:
             self._load(Path(graph_dir))
@@ -216,9 +317,15 @@ class HybridScorer:
         return _FUZZY_MATCH_BONUS * fuzzy_score(query_token, node_label)
 
     @staticmethod
-    def vector_bonus(sim: float) -> float:
+    def vector_bonus(
+        sim: float,
+        tiers: tuple[float, ...] = _DEFAULT_VECTOR_SIM_TIERS,
+    ) -> float:
         """Vector tier bonus for a cosine similarity value.
+
+        Confidence-gated: ``tier_weight × sim``. See
+        docs/retrieval-overall-design/vector-tier-redesign-spec.md §3.
 
         Public so tests can assert the exact bonus formula matches the spec.
         """
-        return _VECTOR_SIMILARITY_BONUS * float(sim)
+        return _vector_tier_weight(sim, tiers) * float(sim)
