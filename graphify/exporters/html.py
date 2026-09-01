@@ -93,10 +93,23 @@ def _html_styles() -> str:
   .workspace { flex:1; display:flex; min-height:0; }
 
   /* Left sidebar */
-  .sidebar { width:var(--gf-sidebar-w); background:var(--gf-surface); border-right:1px solid var(--gf-border-subtle); display:flex; flex-direction:column; flex-shrink:0; overflow:hidden; }
-  .sidebar-header { padding:16px 16px 12px; border-bottom:1px solid var(--gf-border-subtle); flex-shrink:0; }
-  .sidebar-title { font-family:var(--gf-font-heading); font-size:1.0625rem; font-weight:600; color:var(--gf-text-primary); }
+  .sidebar { width:var(--gf-sidebar-w); background:var(--gf-surface); border-right:1px solid var(--gf-border-subtle); display:flex; flex-direction:column; flex-shrink:0; overflow:hidden; transition:width var(--gf-transition-normal); }
+  .sidebar.collapsed { width:0; border-right:none; }
+  .sidebar-header { padding:16px 16px 12px; border-bottom:1px solid var(--gf-border-subtle); flex-shrink:0; display:flex; align-items:center; }
+  .sidebar-title { font-family:var(--gf-font-heading); font-size:1.0625rem; font-weight:600; color:var(--gf-text-primary); flex:1; }
   .sidebar-meta { font-size:0.6875rem; color:var(--gf-text-muted); margin-top:3px; }
+  .sidebar-toggle { width:24px; height:24px; display:flex; align-items:center; justify-content:center; border:none; background:transparent; color:var(--gf-text-muted); border-radius:4px; cursor:pointer; flex-shrink:0; }
+  .sidebar-toggle:hover { background:var(--gf-elevated); color:var(--gf-text-primary); }
+  .sidebar-toggle svg { width:14px; height:14px; }
+  /* Collapse rail (thin strip to re-expand when collapsed) */
+  .sidebar-rail { width:16px; background:var(--gf-surface); border-right:1px solid var(--gf-border-subtle); display:none; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; }
+  .sidebar-rail.visible { display:flex; }
+  .sidebar-rail:hover { background:var(--gf-elevated); }
+  .sidebar-rail svg { width:12px; height:12px; color:var(--gf-text-muted); }
+  .detail-rail { width:16px; background:var(--gf-surface); border-left:1px solid var(--gf-border-subtle); display:none; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; }
+  .detail-rail.visible { display:flex; }
+  .detail-rail:hover { background:var(--gf-elevated); }
+  .detail-rail svg { width:12px; height:12px; color:var(--gf-text-muted); }
   .filter-section { padding:8px 16px; border-bottom:1px solid var(--gf-border-subtle); flex-shrink:0; }
   .filter-section-label { font-size:0.6875rem; color:var(--gf-text-muted); text-transform:uppercase; letter-spacing:0.08em; font-weight:600; margin-bottom:4px; }
   .filter-chip-row { display:flex; flex-wrap:wrap; gap:4px; }
@@ -128,8 +141,9 @@ def _html_styles() -> str:
   .graph-stats b { color:var(--gf-text-secondary); }
 
   /* Right detail panel */
-  .detail-panel { width:var(--gf-detail-w); background:var(--gf-surface); border-left:1px solid var(--gf-border-subtle); display:flex; flex-direction:column; flex-shrink:0; overflow:hidden; }
-  .detail-header { padding:16px; border-bottom:1px solid var(--gf-border-subtle); flex-shrink:0; }
+  .detail-panel { width:var(--gf-detail-w); background:var(--gf-surface); border-left:1px solid var(--gf-border-subtle); display:flex; flex-direction:column; flex-shrink:0; overflow:hidden; transition:width var(--gf-transition-normal); }
+  .detail-panel.collapsed { width:0; border-left:none; }
+  .detail-header { padding:16px; border-bottom:1px solid var(--gf-border-subtle); flex-shrink:0; display:flex; align-items:center; }
   .detail-name { font-family:var(--gf-font-heading); font-size:0.875rem; font-weight:600; color:var(--gf-text-primary); margin-bottom:4px; }
   .detail-meta { display:flex; align-items:center; gap:8px; font-size:0.6875rem; color:var(--gf-text-muted); }
   .kind-badge { padding:1px 6px; border-radius:4px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; font-size:10px; }
@@ -678,14 +692,16 @@ function renderFilterChips() {{
   }}
 }}
 
-// == Node list rendering (all nodes, with status indicators) ==
+// == Node list rendering: review list grouped by type ==
 const REVIEW_NODE_IDS = new Set(REVIEW.map(r => r.node_id || r.endpointId).filter(Boolean));
 const REVIEW_META = {{
-  island: {{ label: '孤岛', dot: '#dc4444', badge: 'nb-island' }},
-  ambiguous_edge: {{ label: '多匹配', dot: '#d97706', badge: 'nb-ambiguous' }},
-  inferred_edge: {{ label: '推断', dot: '#2563eb', badge: 'nb-inferred' }},
-  semantic_gap: {{ label: 'LLM缺失', dot: '#6b7280', badge: 'nb-gap' }},
+  island: {{ label: '孤岛', dot: '#dc4444', badge: 'nb-island', desc: '未匹配的文档锚点' }},
+  ambiguous_edge: {{ label: '多匹配', dot: '#d97706', badge: 'nb-ambiguous', desc: '解析器产生多候选的边' }},
+  inferred_edge: {{ label: '推断边', dot: '#2563eb', badge: 'nb-inferred', desc: '框架推断的非结构化边' }},
+  semantic_gap: {{ label: 'LLM缺失', dot: '#6b7280', badge: 'nb-gap', desc: 'LLM 语义提取失败' }},
 }};
+// Temporary "已查看" tracking (session only, not persisted)
+const REVIEW_SEEN = new Set();
 
 function reviewTypeOf(item) {{
   if (item.type) return item.type;
@@ -694,57 +710,158 @@ function reviewTypeOf(item) {{
   return 'island';
 }}
 
+// Find a node by ID, or by searching label in title string
+function findReviewNode(item) {{
+  const nodeId = item.node_id || item.endpointId || '';
+  if (nodeId && nodesDS.get(nodeId)) return nodeId;
+  // Try to find by matching the source node label from the title
+  const title = item.title || item.anchor || item.endpointLabel || '';
+  if (title) {{
+    const parts = title.split(/ -> | -> | -> /);
+    for (const part of parts) {{
+      const trimmed = part.trim();
+      for (const n of RAW_NODES) {{
+        if (n.label === trimmed) return n.id;
+      }}
+    }}
+    for (const n of RAW_NODES) {{
+      if (n.label && n.label.includes(title.trim())) return n.id;
+    }}
+  }}
+  return null;
+}}
+
 function renderNodeList() {{
   const container = document.getElementById('node-list');
   if (!container) return;
-  const visibleNodes = RAW_NODES.filter(n => !isNodeHidden(n));
-  const showLimit = 100;
   container.innerHTML = '';
-  visibleNodes.slice(0, showLimit).forEach(n => {{
-    const isReview = REVIEW_NODE_IDS.has(n.id);
-    const reviewItem = isReview ? REVIEW.find(r => (r.node_id || r.endpointId) === n.id) : null;
-    const el = document.createElement('div');
-    el.className = 'node-item';
-    el.dataset.nid = n.id;
-    if (isReview && reviewItem) {{
-      const type = reviewTypeOf(reviewItem);
-      const meta = REVIEW_META[type] || REVIEW_META.island;
-      el.innerHTML = `
-        <div class="node-item-head">
-          <span class="node-status-dot" style="background:${{meta.dot}}"></span>
-          <span class="node-badge ${{meta.badge}}">${{esc(meta.label)}}</span>
-          <span class="node-title">${{esc(n.label)}}</span>
-        </div>
-        <div class="node-detail">${{esc(reviewItem.detail || reviewItem.reason || '')}}</div>
-        <div class="node-file">${{esc(n._source_file || '')}}</div>
-      `;
-    }} else {{
-      el.innerHTML = `
-        <div class="node-item-head">
-          <span class="node-type-dot" style="background:${{n.color.background}}"></span>
-          <span class="node-title">${{esc(n.label)}}</span>
-        </div>
-        <div class="node-detail">${{esc(n._node_kind || n._file_type || '')}} · ${{n._degree}} 连接</div>
-        <div class="node-file">${{esc(n._source_file || '')}}</div>
-      `;
-    }}
-    el.addEventListener('click', () => {{
-      focusNode(n.id);
-    }});
-    container.appendChild(el);
+  
+  // Group review items by type
+  const byType = {{}};
+  REVIEW.forEach(item => {{
+    const type = reviewTypeOf(item);
+    if (!byType[type]) byType[type] = [];
+    byType[type].push(item);
   }});
-  // Show count hint if truncated
-  if (visibleNodes.length > showLimit) {{
-    const hint = document.createElement('div');
-    hint.style.cssText = 'padding:8px 16px;text-align:center;font-size:0.6875rem;color:var(--gf-text-muted);border-top:1px solid var(--gf-border-subtle)';
-    hint.textContent = '显示前 ' + showLimit + ' 个 / 共 ' + visibleNodes.length + ' 个节点';
-    container.appendChild(hint);
+  
+  // Header for review list
+  const header = document.createElement('div');
+  header.style.cssText = 'padding:6px 12px;background:var(--gf-panel);border-bottom:1px solid var(--gf-border-subtle)';
+  const unseenCount = REVIEW.filter(r => !REVIEW_SEEN.has(r.node_id || r.title)).length;
+  header.innerHTML = '<span style="font-size:0.75rem;font-weight:600;color:var(--gf-text-primary)">审核列表</span>' +
+    '<span style="margin-left:8px;font-size:0.6875rem;color:var(--gf-text-muted)">' + unseenCount + ' 未查看 / ' + REVIEW.length + ' 总计</span>';
+  container.appendChild(header);
+  
+  // Render each category as a collapsible section
+  Object.keys(REVIEW_META).forEach(typeKey => {{
+    const meta = REVIEW_META[typeKey];
+    const items = byType[typeKey] || [];
+    if (items.length === 0) return;
+    
+    // Category header (collapsible)
+    const cat = document.createElement('div');
+    cat.style.cssText = 'padding:6px 12px;background:var(--gf-elevated);border-bottom:1px solid var(--gf-border-subtle);cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none';
+    const catUnseen = items.filter(r => !REVIEW_SEEN.has(r.node_id || r.title)).length;
+    cat.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:' + meta.dot + '"></span>' +
+      '<span style="font-size:0.75rem;font-weight:600;color:var(--gf-text-primary)">' + esc(meta.label) + '</span>' +
+      '<span style="font-size:0.6875rem;color:var(--gf-text-muted)">' + esc(meta.desc) + '</span>' +
+      '<span style="margin-left:auto;font-size:0.6875rem;font-weight:600;color:var(--gf-text-muted);font-family:var(--gf-font-mono)">' + catUnseen + '/' + items.length + '</span>';
+    let catExpanded = true;
+    const list = document.createElement('div');
+    cat.addEventListener('click', () => {{
+      catExpanded = !catExpanded;
+      list.style.display = catExpanded ? 'block' : 'none';
+    }});
+    container.appendChild(cat);
+    container.appendChild(list);
+    
+    // Render items
+    items.forEach(item => {{
+      const itemKey = item.node_id || item.title;
+      const isSeen = REVIEW_SEEN.has(itemKey);
+      const nodeId = findReviewNode(item);
+      const el = document.createElement('div');
+      el.className = 'node-item';
+      if (nodeId) el.dataset.nid = nodeId;
+      el.style.opacity = isSeen ? '0.4' : '1';
+      const title = esc(item.title || item.anchor || item.endpointLabel || '(unnamed)');
+      const detail = esc(item.detail || item.reason || '');
+      const file = esc(item.source_file || item.file || '');
+      el.innerHTML = 
+        '<div class="node-item-head">' +
+          '<span class="node-status-dot" style="background:' + meta.dot + (isSeen ? ';opacity:0.3' : '') + '"></span>' +
+          '<span class="node-title" style="' + (isSeen ? 'text-decoration:line-through;' : '') + '">' + title + '</span>' +
+          (isSeen ? '' : '<span style="margin-left:auto;font-size:0.6875rem;color:var(--gf-text-faint);cursor:pointer" data-action="seen">标记已查看</span>') +
+        '</div>' +
+        (detail ? '<div class="node-detail">' + detail + '</div>' : '') +
+        (file ? '<div class="node-file">' + file + '</div>' : '');
+      // Click on "标记已查看" button
+      const seenBtn = el.querySelector('[data-action="seen"]');
+      if (seenBtn) {{
+        seenBtn.addEventListener('click', (e) => {{
+          e.stopPropagation();
+          REVIEW_SEEN.add(itemKey);
+          renderNodeList();
+        }});
+      }}
+      // Click on item -> focus node + show edit panel
+      el.addEventListener('click', () => {{
+        if (nodeId && nodesDS.get(nodeId)) {{
+          focusNode(nodeId);
+        }}
+        // Always show edit panel for review items (even if node not found)
+        showReviewEdit(item);
+        // Mark as seen
+        REVIEW_SEEN.add(itemKey);
+        renderNodeList();
+      }});
+      list.appendChild(el);
+    }});
+  }});
+  
+  // If no review items, show empty state
+  if (REVIEW.length === 0) {{
+    const empty = document.createElement('div');
+    empty.style.cssText = 'padding:20px;text-align:center;font-size:0.75rem;color:var(--gf-text-muted)';
+    empty.textContent = '暂无待审核项';
+    container.appendChild(empty);
   }}
+  
   // Update review badge count
   const badge = document.getElementById('review-badge');
   if (badge) {{
     badge.textContent = REVIEW.length;
   }}
+}}
+
+// Show edit panel for a review item (independent of node focus)
+function showReviewEdit(item) {{
+  const editSection = document.getElementById('edit-section');
+  if (!editSection) return;
+  editSection.style.display = 'block';
+  // Update detail header to show review item title
+  const detailHeader = document.getElementById('detail-header');
+  if (detailHeader) {{
+    const type = reviewTypeOf(item);
+    const meta = REVIEW_META[type] || REVIEW_META.island;
+    detailHeader.innerHTML = 
+      '<div class="detail-name">' + esc(item.title || item.anchor || item.endpointLabel || '(unnamed)') + '</div>' +
+      '<div class="detail-meta"><span class="kind-badge ' + (type === 'island' ? 'kb-island' : (type === 'ambiguous_edge' ? 'kb-ambiguous' : (type === 'inferred_edge' ? 'kb-inferred' : 'kb-island'))) + '">' + esc(meta.label) + '</span> <span>' + esc(item.detail || item.reason || '') + '</span></div>';
+  }}
+  // Update detail body
+  const detailBody = document.getElementById('detail-body');
+  if (detailBody) {{
+    detailBody.innerHTML = 
+      '<div class="detail-field"><span class="detail-field-label">来源文件</span><span class="detail-field-value">' + esc(item.source_file || item.file || '-') + '</span></div>' +
+      '<div class="detail-field"><span class="detail-field-label">位置</span><span class="detail-field-value">' + esc(item.source_location || '') + '</span></div>';
+  }}
+  // Pre-fill edit fields
+  const detail = item.detail || item.reason || '';
+  const file = item.source_file || item.file || '';
+  const textarea = document.getElementById('edit-textarea');
+  if (textarea && detail) textarea.value = detail;
+  const filePath = document.getElementById('edit-file-path');
+  if (filePath && file) filePath.textContent = '\u2192 ' + file;
 }}
 
 // == Edit tab switching ==
@@ -881,6 +998,24 @@ document.addEventListener('click', e => {{
     }};
   }}
 }})();
+
+// == Sidebar/detail collapse toggles ==
+function toggleSidebar(tab) {{
+  const sidebar = document.getElementById(tab + '-sidebar');
+  const rail = document.getElementById(tab + '-sidebar-rail');
+  if (!sidebar || !rail) return;
+  const collapsed = sidebar.classList.toggle('collapsed');
+  rail.classList.toggle('visible', collapsed);
+  setTimeout(() => network.redraw(), 200);
+}}
+function toggleDetail(tab) {{
+  const panel = document.getElementById(tab === 'review' ? 'review-detail' : 'learn-detail-panel');
+  const rail = document.getElementById(tab + '-detail-rail');
+  if (!panel || !rail) return;
+  const collapsed = panel.classList.toggle('collapsed');
+  rail.classList.toggle('visible', collapsed);
+  setTimeout(() => network.redraw(), 200);
+}}
 
 // == Initialize ==
 renderFilterChips();
@@ -1582,11 +1717,20 @@ def to_html(
 <!-- Review tab (active by default) -->
 <div id="page-review" class="tab-page active">
   <div class="workspace">
+    <!-- Left rail (visible when sidebar collapsed) -->
+    <div class="sidebar-rail" id="review-sidebar-rail" onclick="toggleSidebar('review')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>
     <!-- Left: node list with filters -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="review-sidebar">
       <div class="sidebar-header">
-        <div class="sidebar-title">节点列表</div>
-        <div class="sidebar-meta">{G.number_of_nodes()} 节点 · {len(review_items)} 项待审核</div>
+        <div style="flex:1">
+          <div class="sidebar-title">审核</div>
+          <div class="sidebar-meta">{len(review_items)} 项待审核</div>
+        </div>
+        <button class="sidebar-toggle" onclick="toggleSidebar('review')" title="收起侧栏">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
       </div>
       <div class="filter-section">
         <div class="filter-section-label">数据类型</div>
@@ -1604,10 +1748,15 @@ def to_html(
       <div class="graph-stats" id="stats">{stats}</div>
     </div>
     <!-- Right: detail + edit -->
-    <aside class="detail-panel">
+    <aside class="detail-panel" id="review-detail">
       <div class="detail-header" id="detail-header">
-        <div class="detail-name">点击节点查看详情</div>
-        <div class="detail-meta"></div>
+        <div style="flex:1">
+          <div class="detail-name">点击节点查看详情</div>
+          <div class="detail-meta"></div>
+        </div>
+        <button class="sidebar-toggle" onclick="toggleDetail('review')" title="收起面板">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
       </div>
       <div class="detail-body" id="detail-body">
         <div style="color:var(--gf-text-muted);font-size:0.75rem;text-align:center;padding:20px 0">选择左侧列表中的节点或点击图谱中的节点</div>
@@ -1629,16 +1778,29 @@ def to_html(
         </div>
       </div>
     </aside>
+    <!-- Right rail (visible when detail collapsed) -->
+    <div class="detail-rail" id="review-detail-rail" onclick="toggleDetail('review')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    </div>
   </div>
 </div>
 
 <!-- Learn tab -->
 <div id="page-learn" class="tab-page">
   <div class="workspace">
-    <aside class="sidebar">
+    <!-- Left rail -->
+    <div class="sidebar-rail" id="learn-sidebar-rail" onclick="toggleSidebar('learn')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>
+    <aside class="sidebar" id="learn-sidebar">
       <div class="sidebar-header">
-        <div class="sidebar-title">引导漫游</div>
-        <div class="sidebar-meta">按依赖顺序浏览架构</div>
+        <div style="flex:1">
+          <div class="sidebar-title">引导漫游</div>
+          <div class="sidebar-meta">按依赖顺序浏览架构</div>
+        </div>
+        <button class="sidebar-toggle" onclick="toggleSidebar('learn')" title="收起侧栏">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
       </div>
       <div class="sidebar-list" id="tour-list">
         <div style="padding:20px 16px;color:var(--gf-text-muted);font-size:0.75rem">漫游功能需要运行 <code style="font-family:var(--gf-font-mono);background:var(--gf-panel);padding:1px 4px;border-radius:3px">graphify --learn</code> 生成。</div>
@@ -1648,10 +1810,15 @@ def to_html(
       <!-- graph container will be moved here by JS when learn tab is active -->
       <div class="graph-stats">{stats}</div>
     </div>
-    <aside class="detail-panel">
+    <aside class="detail-panel" id="learn-detail-panel">
       <div class="detail-header">
-        <div class="detail-name">学习模式</div>
-        <div class="detail-meta">点击图谱节点查看详情</div>
+        <div style="flex:1">
+          <div class="detail-name">学习模式</div>
+          <div class="detail-meta">点击图谱节点查看详情</div>
+        </div>
+        <button class="sidebar-toggle" onclick="toggleDetail('learn')" title="收起面板">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
       </div>
       <div class="detail-body" id="learn-detail">
         <div style="color:var(--gf-text-muted);font-size:0.75rem;text-align:center;padding:20px 0">选择图谱中的节点查看信息</div>
@@ -1662,6 +1829,10 @@ def to_html(
         <button class="detail-nav-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>解释</button>
       </div>
     </aside>
+    <!-- Right rail -->
+    <div class="detail-rail" id="learn-detail-rail" onclick="toggleDetail('learn')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    </div>
   </div>
 </div>
 

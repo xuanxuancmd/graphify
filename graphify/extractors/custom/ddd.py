@@ -61,7 +61,7 @@ FILE_EXTENSIONS: frozenset[str] = frozenset({
 })
 FILE_NAME_REGEX = re.compile(r"^[\w/\\-]+\.\w{1,5}$")
 SNAKE_DOT_METHOD_REGEX = re.compile(r"^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$")
-PASCAL_DOT_METHOD_REGEX = re.compile(r"^([A-Z][a-zA-Z0-9]+)\.([a-z_][a-z0-9_]*)$")
+PASCAL_DOT_METHOD_REGEX = re.compile(r"^([A-Z][a-zA-Z0-9]+)\.([a-zA-Z_][a-zA-Z0-9_]*)$")
 PASCAL_CASE_REGEX = re.compile(r"^[A-Z][a-zA-Z0-9]+$")
 HTTP_URL_REGEX = re.compile(r"^(GET|POST|PUT|DELETE|PATCH)\s+\/.+$", re.IGNORECASE)
 HTTP_COLON_URL_REGEX = re.compile(r"^(GET|POST|PUT|DELETE|PATCH):\/(.+)$", re.IGNORECASE)
@@ -71,6 +71,20 @@ PATH_URL_REGEX = re.compile(r"^\/.+")
 # ---------------------------------------------------------------------------
 # Code anchor matching (ported from ddd-code-matcher.mjs)
 # ---------------------------------------------------------------------------
+
+_PATH_VAR_RE = re.compile(r"\{[^}]+\}")
+
+
+def _normalize_path_vars(p: str) -> str:
+    """Normalize path variables: ``/rest/users/{userId}`` → ``/rest/users/{}``.
+
+    DDD docs may use ``{id}`` while the swagger endpoint's ``full_path`` carries
+    ``{userId}``. Without normalization these never match. This rewrites every
+    ``{...}`` segment to ``{}`` so path-variable anchors match regardless of the
+    variable name.
+    """
+    return _PATH_VAR_RE.sub("{}", p)
+
 
 def _basename_without_ext(file_path: str) -> str:
     from os.path import basename, splitext
@@ -161,17 +175,20 @@ def _build_code_indices(graph_nodes: list[dict]) -> dict[str, dict]:
                     endpoint_index[norm] = node
 
         # Endpoint nodes (swagger rest_endpoint): index by path, not label.
-        # The label is "POST /rest/auth/register" — a URL anchor only
+        # The label is "POST:/rest/auth/register" — a URL anchor only
         # carries the path "/rest/auth/register", so indexing by label
-        # would never match.
+        # would never match. Also index a path-variable-normalized form so
+        # "{id}" and "{userId}" match each other.
         if node.get("node_kind") == "rest_endpoint":
             for path_key in ("full_path", "path"):
                 p = node.get(path_key)
                 if p:
                     endpoint_index[p] = node
+                    endpoint_index[_normalize_path_vars(p)] = node
                     norm = p.rstrip("/")
                     if norm and norm != p:
                         endpoint_index[norm] = node
+                        endpoint_index[_normalize_path_vars(norm)] = node
 
     return {"fileIndex": file_index, "nameIndex": name_index, "endpointIndex": endpoint_index}
 
@@ -323,6 +340,8 @@ def _match_code_anchor(anchor: str, indices: dict) -> list[tuple[dict, str, floa
         space_idx = anchor.index(" ")
         path = anchor[space_idx + 1:].strip()
         _endpoint = indices["endpointIndex"].get(path)
+        if not _endpoint:
+            _endpoint = indices["endpointIndex"].get(_normalize_path_vars(path))
         if _endpoint:
             return [(_endpoint, "EXTRACTED", 1.0)]
         # Prefix match: anchor /rest matches endpoint /rest/users/{id}
@@ -338,10 +357,14 @@ def _match_code_anchor(anchor: str, indices: dict) -> list[tuple[dict, str, floa
         raw_path = "/" + m.group(2)
         norm = raw_path.rstrip("/") if len(raw_path) > 1 else raw_path
         _endpoint = indices["endpointIndex"].get(norm)
+        if not _endpoint:
+            _endpoint = indices["endpointIndex"].get(_normalize_path_vars(norm))
         if _endpoint:
             return [(_endpoint, "EXTRACTED", 1.0)]
         # Also try exact raw (with trailing slash)
         _endpoint = indices["endpointIndex"].get(raw_path)
+        if not _endpoint:
+            _endpoint = indices["endpointIndex"].get(_normalize_path_vars(raw_path))
         if _endpoint:
             return [(_endpoint, "EXTRACTED", 1.0)]
         prefix_matches = [(n, "AMBIGUOUS", 0.3)
@@ -353,9 +376,13 @@ def _match_code_anchor(anchor: str, indices: dict) -> list[tuple[dict, str, floa
     if PATH_URL_REGEX.match(anchor):
         norm = anchor.rstrip("/") if len(anchor) > 1 else anchor
         _endpoint = indices["endpointIndex"].get(norm)
+        if not _endpoint:
+            _endpoint = indices["endpointIndex"].get(_normalize_path_vars(norm))
         if _endpoint:
             return [(_endpoint, "EXTRACTED", 1.0)]
         _endpoint = indices["endpointIndex"].get(anchor)
+        if not _endpoint:
+            _endpoint = indices["endpointIndex"].get(_normalize_path_vars(anchor))
         if _endpoint:
             return [(_endpoint, "EXTRACTED", 1.0)]
         prefix_matches = [(n, "AMBIGUOUS", 0.3)

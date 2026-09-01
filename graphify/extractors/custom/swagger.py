@@ -467,24 +467,33 @@ def _make_endpoint_node(
     base_path: str,
     operation: dict,
     line_num: int,
+    version: str = "2.x",
 ) -> dict:
     """Build one REST endpoint node from a ``paths.<path>.<method>`` block.
 
-    Only graphify generic node fields are populated — no swagger-specific
-    columns.  ``label`` follows the ``METHOD:/full/path`` convention so the
-    URL is recoverable from the label alone.  ``desc`` merges description
-    and x-examples (summary is intentionally excluded — it is redundant
-    with description in swagger specs) so ``graphify query`` / ``explain``
-    return the full human-readable context for the endpoint without needing
-    swagger-specific fields on the node.
+    ``label`` follows the ``METHOD:/full/path`` convention so the URL is
+    recoverable from the label alone.  ``desc`` merges description and
+    x-examples (summary is intentionally excluded — it is redundant with
+    description in swagger specs) so ``graphify query`` / ``explain``
+    return the full human-readable context for the endpoint.
+
+    Swagger-specific fields (``method``, ``path``, ``full_path``,
+    ``operation_id``, ``swagger_tags``, ``summary``, ``description``,
+    ``base_path``, ``response_codes``, ``has_request_body``, ``consumes``)
+    are also stored on the node so downstream consumers (DDD endpointIndex,
+    serve.py, callflow HTML) can use them without re-parsing the yaml.
     """
     full_path = (base_path or "") + path
     method_upper = method.upper()
     description = operation.get("description", "") or ""
+    summary = operation.get("summary", "") or ""
     examples = _extract_examples(operation)
 
-    # desc = description + examples (summary excluded — redundant with description)
+    # desc = summary + description + examples, so graphify query / explain
+    # return the full human-readable context for the endpoint.
     parts: list[str] = []
+    if summary:
+        parts.append(summary)
     if description:
         parts.append(description)
     if examples:
@@ -496,6 +505,15 @@ def _make_endpoint_node(
     endpoint_id = _make_id("swagger_ep", stem, method_upper.lower(), norm_path) if norm_path \
         else _make_id("swagger_ep", stem, method_upper.lower(), "root")
 
+    # Swagger-specific fields for downstream consumers
+    raw_tags = operation.get("tags", []) or []
+    if not isinstance(raw_tags, list):
+        raw_tags = []
+    response_codes = [r["code"] for r in _extract_responses(operation, version)]
+    consumes = operation.get("consumes", []) or []
+    if not isinstance(consumes, list):
+        consumes = []
+
     return {
         "id": endpoint_id,
         "label": f"{method_upper}:{full_path}",
@@ -505,6 +523,18 @@ def _make_endpoint_node(
         "node_kind": "rest_endpoint",
         "desc": desc,
         "tags": ["url"],
+        # Swagger-specific fields for DDD endpointIndex, serve.py, callflow
+        "method": method_upper,
+        "path": path,
+        "full_path": full_path,
+        "operation_id": operation.get("operationId", "") or "",
+        "swagger_tags": raw_tags,
+        "base_path": base_path,
+        "summary": summary,
+        "description": description,
+        "response_codes": response_codes,
+        "has_request_body": _has_request_body(operation, version),
+        "consumes": consumes,
     }
 
 
@@ -614,6 +644,7 @@ def extract_swagger(
             ep_node = _make_endpoint_node(
                 doc_path=doc_path, stem=stem, method=method, path=path_str,
                 base_path=base_path, operation=operation, line_num=line_num,
+                version=version,
             )
             nodes.append(ep_node)
 
@@ -631,10 +662,9 @@ def extract_swagger(
             ))
 
             # --- Code association: tags -> controller class ---
-            # Read directly from the operation dict — the node no longer
-            # carries swagger_tags/operation_id as fields (they were only
-            # needed for matching, and the references edge now carries
-            # that relationship for downstream consumers).
+            # The endpoint node carries swagger_tags/operation_id as fields
+            # for downstream consumers (DDD endpointIndex, serve.py). The
+            # references edge also carries the relationship explicitly.
             raw_tags = operation.get("tags", []) or []
             if not isinstance(raw_tags, list):
                 raw_tags = []

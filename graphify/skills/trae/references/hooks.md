@@ -23,7 +23,7 @@ If a post-commit hook already exists, graphify appends to it rather than replaci
 Run once per project to make graphify always-on in Trae sessions:
 
 ```bash
-graphify trae install       # or: graphify trae-cn install
+# AGENTS.md is injected automatically by /graphify when it builds the graph.
 ```
 
 This writes a `## graphify` section to the local `AGENTS.md` that instructs Trae to check the graph before answering codebase questions and rebuild it after code changes. No manual `/graphify` needed in future sessions.
@@ -31,5 +31,5 @@ This writes a `## graphify` section to the local `AGENTS.md` that instructs Trae
 > **Note:** Unlike Claude Code, Trae does NOT support PreToolUse hooks. The AGENTS.md rules are the always-on mechanism — there is no automatic graph rebuild on tool use. Run `/graphify --update` manually after code changes if the graph needs refreshing.
 
 ```bash
-graphify trae uninstall     # or: graphify trae-cn uninstall   # remove the section
+# Remove the ## graphify section from AGENTS.md manually, or run /graphify --no-inject.
 ```

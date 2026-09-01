@@ -166,9 +166,14 @@ class TestDDDDocAnchorNodes:
         )
 
     def test_all_doc_categories_present(self, doc_anchors):
+        # tags layout: ["ddd", ddd_type] — ddd_type encodes the semantic type
+        # (bounded_context, glossary_term, aggregate_root, tech_constraint, etc.)
+        # The source file stem (context-map, technical-constraints, etc.) is
+        # the document category. We derive it from source_file since tags no
+        # longer carries a third element.
         categories = {
-            n.get("tags", [None, None, None])[2]
-            for n in doc_anchors if len(n.get("tags", [])) >= 3
+            Path(n.get("source_file", "")).stem
+            for n in doc_anchors
         }
         expected = {
             "context-map", "technical-constraints", "business-flow",
@@ -396,7 +401,7 @@ class TestTagsField:
         for n in doc_anchors:
             assert "tags" in n, f"node {n.get('id')} missing tags"
             assert isinstance(n["tags"], list)
-            assert len(n["tags"]) == 3, f"tags should have 3 elements: {n.get('tags')}"
+            assert len(n["tags"]) == 2, f"tags should have 2 elements: {n.get('tags')}"
             assert n["tags"][0] == "ddd", f"tags[0] should be 'ddd': {n.get('tags')}"
 
     def test_code_nodes_have_no_tags(self, nodes):

@@ -5896,6 +5896,39 @@ def extract(
         # match anchors against them (e.g. ddd contracts.md matching swagger
         # endpoints produced from user-api.yaml earlier in the same loop).
         _live_nodes: list[dict] = list(nodes) if nodes else []
+        # Pre-load persisted nodes from graph.json so incremental runs (where
+        # unchanged code/endpoint files are NOT re-extracted this pass) still
+        # have their nodes in the in-memory indices for anchor matching.
+        # Without this, DDD/Swagger anchors referencing unchanged code → unmatched.
+        # The CLI's cli.py:4306-4321 does a partial pre-load (code only), but
+        # the skill path has no pre-load at all. This centralizes the load here
+        # so BOTH paths benefit, and extends the filter beyond code to include
+        # rest_endpoint, doc-anchor, and swagger_doc nodes (needed for DDD URL
+        # anchors and cross-file concept refs).
+        if root is not None:
+            _graph_json_path = Path(root) / ".graph" / "graph.json"
+            if _graph_json_path.exists():
+                try:
+                    from graphify.security import check_graph_file_size_cap as _cfsc
+                    _cfsc(_graph_json_path)
+                    _prior = json.loads(_graph_json_path.read_text(encoding="utf-8"))
+                    _seen_ids = {n.get("id") for n in _live_nodes if n.get("id")}
+                    for n in _prior.get("nodes", []):
+                        if not isinstance(n, dict):
+                            continue
+                        nid = n.get("id")
+                        if not nid or nid in _seen_ids:
+                            continue
+                        ft = n.get("file_type")
+                        nk = n.get("node_kind")
+                        # Load all matchable node types: code (class/function),
+                        # rest_endpoint (URL anchors), doc-anchor (cross-file
+                        # concept refs), swagger_doc (contains endpoints).
+                        if ft == "code" or nk in ("rest_endpoint", "doc-anchor", "swagger_doc"):
+                            _live_nodes.append(n)
+                            _seen_ids.add(nid)
+                except Exception:
+                    pass  # unreadable/oversized graph → resolve with fresh nodes only
         # Process config files (yaml/json/etc.) BEFORE .md docs so that ddd
         # docs can match swagger endpoint anchors produced from yaml in the
         # same pass. Without this, a yaml listed alphabetically after .md

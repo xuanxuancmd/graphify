@@ -122,9 +122,9 @@ Print it once, then continue — do not wait for the user to supply a key. If `G
 
 > **No other API keys are read.** When `GEMINI_API_KEY`/`GOOGLE_API_KEY` are unset, semantic extraction falls to the host agent itself — the running session is the LLM. On a host that dispatches subagents (e.g. Claude Code), dispatch them as written in Part B. On a host that runs the CLI directly in a terminal and cannot dispatch subagents, do not stall: a code-only corpus has no semantic work, so write the empty semantic file (Part B "Fast path") and continue to Part C; for a corpus with docs/papers/images, either set a Gemini key or extract those inline yourself, but in no case prompt for `ANTHROPIC_API_KEY` — that prompt is a misread of this skill.
 
-**Run Part A (AST) and Part B (semantic) in parallel. Dispatch all semantic subagents AND start AST extraction in the same message. Both can run simultaneously since they operate on different file types. Merge results in Part C as before.**
+**Run Part A (AST) and Part B (semantic) in parallel. Dispatch all semantic subagents AND start AST extraction in the same message. Both can run simultaneously since they operate on different file types. Part A2 (doc extraction) runs after Part A completes — it needs AST nodes for anchor matching. Merge all three in Part C.**
 
-Note: Parallelizing AST + semantic saves 5-15s on large corpora. AST is deterministic and fast; start it while subagents are processing docs/papers.
+Note: Parallelizing AST + semantic saves 5-15s on large corpora. AST is deterministic and fast; start it while subagents are processing docs/papers. Part A2 is also fast (deterministic, no LLM) and runs as soon as Part A finishes.
 
 #### Part A - Structural extraction for code files
 
@@ -149,6 +149,38 @@ if code_files:
 else:
     Path('.graph/.graphify_ast.json').write_text(json.dumps({'nodes':[],'edges':[],'input_tokens':0,'output_tokens':0}, ensure_ascii=False), encoding=\"utf-8\")
     print('No code files - skipping AST extraction')
+"
+```
+
+#### Part A2 - Document extraction (DDD / Swagger)
+
+Run external doc extractors (DDD, Swagger YAML) with the AST nodes as
+matching context. This must run AFTER Part A (needs code nodes for anchor
+matching) and BEFORE Part C (doc nodes merge into the final extraction).
+
+```bash
+"$(cat .graph/.graphify_python)" -c "
+import json
+from pathlib import Path
+from graphify.extract import extract
+
+detect = json.loads(Path('.graph/.graphify_detect.json').read_text(encoding='utf-8'))
+doc_files = [Path(f) for f in detect.get('files', {}).get('document', [])]
+
+if doc_files:
+    ast = json.loads(Path('.graph/.graphify_ast.json').read_text(encoding='utf-8'))
+    # extract() internally loads graph.json persisted nodes when root is set,
+    # so incremental runs still match unchanged code/endpoint nodes.
+    result = extract(doc_files, cache_root=Path('INPUT_PATH'), root=Path('INPUT_PATH'),
+                     nodes=list(ast.get('nodes', [])))
+    Path('.graph/.graphify_doc.json').write_text(
+        json.dumps(result, indent=2, ensure_ascii=False), encoding='utf-8')
+    print(f'Doc: {len(result[\"nodes\"])} nodes, {len(result[\"edges\"])} edges')
+else:
+    Path('.graph/.graphify_doc.json').write_text(
+        json.dumps({'nodes':[],'edges':[],'input_tokens':0,'output_tokens':0},
+                   ensure_ascii=False), encoding='utf-8')
+    print('No doc files - skipping doc extraction')
 "
 ```
 
@@ -291,7 +323,7 @@ print(f'Extraction complete - {len(deduped)} nodes, {len(all_edges)} edges ({len
 ```
 Clean up temp files: `rm -f .graph/.graphify_cached.json .graph/.graphify_uncached.txt .graph/.graphify_semantic_new.json`
 
-#### Part C - Merge AST + semantic into final extraction
+#### Part C - Merge AST + doc + semantic into final extraction
 
 ```bash
 "$(cat .graph/.graphify_python)" -c "
@@ -299,17 +331,22 @@ import sys, json
 from pathlib import Path
 
 ast = json.loads(Path('.graph/.graphify_ast.json').read_text(encoding=\"utf-8\"))
+doc = json.loads(Path('.graph/.graphify_doc.json').read_text(encoding=\"utf-8\"))
 sem = json.loads(Path('.graph/.graphify_semantic.json').read_text(encoding=\"utf-8\"))
 
-# Merge: AST nodes first, semantic nodes deduplicated by id
+# Merge: AST nodes first, doc nodes deduplicated by id, then semantic
 seen = {n['id'] for n in ast['nodes']}
 merged_nodes = list(ast['nodes'])
+for n in doc.get('nodes', []):
+    if n['id'] not in seen:
+        merged_nodes.append(n)
+        seen.add(n['id'])
 for n in sem['nodes']:
     if n['id'] not in seen:
         merged_nodes.append(n)
         seen.add(n['id'])
 
-merged_edges = ast['edges'] + sem['edges']
+merged_edges = ast['edges'] + doc.get('edges', []) + sem['edges']
 merged_hyperedges = sem.get('hyperedges', [])
 merged = {
     'nodes': merged_nodes,
@@ -321,7 +358,7 @@ merged = {
 Path('.graph/.graphify_extract.json').write_text(json.dumps(merged, indent=2, ensure_ascii=False), encoding=\"utf-8\")
 total = len(merged_nodes)
 edges = len(merged_edges)
-print(f'Merged: {total} nodes, {edges} edges ({len(ast[\"nodes\"])} AST + {len(sem[\"nodes\"])} semantic)')
+print(f'Merged: {total} nodes, {edges} edges ({len(ast[\"nodes\"])} AST + {len(doc.get(\"nodes\",[]))} doc + {len(sem[\"nodes\"])} semantic)')
 "
 ```
 

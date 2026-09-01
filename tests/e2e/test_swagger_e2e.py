@@ -128,10 +128,10 @@ class TestEndpointNodes:
             f"{[e['label'] for e in endpoint_nodes]}"
         )
 
-    def test_all_endpoint_labels_are_method_space_url(self, endpoint_nodes) -> None:
+    def test_all_endpoint_labels_are_method_colon_url(self, endpoint_nodes) -> None:
         for ep in endpoint_nodes:
-            assert ep["label"].startswith(("GET ", "POST ", "PUT ", "DELETE ", "PATCH "))
-            assert " /rest/" in ep["label"]
+            assert ep["label"].startswith(("GET:", "POST:", "PUT:", "DELETE:", "PATCH:"))
+            assert ":/rest/" in ep["label"]
 
     def test_user_service_endpoints(self, endpoint_nodes) -> None:
         user_eps = [e for e in endpoint_nodes if "UserService" in e.get("swagger_tags", [])]
@@ -148,7 +148,7 @@ class TestEndpointNodes:
             if e["method"] == "GET" and e["path"] == "/userservice/v1/users"
         )
         assert ep["full_path"] == "/rest/userservice/v1/users"
-        assert ep["label"] == "GET /rest/userservice/v1/users"
+        assert ep["label"] == "GET:/rest/userservice/v1/users"
         assert ep["operation_id"] == "getUser"
         assert ep["swagger_tags"] == ["UserService"]
         assert "200" in ep["response_codes"]
@@ -250,7 +250,7 @@ class TestCodeAssociationEdges:
             assert refs_from_ep, f"endpoint {ep['label']} has no references edges"
 
     def test_endpoint_links_to_handler_function(self, edges, endpoint_nodes) -> None:
-        """The POST /users endpoint with operationId=createUser should link
+        """The POST:/users endpoint with operationId=createUser should link
         to a code node labeled 'createUser' (the UserService.createUser method)."""
         create_ep = next(
             e for e in endpoint_nodes

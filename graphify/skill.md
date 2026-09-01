@@ -122,18 +122,18 @@ print(f'Detected {result[\"total_files\"]} files')
 Replace INPUT_PATH with the actual path the user provided. Do NOT cat or print the JSON - read it silently and present a clean summary instead:
 
 ```
-语料：X 个文件 · 约 Y 词
-  代码：     N 个文件 (.py .ts .go ...)
-  文档：     N 个文件 (.md .txt ...)
-  论文：     N 个文件 (.pdf ...)
-  图片：     N 个文件
-  视频：     N 个文件 (.mp4 .mp3 ...)
+Corpus: X files · ~Y words
+  code:     N files (.py .ts .go ...)
+  docs:     N files (.md .txt ...)
+  papers:   N files (.pdf ...)
+  images:   N files
+  video:    N files (.mp4 .mp3 ...)
 ```
 
-文件数为 0 的类别从摘要中省略。
+Omit any category with 0 files from the summary.
 
-然后据此判断：
-- 如果 `total_files` 为 0：停止并提示"在 [path] 中未找到受支持的文件。"
+Then act on it:
+- If `total_files` is 0: stop with "No supported files found in [path]."
 - If `skipped_sensitive` is non-empty: report the count and list the skipped file names, so a wrongly-flagged source or doc is visible and can be renamed or moved (#2106).
 - If `total_words` > 2,000,000 OR `total_files` > 500: show the warning. Then compute the top 5 first-level subdirectories by file count:
   - Read `scan_root` from the detect JSON (always an absolute path to the resolved INPUT_PATH).
@@ -163,9 +163,9 @@ Print it once, then continue — do not wait for the user to supply a key. If `G
 
 > **No other API keys are read.** When `GEMINI_API_KEY`/`GOOGLE_API_KEY` are unset, semantic extraction falls to the host agent itself — the running session is the LLM. On a host that dispatches subagents (e.g. Claude Code), dispatch them as written in Part B. On a host that runs the CLI directly in a terminal and cannot dispatch subagents, do not stall: a code-only corpus has no semantic work, so write the empty semantic file (Part B "Fast path") and continue to Part C; for a corpus with docs/papers/images, either set a Gemini key or extract those inline yourself, but in no case prompt for `ANTHROPIC_API_KEY` — that prompt is a misread of this skill.
 
-**Run Part A (AST) and Part B (semantic) in parallel. Dispatch all semantic subagents AND start AST extraction in the same message. Both can run simultaneously since they operate on different file types. Merge results in Part C as before.**
+**Run Part A (AST) and Part B (semantic) in parallel. Dispatch all semantic subagents AND start AST extraction in the same message. Both can run simultaneously since they operate on different file types. Part A2 (doc extraction) runs after Part A completes — it needs AST nodes for anchor matching. Merge all three in Part C.**
 
-Note: Parallelizing AST + semantic saves 5-15s on large corpora. AST is deterministic and fast; start it while subagents are processing docs/papers.
+Note: Parallelizing AST + semantic saves 5-15s on large corpora. AST is deterministic and fast; start it while subagents are processing docs/papers. Part A2 is also fast (deterministic, no LLM) and runs as soon as Part A finishes.
 
 #### Part A - Structural extraction for code files
 
@@ -190,6 +190,38 @@ if code_files:
 else:
     Path('.graph/.graphify_ast.json').write_text(json.dumps({'nodes':[],'edges':[],'input_tokens':0,'output_tokens':0}, ensure_ascii=False), encoding=\"utf-8\")
     print('No code files - skipping AST extraction')
+"
+```
+
+#### Part A2 - Document extraction (DDD / Swagger)
+
+Run external doc extractors (DDD, Swagger YAML) with the AST nodes as
+matching context. This must run AFTER Part A (needs code nodes for anchor
+matching) and BEFORE Part C (doc nodes merge into the final extraction).
+
+```bash
+"$(cat .graph/.graphify_python)" -c "
+import json
+from pathlib import Path
+from graphify.extract import extract
+
+detect = json.loads(Path('.graph/.graphify_detect.json').read_text(encoding='utf-8'))
+doc_files = [Path(f) for f in detect.get('files', {}).get('document', [])]
+
+if doc_files:
+    ast = json.loads(Path('.graph/.graphify_ast.json').read_text(encoding='utf-8'))
+    # extract() internally loads graph.json persisted nodes when root is set,
+    # so incremental runs still match unchanged code/endpoint nodes.
+    result = extract(doc_files, cache_root=Path('INPUT_PATH'), root=Path('INPUT_PATH'),
+                     nodes=list(ast.get('nodes', [])))
+    Path('.graph/.graphify_doc.json').write_text(
+        json.dumps(result, indent=2, ensure_ascii=False), encoding='utf-8')
+    print(f'Doc: {len(result[\"nodes\"])} nodes, {len(result[\"edges\"])} edges')
+else:
+    Path('.graph/.graphify_doc.json').write_text(
+        json.dumps({'nodes':[],'edges':[],'input_tokens':0,'output_tokens':0},
+                   ensure_ascii=False), encoding='utf-8')
+    print('No doc files - skipping doc extraction')
 "
 ```
 
@@ -356,7 +388,7 @@ print(f'Extraction complete - {len(deduped)} nodes, {len(all_edges)} edges ({len
 ```
 Clean up temp files: `rm -f .graph/.graphify_cached.json .graph/.graphify_uncached.txt .graph/.graphify_semantic_new.json`
 
-#### Part C - Merge AST + semantic into final extraction
+#### Part C - Merge AST + doc + semantic into final extraction
 
 ```bash
 "$(cat .graph/.graphify_python)" -c "
@@ -364,17 +396,22 @@ import sys, json
 from pathlib import Path
 
 ast = json.loads(Path('.graph/.graphify_ast.json').read_text(encoding=\"utf-8\"))
+doc = json.loads(Path('.graph/.graphify_doc.json').read_text(encoding=\"utf-8\"))
 sem = json.loads(Path('.graph/.graphify_semantic.json').read_text(encoding=\"utf-8\"))
 
-# Merge: AST nodes first, semantic nodes deduplicated by id
+# Merge: AST nodes first, doc nodes deduplicated by id, then semantic
 seen = {n['id'] for n in ast['nodes']}
 merged_nodes = list(ast['nodes'])
+for n in doc.get('nodes', []):
+    if n['id'] not in seen:
+        merged_nodes.append(n)
+        seen.add(n['id'])
 for n in sem['nodes']:
     if n['id'] not in seen:
         merged_nodes.append(n)
         seen.add(n['id'])
 
-merged_edges = ast['edges'] + sem['edges']
+merged_edges = ast['edges'] + doc.get('edges', []) + sem['edges']
 merged_hyperedges = sem.get('hyperedges', [])
 merged = {
     'nodes': merged_nodes,
@@ -386,7 +423,7 @@ merged = {
 Path('.graph/.graphify_extract.json').write_text(json.dumps(merged, indent=2, ensure_ascii=False), encoding=\"utf-8\")
 total = len(merged_nodes)
 edges = len(merged_edges)
-print(f'Merged: {total} nodes, {edges} edges ({len(ast[\"nodes\"])} AST + {len(sem[\"nodes\"])} semantic)')
+print(f'Merged: {total} nodes, {edges} edges ({len(ast[\"nodes\"])} AST + {len(doc.get(\"nodes\",[]))} doc + {len(sem[\"nodes\"])} semantic)')
 "
 ```
 
@@ -528,38 +565,6 @@ print('Report updated with community labels')
 Replace `LABELS_DICT` with the actual dict you constructed (e.g. `{0: "Attention Mechanism", 1: "Training Pipeline"}`).
 Replace INPUT_PATH with the actual path.
 
-### Step 5.5 - Build embedding vector index
-
-This step keeps the skill path parity with the `graphify extract` CLI command,
-which calls `build_embeddings` after every successful graph build. The skill
-flow (Step 3 Part A → Step 4 → Step 5) builds the graph via library functions
-but does not pass through the CLI wrapper, so without this explicit call the
-embedding index is never generated — `graphify check` (the SessionStart hook)
-only refreshes an existing index or generates when configured, but the first
-build must produce the sidecar files it compares against.
-
-When no `embed_backend` is configured in `.graph/graphifyrc` or
-`.default-graphifyrc`, `build_embeddings` is a silent no-op — the graph is
-still the primary artifact and queries degrade to pure lexical. When
-configured (e.g. `embed_backend=sentence-transformers`), this generates
-`<graph_dir>/embeddings/embedding.{npy,index.json,meta.json}`. A failure here
-is a warning, not fatal.
-
-This is the same function the CLI and the git post-commit hook call, so all
-three paths (skill / CLI / hook) produce identical embedding output:
-
-```bash
-"$(cat .graph/.graphify_python)" -c "
-from graphify.embeddings import build_embeddings
-from pathlib import Path
-build_embeddings(Path('.graph/graph.json'), log_prefix='[graphify skill]')
-"
-```
-
-If the output shows `[graphify skill] wrote embeddings: ...`, the index was
-generated. If it prints nothing, no embedding backend is configured — this is
-expected when `.graph/graphifyrc` is absent; the graph is complete without it.
-
 ### Step 6 - Generate Obsidian vault (opt-in) + HTML
 
 **Generate HTML always** (unless `--no-viz`). **Obsidian vault only if `--obsidian` was explicitly given** — skip it otherwise, it generates one file per node.
@@ -659,12 +664,12 @@ Replace INPUT_PATH with the actual path (same value used in Steps 4-5) so the ma
 
 Tell the user (omit the obsidian line unless --obsidian was given):
 ```
-图谱构建完成。产物位于 PATH_TO_DIR/.graph/
+Graph complete. Outputs in PATH_TO_DIR/.graph/
 
-  graph.html            - 可交互图谱，用浏览器打开
-  GRAPH_REPORT.md       - 审计报告
-  graph.json            - 原始图谱数据
-  obsidian/             - Obsidian vault（仅当指定了 --obsidian 时）
+  graph.html            - interactive graph, open in browser
+  GRAPH_REPORT.md       - audit report
+  graph.json            - raw graph data
+  obsidian/             - Obsidian vault (only if --obsidian was given)
 ```
 
 If graphify saved you time, consider supporting it: https://github.com/sponsors/safishamsi
@@ -680,7 +685,7 @@ Do NOT paste the full report - just those three sections. Keep it concise.
 
 Then immediately offer to explore. Pick the single most interesting suggested question from the report - the one that crosses the most community boundaries or has the most surprising bridge node - and ask:
 
-> "这张图谱能回答的最有意思的问题是：**[question]**。要我顺着图谱把它追下去吗？"
+> "The most interesting question this graph can answer: **[question]**. Want me to trace it?"
 
 If the user says yes, run `/graphify query "[question]"` on the graph and walk them through the answer using the graph structure - which nodes connect, which community boundaries get crossed, what the path reveals. Keep going as long as they want to explore. Each answer should end with a natural follow-up ("this connects to X - want to go deeper?") so the session feels like navigation, not a one-shot report.
 
@@ -688,9 +693,9 @@ The graph is the map. Your job after the pipeline is to be the guide.
 
 ---
 
-### Step 10 - Inject CLAUDE.md always-on section
+### Step 10 - Inject CLAUDE.md always-on section (CLAUDE.md hosts only)
 
-After a successful graph build, inject a `## graphify` section into the project's `CLAUDE.md` so future agent sessions know the graph exists and prefer it over raw grep. Idempotent: if the section already exists, it is replaced in place; otherwise appended.
+After a successful graph build, inject a `## graphify` section into the project's `CLAUDE.md` so future agent sessions in this project know the graph exists and prefer it over raw grep. Idempotent: if the section already exists (matched by the `## graphify` marker), it is replaced in place; otherwise the section is appended. This step is skipped on `--update` and `--cluster-only` runs (those are rebuilds, not first-builds — the section is already there).
 
 ```bash
 "$(cat .graph/.graphify_python)" -c "
@@ -714,7 +719,7 @@ else:
 "
 ```
 
----
+This writes the same block that `graphify claude install` / `graphify codeagent install` used to write. Those commands now only install the global PreToolUse hook; the CLAUDE.md injection is done here, at graph-build time, so it lands in the right project automatically.
 
 ## Interpreter guard for subcommands
 
@@ -771,10 +776,3 @@ When the user asks to install the post-commit auto-rebuild hook or wire graphify
 - Always show token cost in the report.
 - Never hide cohesion scores behind symbols - show the raw number.
 - Never run HTML viz on a graph with more than 5,000 nodes without warning the user.
-
-> 诚实规则：
-> - 永不编造边。不确定时标记为 AMBIGUOUS。
-> - 永不跳过语料检查警告。
-> - 报告中始终展示 token 开销。
-> - 永不把凝聚度分数藏在符号背后——直接展示原始数字。
-> - 永不在节点数超过 5000 的图谱上运行 HTML 可视化而不警告用户。
