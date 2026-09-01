@@ -498,8 +498,6 @@ def test_node_shape_compliance(tmp_path: Path):
 
     assert "bounded_context" in node["tags"]
 
-    assert "context-map" in node["tags"]  # doc_category
-
     # No ddd_* prefixed fields
 
     assert not any(k.startswith("ddd_") for k in node.keys())
@@ -846,15 +844,13 @@ def test_tags_retrieval_aggregate_root():
 
         "label": "??????",
 
-        "tags": ["ddd", "aggregate_root", "domain-model"],
+        "tags": ["ddd", "aggregate_root"],
 
     }
 
     text = _node_search_text(node, node["id"])
 
     assert "aggregate_root" in text
-
-    assert "domain-model" in text
 
     assert "ddd" in text
 

@@ -29,7 +29,8 @@ queries. The bonus is ``tier_weight × sim`` (not tier_weight alone) so
 magnitude is preserved within each tier and there's a deliberate jump at
 tier boundaries (confidence-level transitions).
 
-Thresholds are configurable via ``vector_sim_tiers`` in graphifyrc.
+Thresholds are hardcoded (not user-configurable) — see
+``_DEFAULT_VECTOR_SIM_TIERS`` below.
 
     _FUZZY_MATCH_BONUS = 2.0   (above SUBSTRING=1, below VECTOR T3=5)
 
@@ -55,9 +56,8 @@ from graphify.fuzzy import fuzzy_score
 
 # --- Vector tier: confidence-gated piecewise weights ----------------------
 #
-# Default sim thresholds (configurable via graphifyrc vector_sim_tiers).
-# Adapted for OpenAI-compatible embedding models. Lower these for
-# sentence-transformers / BGE models (see spec §4.2).
+# Default sim thresholds (hardcoded, not user-configurable).
+# Adapted for OpenAI-compatible embedding models.
 #
 # Each tier maps to a band in the lexical scoring hierarchy:
 #   T1 [t1, 1.0]      → 80.0  (PREFIX-level, high-confidence semantic)
@@ -80,7 +80,7 @@ def _vector_tier_weight(
 ) -> float:
     """Return the tier_weight for a cosine similarity value.
 
-    Tiers (configurable via graphifyrc vector_sim_tiers):
+    Tiers (hardcoded — see ``_DEFAULT_VECTOR_SIM_TIERS``):
         sim ≥ tiers[0]          → 80.0  (T1: high-confidence, PREFIX-level)
         tiers[1] ≤ sim < tiers[0] → 20.0  (T2: medium, SUBSTRING~PREFIX)
         tiers[2] ≤ sim < tiers[1] → 5.0   (T3: weak, SUBSTRING-level)
@@ -103,28 +103,6 @@ def _vector_tier_weight(
     if sim >= tiers[3]:
         return _VECTOR_TIER_WEIGHTS[3]
     return _VECTOR_TIER_WEIGHTS[4]
-
-
-def _parse_vector_sim_tiers(raw: str) -> tuple[float, ...]:
-    """Parse ``vector_sim_tiers`` from graphifyrc into a 4-tuple.
-
-    Format: comma-separated 4 floats in descending order, e.g.
-    ``"0.85,0.70,0.55,0.40"``. Returns ``_DEFAULT_VECTOR_SIM_TIERS`` on
-    empty input, parse error, or validation failure — never raises, so
-    a config typo never crashes a query.
-    """
-    raw = raw.strip()
-    if not raw:
-        return _DEFAULT_VECTOR_SIM_TIERS
-    try:
-        parts = [float(x.strip()) for x in raw.split(",")]
-        if len(parts) != 4:
-            return _DEFAULT_VECTOR_SIM_TIERS
-        if not (0.0 < parts[3] < parts[2] < parts[1] < parts[0] <= 1.0):
-            return _DEFAULT_VECTOR_SIM_TIERS
-        return (parts[0], parts[1], parts[2], parts[3])
-    except (ValueError, TypeError):
-        return _DEFAULT_VECTOR_SIM_TIERS
 
 
 def _load_embed_config_from_graphifyrc(graph_dir: "str | Path | None" = None) -> dict[str, str]:
@@ -173,13 +151,12 @@ def _load_embed_config_from_graphifyrc(graph_dir: "str | Path | None" = None) ->
     # Extract embed-related keys. ``embed_*`` are the core embedding config
     # (backend/base_url/api_key/model). ``enable_embedding_proxy`` is the
     # proxy bypass switch (default false = direct connect, see embeddings.py
-    # _build_embed_http_client). ``vector_sim_tiers`` configures the
-    # confidence-gated vector tier thresholds (see _vector_tier_weight).
-    # Other keys like viz_node_limit are not relevant here.
+    # _build_embed_http_client). Other keys like viz_node_limit are not
+    # relevant here.
     return {
         k: str(v)
         for k, v in cfg.items()
-        if k.startswith("embed_") or k == "enable_embedding_proxy" or k == "vector_sim_tiers"
+        if k.startswith("embed_") or k == "enable_embedding_proxy"
     }
 
 
@@ -237,7 +214,6 @@ class HybridScorer:
         # the rc_cfg getter — no env vars needed, avoiding "works on my
         # machine" issues where env vars are set in one shell but not visible
         # to a subprocess.
-        self._graph_dir = graph_dir
         self._rc_cfg = _load_embed_config_from_graphifyrc(graph_dir)
         # Backend: explicit arg > .graph/graphifyrc embed_backend.
         self._embed_backend = (
@@ -250,12 +226,6 @@ class HybridScorer:
             embed_model
             or self._rc_cfg.get("embed_model", "").strip()
             or None
-        )
-        # Vector sim tiers: configurable thresholds for confidence-gated
-        # weighting. Falls back to defaults on parse error — don't crash
-        # queries over a config typo.
-        self._vector_sim_tiers = _parse_vector_sim_tiers(
-            self._rc_cfg.get("vector_sim_tiers", "")
         )
         if graph_dir is not None:
             self._load(Path(graph_dir))

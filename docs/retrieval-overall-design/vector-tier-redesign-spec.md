@@ -272,38 +272,29 @@ coverage² 只作用于 EXACT 和 PREFIX 两个词法层。向量层不乘 cover
 
 ---
 
-## 6. 可配置性
+## 6. 阈值设计
 
-### 6.1 graphifyrc 配置
+### 6.1 阈值与权重均硬编码
 
-新增 `vector_sim_tiers` 配置项，格式为逗号分隔的 4 个阈值（降序）：
+sim 阈值（0.85/0.70/0.55/0.40）和 tier_weight（80/20/5/1/0）均在代码中硬编码（`_DEFAULT_VECTOR_SIM_TIERS` + `_VECTOR_TIER_WEIGHTS`），**不暴露为用户配置项**。理由：
 
-```ini
-# .graph/graphifyrc
+- 减少配置面 = 减少出错面 = 减少需要测试的解析逻辑
+- tier_weight 与词法量级阶梯（EXACT=1000/PREFIX=100/SUBSTRING=1）的关系是设计约束，暴露会破坏层次
+- sim 阈值与 embedding 模型的 sim 分布相关，不同模型差异大，用户手动配置容易出错
+- 如果未来需要按模型自动调整阈值，更好的解法是检测 `embed_model` 自动选择阈值，而非让用户手动配
 
-# 向量检索 confidence-gated 分层权重阈值
-# 格式: t1,t2,t3,t4（降序，0 < t4 < t3 < t2 < t1 ≤ 1.0）
-# 对应 5 个 tier: [t1, 1.0] / [t2, t1) / [t3, t2) / [t4, t3) / [0, t4)
-# 默认: 0.85,0.70,0.55,0.40（适配 OpenAI text-embedding-3-small）
-#
-# sentence-transformers 用户建议降低阈值:
-# vector_sim_tiers = 0.65,0.50,0.35,0.20
-vector_sim_tiers = 0.85,0.70,0.55,0.40
-```
+### 6.2 不同模型的 sim 分布差异
 
-### 6.2 tier_weight 的可配置性
+阈值默认值面向 OpenAI 兼容模型。不同 embedding 模型的 sim 绝对值分布不同：
 
-tier_weight（80/20/5/1/0）**暂不可配置**，理由：
+| 模型 | 典型相关 sim | 典型弱相关 sim | 影响 |
+|---|---|---|---|
+| OpenAI text-embedding-3-small | 0.75-0.95 | 0.45-0.65 | 默认阈值适用 |
+| sentence-transformers paraphrase-multilingual-MiniLM-L12-v2 | 0.50-0.80 | 0.25-0.45 | 低 sim 区间可能落入 T4/T5 |
+| BGE-large-zh-v1.5 | 0.60-0.85 | 0.30-0.50 | 同上 |
+| Ollama nomic-embed-text | 0.55-0.80 | 0.30-0.50 | 同上 |
 
-- tier_weight 是映射到词法量级阶梯的设计，与 EXACT=1000/PREFIX=100/SUBSTRING=1 的关系是固定的
-- 暴露 tier_weight 配置会让调参空间过大，且容易破坏量级层次
-- 如果未来需要调参，可以通过 benchmark fixture 验证后开放
-
-### 6.3 默认值表
-
-| 配置项 | 默认值 | 说明 |
-|---|---|---|
-| `vector_sim_tiers` | `0.85,0.70,0.55,0.40` | 4 个 sim 阈值，适配 OpenAI 兼容模型 |
+> **注意**：使用 sentence-transformers / BGE 等模型时，部分查询的 sim 值可能偏低（落在 T4 甚至 T5）。当前默认阈值面向 OpenAI 兼容模型；未来可考虑按 `embed_model` 自动检测并调整阈值。
 
 ---
 
@@ -334,9 +325,8 @@ _VECTOR_SIMILARITY_BONUS = 5.0
 #
 # See docs/retrieval-overall-design/vector-tier-redesign-spec.md
 
-# Default sim thresholds (configurable via graphifyrc vector_sim_tiers).
-# Adapted for OpenAI-compatible embedding models. Lower these for
-# sentence-transformers / BGE models (see spec §4.2).
+# Default sim thresholds (hardcoded, not user-configurable).
+# Adapted for OpenAI-compatible embedding models.
 _DEFAULT_VECTOR_SIM_TIERS = (0.85, 0.70, 0.55, 0.40)
 _VECTOR_TIER_WEIGHTS = (80.0, 20.0, 5.0, 1.0, 0.0)
 
@@ -344,7 +334,7 @@ _VECTOR_TIER_WEIGHTS = (80.0, 20.0, 5.0, 1.0, 0.0)
 def _vector_tier_weight(sim: float, tiers: tuple[float, ...] = _DEFAULT_VECTOR_SIM_TIERS) -> float:
     """Return the tier_weight for a cosine similarity value.
 
-    Tiers (configurable via graphifyrc vector_sim_tiers):
+    Tiers (hardcoded — see ``_DEFAULT_VECTOR_SIM_TIERS``):
         sim ≥ tiers[0]      → 80.0  (T1: high-confidence, PREFIX-level)
         tiers[1] ≤ sim < tiers[0] → 20.0  (T2: medium, SUBSTRING~PREFIX)
         tiers[2] ≤ sim < tiers[1] → 5.0   (T3: weak, SUBSTRING-level)
@@ -376,26 +366,8 @@ class HybridScorer:
         embed_backend: str | None = None,
         embed_model: str | None = None,
     ) -> None:
-        # ... 既有初始化 ...
-        # NEW: load vector_sim_tiers from graphifyrc
-        self._vector_sim_tiers = self._load_vector_sim_tiers()
-
-    def _load_vector_sim_tiers(self) -> tuple[float, ...]:
-        """Load vector_sim_tiers from graphifyrc, falling back to defaults."""
-        rc_cfg = _load_embed_config_from_graphifyrc(self._graph_dir)
-        raw = rc_cfg.get("vector_sim_tiers", "").strip()
-        if not raw:
-            return _DEFAULT_VECTOR_SIM_TIERS
-        try:
-            parts = [float(x.strip()) for x in raw.split(",")]
-            if len(parts) != 4:
-                raise ValueError(f"expected 4 values, got {len(parts)}")
-            if not (0 < parts[3] < parts[2] < parts[1] < parts[0] <= 1.0):
-                raise ValueError(f"must be ascending in (0, 1.0]: {parts}")
-            return tuple(parts)
-        except (ValueError, TypeError) as exc:
-            # Fall back to defaults on parse error — don't crash queries
-            return _DEFAULT_VECTOR_SIM_TIERS
+        # ... 既有初始化（embed_backend / embed_model / sidecar 加载）...
+        # 不新增任何配置加载——阈值在 _DEFAULT_VECTOR_SIM_TIERS 中硬编码
 
     @staticmethod
     def vector_bonus(sim: float, tiers: tuple[float, ...] = _DEFAULT_VECTOR_SIM_TIERS) -> float:
@@ -423,16 +395,13 @@ if query_embedding_scores:
 **修改后**：
 ```python
 if query_embedding_scores:
-    # Get the tier config from the hybrid scorer if available
-    tiers = (
-        hybrid_scorer._vector_sim_tiers
-        if hybrid_scorer is not None
-        else _DEFAULT_VECTOR_SIM_TIERS
-    )
     for nid, vec_sim in query_embedding_scores.items():
         if vec_sim <= 0:
             continue
-        bonus = _vector_tier_weight(vec_sim, tiers) * vec_sim
+        tier_weight = _vector_tier_weight(vec_sim)
+        if tier_weight <= 0:
+            continue  # T5 noise: sim below lowest threshold → skip
+        bonus = tier_weight * vec_sim
         score_by_nid[nid] = score_by_nid.get(nid, 0.0) + bonus
 ```
 
@@ -443,43 +412,16 @@ if query_embedding_scores:
 from graphify.hybrid_scorer import HybridScorer, _VECTOR_SIMILARITY_BONUS
 
 # 修改后:
-from graphify.hybrid_scorer import (
-    HybridScorer,
-    _vector_tier_weight,
-    _DEFAULT_VECTOR_SIM_TIERS,
-)
+from graphify.hybrid_scorer import HybridScorer, _vector_tier_weight
 ```
 
 ### 7.3 `graphify/hooks.py`
 
-#### `_parse_graphifyrc_file` 新增 `vector_sim_tiers` 解析
-
-```python
-elif key == "vector_sim_tiers":
-    # Comma-separated 4 floats, e.g. "0.85,0.70,0.55,0.40"
-    # Validation (ascending order, 4 values, in (0, 1.0]) is deferred
-    # to HybridScorer._load_vector_sim_tiers at query time — here we
-    # just store the raw string.
-    cfg["vector_sim_tiers"] = val
-```
+**无改动**。`vector_sim_tiers` 不再作为配置项暴露，hooks.py 的 `_parse_graphifyrc_file` 不需要新增解析分支。
 
 ### 7.4 `.default-graphifyrc`
 
-```ini
-# --- Vector Tier Confidence-Gated Weighting -------------------------------
-# Sim thresholds for the 5 confidence tiers of vector retrieval.
-# Format: t1,t2,t3,t4 (descending, 0 < t4 < t3 < t2 < t1 ≤ 1.0)
-#   T1 [t1, 1.0]     → weight 80  (PREFIX-level, high-confidence semantic)
-#   T2 [t2, t1)      → weight 20  (medium semantic)
-#   T3 [t3, t2)      → weight 5   (SUBSTRING-level, weak semantic)
-#   T4 [t4, t3)      → weight 1   (FUZZY-level, marginal)
-#   T5 [0, t4)       → weight 0   (noise, discarded)
-#
-# Defaults below suit OpenAI-compatible models (text-embedding-3-small etc).
-# For sentence-transformers / BGE models, lower thresholds, e.g.:
-#   vector_sim_tiers = 0.65,0.50,0.35,0.20
-# vector_sim_tiers = 0.85,0.70,0.55,0.40
-```
+**无改动**。阈值在代码中硬编码，不通过配置文件暴露。
 
 ### 7.5 `tests/test_hybrid_search.py`
 
@@ -608,7 +550,7 @@ class TestBonusConstants:
 - **不改动 coverage² 公式**（仍只作用于 EXACT/PREFIX）
 - **不引入 RRF**（分层方案保留 magnitude 信号，比 RRF 更适合 graphify 场景）
 - **不改动 embedding 生成与存储**（`.npy` / `.index.json` / `.meta.json` 格式不变）
-- **不开放 tier_weight 可配置**（80/20/5/1/0 固定，只开放 sim 阈值可配置）
+- **不开放 tier_weight 和 sim 阈值可配置**（80/20/5/1/0 和 0.85/0.70/0.55/0.40 均硬编码，减少配置面和出错面）
 
 ---
 
@@ -626,11 +568,9 @@ class TestBonusConstants:
 | AC8 | 精确查询 `"UserService"` 仍排第一（EXACT 主导） | 集成测试 |
 | AC9 | 语义查询 `"login"`（sim=0.90）的 AuthService 得分 ≈ 72.0，高于任何词法弱命中 | 集成测试 |
 | AC10 | sim < 0.40 的节点不进入候选（bonus=0） | 集成测试 |
-| AC11 | `vector_sim_tiers` 配置在 graphifyrc 中生效 | 配置测试 |
-| AC12 | 配置格式错误时回退到默认阈值，不崩溃 | 配置测试 |
-| AC13 | 无 embedding sidecar 时降级为纯词法，行为不变 | 集成测试 |
-| AC14 | `semantic=false` 时完全跳过向量层 | 集成测试 |
-| AC15 | 双路命中（词法 + 高 sim vector）的节点得分高于单路命中 | 集成测试 |
+| AC11 | 无 embedding sidecar 时降级为纯词法，行为不变 | 集成测试 |
+| AC12 | `semantic=false` 时完全跳过向量层 | 集成测试 |
+| AC13 | 双路命中（词法 + 高 sim vector）的节点得分高于单路命中 | 集成测试 |
 
 ---
 
@@ -638,23 +578,20 @@ class TestBonusConstants:
 
 | 风险 | 缓解 |
 |---|---|
-| 阈值不适配 sentence-transformers（sim 分布更低） | `vector_sim_tiers` 可配置；文档给出 sentence-transformers 建议值（0.65/0.50/0.35/0.20） |
+| 阈值不适配 sentence-transformers（sim 分布更低） | 阈值硬编码面向 OpenAI 兼容模型；未来可考虑按 `embed_model` 自动检测并调整 |
 | T1 权重 80 在某些场景压过 PREFIX(100) | 80 < 100，PREFIX 仍高于 T1；且 PREFIX 乘 coverage² 后对多词精确查询更强 |
 | 分段边界跳变导致排序不稳定 | 边界跳变是 feature（confidence 级别转换）；sim 值在 0.85 附近波动是 embedding 模型本身的特性，不是分层方案引入的 |
 | 高 sim 节点过多导致候选集膨胀 | T1(sim≥0.85) 在实际 embedding 模型中是少数；T4/T5 过滤掉了大部分低相关节点 |
-| 与既有 benchmark fixture 的 sim 分布不匹配 | benchmark fixture 使用 sentence-transformers，需同步调整 `vector_sim_tiers` 或 fixture 的 expected sim 值 |
 
 ---
 
 ## 11. 实施顺序
 
-1. `hybrid_scorer.py`：新增 `_vector_tier_weight()` + `_DEFAULT_VECTOR_SIM_TIERS` + `_VECTOR_TIER_WEIGHTS`；更新 `HybridScorer.vector_bonus()`；新增 `_load_vector_sim_tiers()`
-2. `hooks.py`：`_parse_graphifyrc_file` 新增 `vector_sim_tiers` 解析
-3. `.default-graphifyrc`：文档化 `vector_sim_tiers` 配置
-4. `serve.py`：更新 import；更新 Pass 2 调用为 `_vector_tier_weight(sim, tiers) × sim`
-5. `tests/test_hybrid_search.py`：更新 `TestBonusConstants` 和 `TestScoreQueryVectorTier`
-6. 运行测试验证：`pytest tests/test_hybrid_search.py -q`
-7. 运行 benchmark：`python tests/fixtures/search_benchmark/run_benchmark.py`
+1. `hybrid_scorer.py`：新增 `_vector_tier_weight()` + `_DEFAULT_VECTOR_SIM_TIERS` + `_VECTOR_TIER_WEIGHTS`；更新 `HybridScorer.vector_bonus()`
+2. `serve.py`：更新 import；更新 Pass 2 调用为 `_vector_tier_weight(sim) × sim`
+3. `tests/test_hybrid_search.py`：更新 `TestBonusConstants` 和 `TestScoreQueryVectorTier`
+4. 运行测试验证：`pytest tests/test_hybrid_search.py -q`
+5. 运行 benchmark：`python tests/fixtures/search_benchmark/run_benchmark.py`
 
 ---
 
@@ -665,7 +602,7 @@ class TestBonusConstants:
 | vector 权重是线性还是分层 | **分层** | 线性 `5.0×sim` 导致装饰性权重（0.5% of EXACT）；分层让高 sim 拿 PREFIX 级权重，低 sim 拿 FUZZY 级 |
 | 分几层 | **5 层** | 5 层覆盖了从"高置信"到"噪声"的完整区间，且映射到词法量级阶梯（PREFIX/SUBSTRING/FUZZY/SOURCE/0） |
 | 段内是否乘 sim | **乘** | 保留 magnitude 信号；段间跳变是 confidence 级别转换的 feature |
-| 阈值默认值 | **0.85/0.70/0.55/0.40** | 适配 OpenAI 兼容模型；sentence-transformers 可通过 graphifyrc 降低 |
+| 阈值默认值 | **0.85/0.70/0.55/0.40（硬编码）** | 适配 OpenAI 兼容模型；不暴露为配置项，减少配置面和出错面 |
 | tier_weight 是否可配置 | **不可配置** | tier_weight 与词法量级阶梯的关系是设计约束，暴露会破坏层次 |
 | 是否引入 RRF | **不引入** | RRF 丢弃 magnitude 信号；分层方案在保留信号方面更优 |
 | 向量层是否乘 IDF | **不乘** | vector sim 是全 query 级别的一次计算，不是 per-term |

@@ -1,32 +1,32 @@
 # 图谱报告 - graphify  (2026-09-01)
 
 ## 语料检查
-- 890 个文件 · 约 1,494,721 词
+- 821 个文件 · 约 1,409,865 词
 - 判定：语料规模足够大，图结构能带来价值。
 
 ## 概要
-- 16076 个节点 · 29321 条边 · 1140 个社区（展示 917 个，省略 223 个稀疏社区）
+- 15882 个节点 · 29208 条边 · 1066 个社区（展示 864 个，省略 202 个稀疏社区）
 - 提取：97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED：783 条边（平均置信度：0.85）
 - Token 开销：0 输入 · 0 输出
 
 ## 图谱新鲜度
-- 构建自提交：`af1fb2ae`
+- 构建自提交：`ce9fad8d`
 - 运行 `git rev-parse HEAD` 并与之对比，以检查图谱是否陈旧。
 - 代码变更后运行 `graphify update .`（无 API 开销）。
 
 ## 社区枢纽（导航）
-- _make_id
+- normalize_id
 - load_prompts_from_dir
 - test_extract.py
-- _labels
-- build_from_json
-- extract.py
+- main
+- test_build.py
+- to_obsidian
 - _read_text
-- _edges_with_relation
+- Spec: 向量检索 confidence-gated 分层权重设计
 - test_import_extension_resolution.py
-- extract_bash
+- _labels
 - graphify/__main__.py
-- generate
+- _rebuild_code
 - detect
 - test_llm_backends.py
 - _query_terms
@@ -42,16 +42,16 @@
 - test_chunking.py
 - test_dotnet.py
 - test_pascal.py
-- test_ignore_file_encoding.py
-- _rewire_unique_stub_nodes
+- save_manifest
+- extract.py
 - _call_claude_cli
 - test_cli_export.py
 - test_extract_cli.py
 - test_image_vision.py
-- test_hooks.py
+- install
 - test_ruby_resolution.py
 - Communities (141 total, 52 thin omitted)
-- test_watch.py
+- file_hash
 - test_languages.py
 - extract_python
 - test_csharp_member_calls.py
@@ -59,26 +59,26 @@
 - Embedding 手动验证流程
 - test_js_import_resolution.py
 - extract_js
-- fuzzy_score
-- attach_hyperedges
+- _extract_with_adaptive_retry
+- _edges_with_relation
 - test_multigraph_diagnostics.py
-- file_hash
+- cache.py
 - extract
 - test_codebuddy.py
-- generate_embeddings_incremental
-- normalize_id
+- _make_graph_json
+- embeddings.py
 - _extract_node_desc
 - _parse_llm_json
 - save_semantic_cache
 - introspect_postgres
 - Communities
-- to_json
+- score_all
 - registry.py
 - test_skillgen.py
 - test_scip_ingest.py
 - test_reflect.py
 - test_serve_http.py
-- test_devin.py
+- test_query_cli.py
 - test_manifest_ingest.py
 - test_global_graph.py
 - gen.py
@@ -91,18 +91,18 @@
 - test_evidence_binding.py
 - reflect.py
 - build_tree
-- edge_data
+- to_graphml
 - extract_objc
 - Path
-- test_mcp_ingest.py
+- _get_extractor
 - _score_nodes
 - _query_graph_text
 - test_affected_cli.py
 - test_query_induced_edges.py
-- watch.py
-- serve.py
+- save_cached
+- Path
 - test_install_references.py
-- _pick_seeds
+- bench_query_scoring.py
 - claude_install
 - ingest_scip_json
 - test_transcribe.py
@@ -116,9 +116,9 @@
 - 3. Tier 2 扩展:提示词型解析器
 - test_cache.py
 - test_obsidian_vault_migration.py
-- save_manifest
+- export.py
 - test_user_management_e2e.py
-- embeddings.py
+- hooks.py
 - test_querylog.py
 - /graphify
 - /graphify
@@ -135,27 +135,27 @@
 - parametrize
 - test_minhash.py
 - /graphify
-- build_merge
+- graphify/build.py
 - skipif
 - load_platforms
 - /graphify
 - /graphify
-- sanitize_label
+- markdown.py
 - _load_graphifyignore
 - run_language_resolvers
-- Cookies
+- client.py
 - TestSubprocessEncoding
 - test_indirect_call_function_expression_shadow.py
 - Plan: DDD 文档自定义解析器 + 解析器优先级机制
 - write_callflow_html
 - test_callflow_html.py
-- TestDart
+- _make_id
 - _extract_pascal_regex
 - test_go_qualified_resolution.py
 - test_install_roundtrip.py
 - test_path_cli.py
 - Request
-- symbol_resolution.py
+- edge_data
 - Spec: 混合语义检索（语义 + fuzzy 重排）
 - test_csharp_interface_dispatch.py
 - test_agents_platform.py
@@ -168,7 +168,7 @@
 - sample.swift
 - graphify 数据建模
 - test_indirect_dispatch_getattr.py
-- _llm_tiebreak
+- dedup.py
 - test_vue_extraction.py
 - test_ddd_extractor.py
 - ExtractionResult
@@ -177,9 +177,9 @@
 - DataProcessor
 - What You Must Do When Invoked
 - introspect_cargo
-- test_prs.py
+- fetch_worktrees
 - detect.py
-- _2406_graph
+- Spec: 检索整体方案设计（双循环 + 7 通路加法打分）
 - swagger.py
 - multigraph_compat.py
 - What You Must Do When Invoked
@@ -219,8 +219,8 @@
 - test_multilang.py
 - _edge_labels
 - test_python_import_resolution.py
-- graphify/build.py
-- test_community_labels_skill.py
+- test_ts_inheritance.py
+- _hooks_dir
 - test_swagger_e2e.py
 - test_js_dynamic_imports.py
 - test_kotlin_grammar.py
@@ -234,22 +234,22 @@
 - extract_terraform
 - ingest.py
 - test_semantic_cleanup.py
-- test_export_control_characters.py
+- generate
 - test_js_dynamic_import_affected.py
 - test_search_hook.py
-- client.py
+- auth.py
 - extract_powershell
-- AuthService
-- build_community_labels
+- AuthController
+- test_prs.py
 - generate_section_flowchart
 - CsharpNameResolver
-- _extract_sql_or_skip
+- _2406_graph
 - test_python_decorators.py
 - generate_section_cards
-- test_symbol_resolution.py
+- build_label_index
 - extract_ocaml
 - save_query_result
-- _compute_idf
+- build_from_json
 - test_csharp_partial_classes.py
 - _two_community_graph
 - _write_raw_doc
@@ -265,65 +265,65 @@
 - test_go_builtin_call_targets.py
 - test_install_upgrade.py
 - test_java_type_resolution.py
-- _make_graph
-- _load_custom_providers
+- _run
+- .vector_bonus
 - test_watch_manifest_location.py
-- test_obsidian_unicode_tags.py
+- _pick_seeds
 - 技术约束提取参考
 - security.py
 - SKILL.md
 - test_cross_extension_reexport_self_cycle.py
 - test_csharp_object_creation.py
 - _claude_artifacts
-- export.py
+- test_obsidian_unicode_tags.py
 - sample.php
 - UserControl
 - Plan: 提交阶段图谱更新能力补齐
 - Design: Incremental Updates + Entity Deduplication
-- _rebuild_code
+- test_watch.py
 - compute_pr_impact
-- _claude_pretooluse_hooks
+- test_hybrid_search.py
 - Graph
 - sample.kt
 - test_indirect_call_external_import_shadow.py
 - test_semantic_cache_out_root.py
 - test_ts_decorators.py
 - Window
-- _check_shrink
-- test_cluster.py
+- _relations
+- UserService
 - test_wiki_link_filename_parity.py
 - schema_singleton
 - e
 - test_merge_graphs_cli.py
-- external_extractor_extensions
+- TestRebuildCodeProcessesSwaggerYaml
 - test_typescript_enum_members.py
 - Graphify Evaluation - Mixed Corpus (2026-04-04)
 - Window
 - _stale_graph_sources
 - _is_regular_file
-- affected.py
+- _ApiKeyMiddleware
 - wiki.py
-- extract_markdown
-- test_indirect_call_nested_closure_shadow.py
+- _clear_backend_keys
+- affected_nodes
 - test_inferred_confidence_rubric.py
 - test_java_member_calls.py
-- extract_astro
+- _check_shrink
 - test_objc_category_interfaces.py
 - test_objc_property_ivar_receivers.py
 - test_file_label_disambiguation.py
-- paths.py
+- test_atomic_writes.py
 - sample.json
 - graphify Benchmarks
 - AccountService
 - _inline_links
-- extract_fortran
+- paths.py
 - TDataProcessor
-- _reset_stat_index
+- Path
 - test_cross_repo_shared_types.py
 - test_csharp_call_site_generic_args.py
 - test_csharp_enum_members.py
 - test_csharp_field_generic_args.py
-- extract_julia
+- test_semantic_similarity.py
 - test_src_layout_import_resolution.py
 - test_merge_chunks_validation.py
 - test_no_dedup_flag.py
@@ -340,7 +340,7 @@
 - test_node_id_canonical.py
 - test_ts_namespace.py
 - test_ts_receiver_member_calls.py
-- push_to_falkordb
+- skipif
 - Communities
 - raw/models.py
 - Benchmark: Karpathy Repos + Research Papers
@@ -356,11 +356,11 @@
 - ScopedCallsUnit
 - test_extraction_spec_ids.py
 - test_objc_member_calls.py
-- test_ts_inheritance.py
+- test_swift_builtin_noise.py
 - Graph Report - worked/mixed-corpus/raw  (2026-04-05)
-- test_query_cli.py
-- PRInfo
-- _detect_default_branch
+- parametrize
+- _replace_or_append_section
+- _build_server
 - test_swift_computed_properties.py
 - 1. 业务实现技术
 - compilerOptions
@@ -372,9 +372,9 @@
 - test_scala_self_type.py
 - test_ts_generators.py
 - test_typescript_module_extensions.py
-- _plant_skill_tree
+- test_uninstall_scope.py
 - _make_scip_node_id
-- HTTPStatusError
+- watch
 - Case Study: rsl-siege-manager (Python + TypeScript monorepo)
 - Demo.ViewModels
 - RFC: file-level node summaries
@@ -383,52 +383,52 @@
 - BC 级产物
 - 使用说明（给主 Agent）
 - {BC 名称} — 限界上下文索引
-- test_zig_enum_and_union_methods_are_extracted
+- backup_if_protected
 - graphify
-- llm.py
+- _load_custom_providers
 - parse_memory_doc
-- to_wiki
+- symbol_resolution.py
 - _git
 - TestCodeAssociationEdges
 - TMainForm
 - test_cjs_module_extension.py
 - test_indirect_dispatch_assign_return.py
-- test_kotlin_object_literal.py
+- extract_powershell_manifest
 - test_partial_extraction_warning.py
-- test_pascal_call_scoping.py
+- test_indirect_call_nested_closure_shadow.py
 - test_php_type_resolution.py
 - test_wheel_packaging.py
-- _glob_match
+- prompt_registry.py
 - 支付
 - Gap-6: DDD 代码锚点匹配增强(全限定名 + 多匹配 + 置信度标注)
 - Incremental Updates + Entity Deduplication Implementation Plan
 - prs.py
-- prompt_fingerprint
+- test_query_names_its_graph.py
 - §7 模式识别：聚合协作（Step 6）
 - _is_swagger_spec
 - 聚合协作视图 — {BC 名称}
 - compilerOptions
 - package.json
-- list_records
+- JwtManager
 - sample_plpgsql_quoted.sql
 - test_indirect_call_for_of_binding_shadow.py
 - test_phantom_cross_package_call.py
-- test_paths.py
+- test_corrupt_graph_json.py
 - render_always_on
 - test_ts_parse_warning.py
 - Architecture
 - Gap-3: 项目级目录 + 优先级
 - Gap-4: Tier 2 prompt registry
-- _shortest_path_text
+- _community_label_lines
 - sample.csproj
-- extract_rust
+- resolve_python_import_guided_calls
 - graphify reference: extra exports and benchmark
-- dedup.py
+- _collision_rank
 - graphify reference: extra exports and benchmark
 - 3. 各文件类型的建模方式
-- skipif
-- merge_raw_extraction
-- graphify reference: extra exports and benchmark
+- _run_extract
+- _run_hook_guard
+- 日志不变式
 - _path_match
 - 实现步骤
 - graphify reference: extra exports and benchmark
@@ -462,7 +462,7 @@
 - graphify reference: extra exports and benchmark
 - graphify reference: extra exports and benchmark
 - graphify reference: extra exports and benchmark
-- AsyncHTTPTransport
+- _queue_pending
 - Graph Report - .  (2026-05-13)
 - Review: rsl-siege-manager
 - saxpy
@@ -472,18 +472,18 @@
 - first_present
 - format_node_refs
 - safe_file_path
-- {名称}
+- load_all_prompts
 - label_communities_by_hub
 - Migrating a language extractor out of extract.py
 - lessons_fresh
 - load_memory_docs
 - load_validated_semantic_fragment
-- §3 模式识别：限界上下文（Step 2）
-- PasswordHasher
-- make_pr
-- extract_powershell_manifest
+- Cookies
+- .login
+- to_json
+- llm.py
 - gen_demo_path.py
-- collect_files
+- handle_list
 - TestDDDDocAnchorNodes
 - TestCrossFileEdgeResolution
 - sample.zig
@@ -491,24 +491,23 @@
 - test_antigravity_install.py
 - test_case_sensitive_resolution.py
 - §4 临时文件 vs 产物：清晰边界
-- test_phantom_external_import.py
+- extract_astro
 - 用例: {用例名称}
 - test_swift_import_resolution.py
-- DigestAuth
+- _shortest_path_text
 - Graph Report - /home/safi/graphify-benchmark  (2026-04-04)
 - Corpus (52 files)
 - Gap-5: 三阶段提取顺序(代码 → 配置文件 → 文档)
 - 7. 步骤 7：修改 `graphify/serve.py`
 - 上下文图 — {系统名称}
 - 假设草稿 — {系统名称}
-- _make_noisy_graph
-- test_maybe_reload_detects_graph_change
-- _md_extract
-- extract_go
+- TestEndpointNodes
+- extract_markdown
+- iter_raw_calls
 - §8 模式识别：业务不变式（Step 7）
 - 提问记录 — {系统名称}
-- resolve_python_import_guided_calls
-- parse_python_import_aliases
+- check_update
+- §9 隐形架构决策提取
 - 上下文图 — User Management System
 - TestCodeAnchorMatching
 - test_security.py
@@ -517,21 +516,21 @@
 - sample_php_listen.php
 - test_cpp_preprocess.py
 - test_crossfile_identical_labels_stay_distinct_for_guarded_types
-- test_home_sandbox.py
+- TestCodeAnchorConfidence
 - Research Notes
 - Gap-1: 解除 Tier 1 扫描范围硬编码,支持任意文件类型
 - Gap-2: 内置自动扫描目录
 - Plan: 混合语义检索（语义 + fuzzy 重排）
-- safe_fetch
+- test_extract_codeonly_succeeds_without_api_key
 - graphify reference: query, path, explain
-- _inferred_uses
+- {业务术语名称}
 - graphify reference: query, path, explain
 - .opencode/opencode.json
 - user-management/.opencode/opencode.json
-- 日志不变式
-- graphify reference: query, path, explain
-- _resolve_max_retry_depth
-- _queue_pending
+- default_graph_json
+- _inferred_uses
+- _bash_assignment_base
+- _norm
 - graphify reference: query, path, explain
 - CLI 命令（终端里运行）
 - graphify reference: query, path, explain
@@ -572,20 +571,19 @@
 - 9. 步骤 9：测试
 - SamplePackage
 - §11 质量检查
-- validate_url
-- _communities_from_graph
+- _write_build_config
+- _GraphContextCache
 - _translate_bash_block
-- _norm
-- affected_nodes
+- _MCPASGIApp
+- test_symbol_resolution.py
 - cli.py
-- TestEndpointNodes
-- _detached_launch
+- test_embedding_incremental.py
+- test_hooks.py
 - render
 - _score_query
-- cosine_similarity
-- graphify reference: extra exports and benchmark
-- graphify reference: extra exports and benchmark
-- graphify reference: extra exports and benchmark
+- test_extractors_registry.py
+- dm.py
+- test_prefix_extension_symbols_not_merged
 - User Management Test Project
 - 限界上下文映射（Context Map）
 - 订单领域模型（Domain Model）
@@ -610,28 +608,28 @@
 - 5. 步骤 5：创建 `graphify/fuzzy.py`
 - 6. 步骤 6：创建 `graphify/hybrid_scorer.py`
 - generate_header
-- test_swift_builtin_noise.py
+- test_phantom_external_import.py
 - graphify reference: add a URL and watch a folder
 - graphify reference: commit hook and native AGENTS.md integration
 - graphify reference: incremental update and cluster-only
-- graphify reference: extra exports and benchmark
+- test_pass2_winner_union_does_not_pull_in_uncompared_same_label_nodes
 - _match_anchored_ignore_pattern
-- graphify reference: extra exports and benchmark
+- test_dedup_summary_prints_fuzzy_count_when_no_exact_merges
 - graphify reference: add a URL and watch a folder
 - graphify reference: commit hook and native CLAUDE.md integration
 - graphify reference: incremental update and cluster-only
-- graphify reference: extra exports and benchmark
-- graphify reference: extra exports and benchmark
+- §5 模式识别：契约（Step 4）
+- test_same_file_relabel_is_noted
 - _content_token_swap
-- check_update
-- graphify-dark Design System
-- _write_two_tier_graph
+- test_dedup_no_attribute_merge_when_source_file_missing
+- 令牌刷新端点
+- 注册端点
 - test_ingest_symbol_trailing_hash_no_display_name_has_non_empty_label
 - test_relationship_target_unknown_emits_stub_node
 - test_non_string_relative_path_falls_back_to_default
-- graphify reference: add a URL and watch a folder
-- graphify reference: commit hook and native CLAUDE.md integration
-- graphify reference: incremental update and cluster-only
+- test_zig_enum_and_union_methods_are_extracted
+- 登录端点
+- _doc_community
 - test_non_string_language_falls_back
 - test_documents_field_non_list_returns_empty
 - test_occurrence_negative_line_falls_back_to_zero
@@ -728,15 +726,12 @@
 - test_ingest_document_relative_path_overrides_source_file_param
 - test_ingest_symbol_with_short_range_uses_first_element_as_line
 - test_ingest_symbol_with_documentation_becomes_description
-- graphify reference: GitHub clone and cross-repo merge
-- graphify reference: transcribe video and audio
+- to_wiki
 - test_ingest_symbol_with_empty_documentation_skips_description
 - test_ingest_edge_with_zero_sourceline_has_empty_location
-- TestLaunchEmbeddingRefresh
-- _labels
+- patch
 - graphify reference: GitHub clone and cross-repo merge
 - graphify reference: transcribe video and audio
-- test_word_count_cache.py
 - Skill 命令（在 AI 编码助手里输入）
 - graphify reference: GitHub clone and cross-repo merge
 - graphify reference: transcribe video and audio
@@ -950,17 +945,14 @@
 - always_on/agents-md.md
 - always_on/antigravity-rules.md
 - always_on/claude-md.md
-- test_hyperedge_member_shapes.py
 - always_on/vscode-instructions.md
 - custom/__init__.py
-- test_ollama_retry_cap.py
 - agents/references/extraction-spec.md
 - {业务动作}
 - claude/references/extraction-spec.md
 - {唯一业务名称}
 - {描述性失败名称}
 - {术语}
-- droid/references/extraction-spec.md
 - {描述性契约名称}
 - {EventName}
 - opencode/references/extraction-spec.md
@@ -1034,38 +1026,9 @@
 - AG-06 订单-支付协作
 - AG-07 订单-库存协作
 - 数据库分库策略
-- graphify reference: query, path, explain
-- graphify reference: query, path, explain
-- graphify reference: query, path, explain
-- graphify reference: query, path, explain
-- graphify reference: query, path, explain
-- graphify reference: query, path, explain
-- graphify reference: query, path, explain
-- §5 模式识别：契约（Step 4）
 - TestThreePhaseExtraction
-- TestCodeAnchorConfidence
 - 1. 节点模型
-- _StageTimer
 - pascal_resolution.py
-- format_prs_text
-- _bash_make_id
-- estimate_cost
-- graphify reference: add a URL and watch a folder
-- graphify reference: commit hook and native AGENTS.md integration
-- graphify reference: incremental update and cluster-only
-- graphify reference: add a URL and watch a folder
-- graphify reference: commit hook and native AGENTS.md integration
-- graphify reference: incremental update and cluster-only
-- graphify reference: add a URL and watch a folder
-- graphify reference: commit hook and native AGENTS.md integration
-- graphify reference: incremental update and cluster-only
-- graphify reference: add a URL and watch a folder
-- graphify reference: commit hook and native AGENTS.md integration
-- graphify reference: incremental update and cluster-only
-- graphify reference: add a URL and watch a folder
-- graphify reference: commit hook and native CLAUDE.md integration
-- graphify reference: incremental update and cluster-only
-- graphify reference: add a URL and watch a folder
 - crate_a
 - crate_b
 - graphifyy
@@ -1074,46 +1037,9 @@
 - y
 - z
 - Int
-- graphify reference: commit hook and native CLAUDE.md integration
-- graphify reference: incremental update and cluster-only
-- graphify reference: add a URL and watch a folder
-- graphify reference: commit hook and native CLAUDE.md integration
-- graphify reference: incremental update and cluster-only
-- test_build_dedup_preserves_semantic_attributes
-- TestScheduleStatus
-- graphify reference: GitHub clone and cross-repo merge
-- graphify reference: transcribe video and audio
-- graphify reference: GitHub clone and cross-repo merge
-- graphify reference: transcribe video and audio
-- graphify reference: GitHub clone and cross-repo merge
-- graphify reference: transcribe video and audio
-- graphify reference: GitHub clone and cross-repo merge
-- graphify reference: transcribe video and audio
-- graphify reference: GitHub clone and cross-repo merge
-- graphify reference: transcribe video and audio
-- graphify reference: GitHub clone and cross-repo merge
-- graphify reference: transcribe video and audio
-- graphify reference: GitHub clone and cross-repo merge
-- graphify reference: transcribe video and audio
-- opendesign/manifest.json
 - always_on/gemini-md.md
-- amp/references/extraction-spec.md
-- claw/references/extraction-spec.md
-- codex/references/extraction-spec.md
-- copilot/references/extraction-spec.md
-- kilo/references/extraction-spec.md
-- kiro/references/extraction-spec.md
-- pi/references/extraction-spec.md
-- test_build_calls_dedup
-- test_sql_cte_shadows_same_named_table_within_its_statement
-- test_sql_subquery_cte_does_not_suppress_outer_real_table
-- test_php_builtin_base_class_never_inherits_from_cross_language_class
-- test_sql_cross_file_fk_resolves_and_never_leaks_scan_path
 - agents-md-inject.md
 - claude-md-inject.md
-- handle_delete
-- handle_get
-- handle_search
 
 ## God Nodes（连接数最多——核心抽象）
 1. `extract()` - 538 条边
@@ -1128,77 +1054,77 @@
 10. `main()` - 92 条边
 
 ## 意外连接（你多半没注意到这些）
-- `test_dmi_no_error()` --calls--> `extract_dmi()`  [INFERRED]
-  tests/test_languages.py → graphify/extractors/dm.py
-- `test_dmi_state_contained_by_file()` --calls--> `extract_dmi()`  [INFERRED]
-  tests/test_languages.py → graphify/extractors/dm.py
 - `test_semantic_reference_edges_carry_context_and_source()` --calls--> `_semantic_reference_edge()`  [INFERRED]
   tests/test_extract.py → graphify/extractors/engine.py
 - `test_scoped_package_import_is_ref_namespaced()` --calls--> `_resolve_js_import_target()`  [INFERRED]
   tests/test_phantom_external_import.py → graphify/extractors/resolution.py
 - `test_unresolved_bare_import_is_ref_namespaced()` --calls--> `_resolve_js_import_target()`  [INFERRED]
   tests/test_phantom_external_import.py → graphify/extractors/resolution.py
+- `test_gemini_install_idempotent()` --calls--> `gemini_install()`  [INFERRED]
+  tests/test_install.py → graphify/install.py
+- `test_gemini_install_merges_existing_gemini_md()` --calls--> `gemini_install()`  [INFERRED]
+  tests/test_install.py → graphify/install.py
 
 ## 导入循环
 - 1 个文件的循环：`tests/fixtures/sample.sv -> tests/fixtures/sample.sv`
 
-## 社区（共 1140 个，省略 223 个稀疏社区）
+## 社区（共 1066 个，省略 202 个稀疏社区）
 
-### 社区 0 —— "_make_id"
-凝聚度：0.03
-节点（共 113 个）：_augment_cpp_string_tests(), _extract_js_rationale(), _extract_python_rationale(), _import_js(), _import_swift(), _is_autogenerated_python(), Emit module-level ``imports`` edges and report the imported modules. A Swift…, Return True if this Python file is auto-generated and its module docstring is…（还有 105 个）
+### 社区 0 —— "normalize_id"
+凝聚度：0.05
+节点（共 63 个）：given, graph_has_legacy_ids(), _has_global_id(), _old_file_stems(), Pre-migration stem forms a semantic fragment may have used for ``rel``. Ordered…, Whether ``node``'s ID is global by construction rather than file-derived., Whether a loaded graph still uses pre-#1504 node IDs (parent-dir / filename…, Json_config extractor. Moved verbatim from graphify/extract.py.（还有 55 个）
 
 ### 社区 1 —— "load_prompts_from_dir"
-凝聚度：0.12
-节点（共 31 个）：find_prompt(), group_by_prompt(), load_all_prompts(), load_builtin_prompts(), load_prompts_from_dir(), Path, Scan the built-in ``graphify/prompts/*.yaml`` directory. These ship with the…, Load built-in + project-level prompts, project-level first (priority). Mirrors…（还有 23 个）
+凝聚度：0.16
+节点（共 24 个）：find_prompt(), group_by_prompt(), load_prompts_from_dir(), Return the first PromptSpec whose ``match.files`` glob matches *path*. *path*…, Group semantic files by matching PromptSpec. Returns a dict mapping each…, Scan ``*.yaml`` in *prompt_dir* and return a list of PromptSpec. A malformed…, prompt_dir(), Path（还有 16 个）
 
 ### 社区 2 —— "test_extract.py"
 凝聚度：0.01
-节点（共 189 个）：extract_json(), _is_config_json(), Path, True if a .json file is a recognized config/manifest worth AST-extracting.…, Extract structure and dependency edges from a *config/manifest* .json file.…, by_label_by_id(), Two different files' same-named, otherwise-undefined base class must not…, #2653: function declarations nested inside another function emit nodes, source…（还有 181 个）
+节点（共 249 个）：collect_files(), extract_bash(), Extract functions, source imports, and cross-function calls from a .sh file., extract_json(), _is_config_json(), Path, True if a .json file is a recognized config/manifest worth AST-extracting.…, Extract structure and dependency edges from a *config/manifest* .json file.…（还有 241 个）
 
-### 社区 3 —— "_labels"
-凝聚度：0.04
-节点（共 60 个）：extract_csproj(), extract_swift(), Extract classes, structs, protocols, functions, imports, and calls from a…, Extract packages, project refs, and target framework from a…, extract_apex(), Path, Extract classes, interfaces, enums, methods, and Salesforce constructs from…, _labels()（还有 52 个）
-
-### 社区 4 —— "build_from_json"
+### 社区 3 —— "main"
 凝聚度：0.03
-节点（共 122 个）：build_from_json(), dedupe_edges(), edge_datas(), Return every edge attribute dict for (u, v); always a list., Collapse exact parallel edges by ``(source, target, relation)``, keeping the…, Build a NetworkX graph from an extraction dict. directed=True produces a…, load_extraction(), Already-relative source_file paths must not be modified.（还有 114 个）
+节点（共 96 个）：main(), Handle a downstream reader that closed the pipe early. Redirect stdout to…, Console entry point. Wraps the CLI so that when a downstream consumer closes…, _silence_broken_pipe(), _devin_install_user(), Tests for graphify devin install / uninstall commands., The rules file installed by devin must use query-first policy., Installing rules twice does not change content and prints 'no change'.（还有 88 个）
 
-### 社区 5 —— "extract.py"
-凝聚度：0.04
-节点（共 135 个）：_augment_js_reexport_edges(), _canonicalize_csharp_namespace_nodes(), _check_tree_sitter_version(), _emit_rescued_import(), extract_svelte(), _import_c(), _import_lua(), Deterministic structural extraction from source code using tree-sitter. Outputs…（还有 127 个）
+### 社区 4 —— "test_build.py"
+凝聚度：0.02
+节点（共 100 个）：dedupe_edges(), dedupe_nodes(), edge_datas(), Return every edge attribute dict for (u, v); always a list., Collapse nodes sharing an ``id``, last-writer-wins on attributes. Mirrors what…, Collapse exact parallel edges by ``(source, target, relation)``, keeping the…, load_extraction(), Already-relative source_file paths must not be modified.（还有 92 个）
+
+### 社区 5 —— "to_obsidian"
+凝聚度：0.06
+节点（共 63 个）：_dedup_node_filenames(), Export graph as an Obsidian Canvas file - communities as groups, nodes as…, Escape a value for safe embedding in a YAML double-quoted scalar (F-009). See…, Map each node_id to a unique note filename, appending a numeric suffix on…, Export graph as an Obsidian vault - one .md file per node with [[wikilinks]],…, to_canvas(), to_obsidian(), _yaml_str()（还有 55 个）
 
 ### 社区 6 —— "_read_text"
 凝聚度：0.02
-节点（共 178 个）：_get_c_func_name(), _import_csharp(), _import_java(), _import_kotlin(), _import_php(), _import_scala(), Recursively unwrap declarator to find the innermost identifier (C)., _read_text()（还有 170 个）
+节点（共 189 个）：_get_c_func_name(), Get the name from a node using config.name_field, falling back to child types., Recursively unwrap declarator to find the innermost identifier (C)., _resolve_name(), _read_text(), _c_collect_type_refs(), _cpp_collect_type_refs(), _cpp_declarator_name()（还有 181 个）
 
-### 社区 7 —— "_edges_with_relation"
-凝聚度：0.07
-节点（共 31 个）：extract_c(), Extract functions and includes from a .c/.h file., extract_elixir(), Path, Extract modules, functions, imports, and calls from a .ex/.exs file., _edges_with_relation(), `alias Foo.{Bar, Baz}` must emit one imports edge per expanded module. The…, test_c_call_edges_have_call_context()（还有 23 个）
+### 社区 7 —— "Spec: 向量检索 confidence-gated 分层权重设计"
+凝聚度：0.04
+节点（共 44 个）：10. 风险, 11. 实施顺序, 12. 关键设计决策记录, 13. 参考文献, 1.1 当前设计：线性乘法导致"装饰性权重", 1.2 业界对比：没有任何主流系统用 rescue-only, 1.3 核心洞察：权重应按 confidence (sim) 分层, 1. 背景与问题（还有 36 个）
 
 ### 社区 8 —— "test_import_extension_resolution.py"
 凝聚度：0.05
 节点（共 75 个）：Resolve a JS/TS module path or specifier to a local source file. With a Path…, _resolve_js_module_path(), _import_targets(), Path, Tests for #716 — TypeScript bare-path imports, Svelte 5 rune file imports…, JS variant of the rune file pattern: a `.svelte.js` file (used in JavaScript-…, When both `.svelte.ts` and `.svelte.js` exist (hybrid project mid- migration,…, If `foo.svelte` IS a real markup file, importing `./foo.svelte` must resolve to…（还有 67 个）
 
-### 社区 9 —— "extract_bash"
-凝聚度：0.03
-节点（共 74 个）：_bash_assignment_base(), extract_bash(), Path, Extract functions, source imports, and cross-function calls from a .sh file., True if *target* is *ceiling* or lives beneath it, compared lexically…, Resolve a top-level assignment's value to a directory, or None if untracked.…, _within_tree(), parametrize（还有 66 个）
+### 社区 9 —— "_labels"
+凝聚度：0.05
+节点（共 52 个）：extract_csproj(), extract_swift(), Extract classes, structs, protocols, functions, imports, and calls from a…, Extract packages, project refs, and target framework from a…, extract_apex(), Path, Extract classes, interfaces, enums, methods, and Salesforce constructs from…, _labels()（还有 44 个）
 
 ### 社区 10 —— "graphify/__main__.py"
 凝聚度：0.04
-节点（共 137 个）：_agents_install(), _agents_platform_install(), _agents_platform_uninstall(), _agents_uninstall(), _always_on(), _amp_install(), _amp_legacy_cleanup(), _amp_uninstall()（还有 129 个）
+节点（共 153 个）：_agents_install(), _agents_platform_install(), _agents_platform_uninstall(), _agents_uninstall(), _always_on(), _amp_install(), _amp_legacy_cleanup(), _amp_uninstall()（还有 145 个）
 
-### 社区 11 —— "generate"
-凝聚度：0.08
-节点（共 45 个）：_is_file_node(), Return True if this node is a file-level hub node (e.g. 'client', 'models') or…, generate(), _learning_section(), _portable_root_label(), Portable label for the report header — the project directory basename.…, Mirrors export.safe_name so community hub filenames and report wikilinks always…, Append the ``## Work-memory lessons`` section, or nothing when empty.（还有 37 个）
+### 社区 11 —— "_rebuild_code"
+凝聚度：0.06
+节点（共 51 个）：Return the effective viz node limit, honoring GRAPHIFY_VIZ_NODE_LIMIT env var.…, _viz_node_limit(), external_extractor_extensions(), Union of file extensions declared by all registered extractors. Used by…, load_node_link_graph(), Load a graphify graph.json into a networkx graph, accepting both writers. The…, _apply_resource_limits(), _canonical_graph_for_compare()（还有 43 个）
 
 ### 社区 12 —— "detect"
 凝聚度：0.02
-节点（共 122 个）：detect(), skipif, __snapshots__/ and real jest/vitest snapshots/ dirs are artefacts — excluded., Obsidian metadata and plugin caches are not part of the source corpus (#2493)., #1666: a bare snapshots/ dir with no .snap files is a legit code namespace…, storybook-static/ is a build artefact — must be excluded., Files inside .github/ (workflows etc.) are now indexed (#873)., .next/ (Next.js build cache) must be excluded even after dot-dir fix (#873).（还有 114 个）
+节点（共 147 个）：detect(), Read an ignore file, preferring UTF-8 but never silently dropping a rule. These…, _read_ignore_text(), skipif, __snapshots__/ and real jest/vitest snapshots/ dirs are artefacts — excluded., Obsidian metadata and plugin caches are not part of the source corpus (#2493)., #1666: a bare snapshots/ dir with no .snap files is a legit code namespace…, storybook-static/ is a build artefact — must be excluded.（还有 139 个）
 
 ### 社区 13 —— "test_llm_backends.py"
-凝聚度：0.03
-节点（共 114 个）：BaseException, _call_openai_compat(), _extract_with_adaptive_retry(), _looks_like_context_exceeded(), _looks_like_timeout(), _model_requires_default_temperature(), Detect a successful HTTP response that yielded no usable extraction. A local…, Call any OpenAI-compatible API (Kimi, OpenAI, etc.) and return parsed JSON.（还有 106 个）
+凝聚度：0.05
+节点（共 72 个）：_call_openai_compat(), _model_requires_default_temperature(), Detect a successful HTTP response that yielded no usable extraction. A local…, Call any OpenAI-compatible API (Kimi, OpenAI, etc.) and return parsed JSON., True if `model` is a reasoning model that rejects an explicit temperature.…, Resolve the temperature to send, honouring GRAPHIFY_LLM_TEMPERATURE. Precedence…, Resolve the Ollama base URL. Honors an explicit OLLAMA_BASE_URL first…, _resolve_ollama_base_url()（还有 64 个）
 
 ### 社区 14 —— "_query_terms"
 凝聚度：0.07
@@ -1206,31 +1132,31 @@
 
 ### 社区 15 —— "test_detect.py"
 凝聚度：0.04
-节点（共 108 个）：_is_sensitive(), Return True if this file likely contains secrets and should be skipped., as_posix_list(), parametrize, Path, `/*` stays at the root, so `!/src/` makes the subtree walkable (#1975)., A regular `*` matches one component; recursive matching requires `**`., A single `!` re-include must not switch off pruning of *unrelated* ignored…（还有 100 个）
+节点（共 110 个）：_is_sensitive(), Return True if this file likely contains secrets and should be skipped., as_posix_list(), parametrize, Path, `/*` stays at the root, so `!/src/` makes the subtree walkable (#1975)., A regular `*` matches one component; recursive matching requires `**`., A single `!` re-include must not switch off pruning of *unrelated* ignored…（还有 102 个）
 
 ### 社区 16 —— "test_export.py"
-凝聚度：0.04
-节点（共 91 个）：cluster(), Run Leiden community detection. Returns {community_id: [node_ids]}. Community…, existing_graph_node_count(), Export graph as GraphML - opens in Gephi, yEd, and any GraphML-compatible tool.…, Node count of an existing graph.json. Returns: - an ``int`` node count when the…, to_graphml(), _html_document_title(), _html_script()（还有 83 个）
+凝聚度：0.05
+节点（共 74 个）：cluster(), Run Leiden community detection. Returns {community_id: [node_ids]}. Community…, _html_document_title(), _html_script(), _html_styles(), _hyperedge_script(), _normalize_tag(), html — moved verbatim from graphify/export.py.（还有 66 个）
 
 ### 社区 17 —— "test_install.py"
-凝聚度：0.02
-节点（共 145 个）：main(), Handle a downstream reader that closed the pipe early. Redirect stdout to…, Console entry point. Wraps the CLI so that when a downstream consumer closes…, _silence_broken_pipe(), _arm_extract(), _arm_no_cluster(), _make_docs_corpus(), Tests for the incomplete-build shrink-guard on `graphify extract`. A full build…（还有 137 个）
+凝聚度：0.03
+节点（共 109 个）：_agents_install(), _agents_uninstall(), _cli_dispatched_commands(), _install(), _install_opencode_plugin_with_home(), _kilo_install(), _kilo_uninstall(), Tests for graphify install --platform routing.（还有 101 个）
 
 ### 社区 18 —— "test_dedup.py"
 凝聚度：0.03
-节点（共 100 个）：deduplicate_entities(), Deduplicate near-identical entities in a knowledge graph. Args: nodes: list of…, _make_edges(), _make_nodes(), Tests for graphify/dedup.py entity deduplication pipeline., The pair #1243 was scoped around: swapping a function word is how a restatement…, Punct/case variants norm-equal in one file (pass 1), and a fused camelCase…, A typo inside the differing token leaves it the same word: manager and managr…（还有 92 个）
+节点（共 97 个）：deduplicate_entities(), _entropy(), Shannon entropy in bits/char of the normalised label., Deduplicate near-identical entities in a knowledge graph. Args: nodes: list of…, _make_edges(), _make_nodes(), Tests for graphify/dedup.py entity deduplication pipeline., The pair #1243 was scoped around: swapping a function word is how a restatement…（还有 89 个）
 
 ### 社区 19 —— "test_serve.py"
-凝聚度：0.06
-节点（共 60 个）：_community_header(), _cut_lines_to_budget(), _find_node(), _find_node_tiers(), _get_trigram_index(), _infer_context_filters(), _node_search_text(), _normalize_context_filters()（还有 52 个）
+凝聚度：0.04
+节点（共 86 个）：_communities_from_graph(), _community_header(), _compute_idf(), _cut_lines_to_budget(), _filter_graph_by_context(), _find_node(), _find_node_tiers(), _infer_context_filters()（还有 78 个）
 
 ### 社区 20 —— "expand_oversized_files"
 凝聚度：0.05
-节点（共 87 个）：_best_cut(), bisect_slice(), expand_oversized_files(), FileSlice, is_splittable_text(), _pdf_text(), Path, Intra-file slicing for oversized text documents (#1369). The extraction packer…（还有 79 个）
+节点（共 86 个）：_best_cut(), bisect_slice(), expand_oversized_files(), FileSlice, is_splittable_text(), _pdf_text(), Path, Intra-file slicing for oversized text documents (#1369). The extraction packer…（还有 78 个）
 
 ### 社区 21 —— "test_analyze.py"
 凝聚度：0.04
-节点（共 104 个）：_cross_community_surprises(), _cross_file_surprises(), _cross_language(), _file_category(), find_import_cycles(), god_nodes(), graph_diff(), _is_concept_node()（还有 96 个）
+节点（共 90 个）：_cross_language(), _file_category(), find_import_cycles(), god_nodes(), graph_diff(), _is_concept_node(), _is_json_key_node(), Return the top_n most-connected real entities - the core abstractions. File-…（还有 82 个）
 
 ### 社区 22 —— "test_dedup_remaps_hyperedges.py"
 凝聚度：0.13
@@ -1241,8 +1167,8 @@
 节点（共 88 个）：classify_file(), FileType, Return the interpreter name from a shebang line. Handles forms that a naive…, Peek at the first line of an extensionless file for a shebang., _shebang_file_type(), _shebang_interpreter(), str, A .md file with enough paper signals should classify as PAPER.（还有 80 个）
 
 ### 社区 24 —— "test_chunking.py"
-凝聚度：0.08
-节点（共 36 个）：extract_corpus_parallel(), _extraction_system(), Extract a corpus in chunks, merging results. Chunking strategy: - If…, Return the semantic-extraction system prompt, optionally in deep mode., Tests for token-aware chunking and parallel chunk execution in graphify.llm., Build a deterministic fake extraction result for a chunk., With max_concurrency > 1, total wall time should be ~max(chunk times), not the…, max_concurrency=1 should run sequentially (no thread pool).（还有 28 个）
+凝聚度：0.04
+节点（共 65 个）：extract_corpus_parallel(), _extraction_system(), _is_vision_image(), _merge_into(), _pack_chunks_by_tokens(), Greedily pack files/slices into chunks that fit a token budget. Units are first…, Extract a corpus in chunks, merging results. Chunking strategy: - If…, Append a chunk result into the running merged accumulator.（还有 57 个）
 
 ### 社区 25 —— "test_dotnet.py"
 凝聚度：0.05
@@ -1252,13 +1178,13 @@
 凝聚度：0.07
 节点（共 51 个）：extract_lazarus_package(), Extract package metadata from Lazarus .lpk package files (XML format). .lpk is…, extract_pascal(), extract_delphi_form(), extract_lazarus_form(), Path, Extract component hierarchy from Delphi .dfm form files. .dfm files come in two…, Extract component hierarchy from Lazarus .lfm form files. .lfm is a text-based…（还有 43 个）
 
-### 社区 27 —— "test_ignore_file_encoding.py"
-凝聚度：0.13
-节点（共 25 个）：Read an ignore file, preferring UTF-8 but never silently dropping a rule. These…, _read_ignore_text(), _corpus(), parametrize, r"""An ignore file that is not valid UTF-8 must not silently lose its rules.…, The actual regression: every rule survives, even if a third encoding renders it…, The existing NFC/NFD guarantee must survive the new decode path., A UTF-16 (BOM) .graphifyignore — what PowerShell Set-Content and Notepad…（还有 17 个）
+### 社区 27 —— "save_manifest"
+凝聚度：0.06
+节点（共 55 个）：detect_incremental(), load_manifest(), _mtime_may_hide_a_rewrite(), _nfc(), NFC-normalize a path string used as a manifest key. On macOS, ``os.walk`` /…, Return ``key`` as a forward-slash relative path from ``root``. Keys outside…, Inverse of :func:`_to_relative_for_storage`. Re-anchor a stored key against…, Load the manifest from a previous run. Returns {} on any error. When ``root``…（还有 47 个）
 
-### 社区 28 —— "_rewire_unique_stub_nodes"
-凝聚度：0.07
-节点（共 32 个）：_is_top_level_function_definition(), _lang_family(), _lang_is_case_insensitive(), _merge_swift_extensions(), _node_label_key(), True when the file's language resolves identifiers case-insensitively (#1581)., Interop family of the file's language, or None when unknown/not code., A free/top-level function def (label ``name()``), not a method or type. Methods…（还有 24 个）
+### 社区 28 —— "extract.py"
+凝聚度：0.03
+节点（共 147 个）：_augment_js_reexport_edges(), _canonicalize_csharp_namespace_nodes(), _check_tree_sitter_version(), _emit_rescued_import(), extract_svelte(), _import_c(), _import_lua(), _merge_swift_extensions()（还有 139 个）
 
 ### 社区 29 —— "_call_claude_cli"
 凝聚度：0.04
@@ -1269,36 +1195,36 @@
 节点（共 76 个）：_calls(), _init_git_repo(), _make_graph(), CompletedProcess, Path, Integration tests for graphify export subcommands and CLI commands. Each test…, #1423: `graphify extract` honours GRAPHIFY_OUT for where it WRITES, not only…, Write a minimal hand-rolled directed graph.json for path-direction tests.（还有 68 个）
 
 ### 社区 31 —— "test_extract_cli.py"
-凝聚度：0.05
-节点（共 75 个）：_clear_backend_keys(), _code_only_corpus(), _failing_sql(), _make_corpus(), _manifest_row(), _node_sources(), _ok_sql(), parametrize（还有 67 个）
+凝聚度：0.08
+节点（共 36 个）：_make_corpus(), Tests for `graphify extract` CLI dispatch path in graphify.__main__., When every semantic chunk errors (e.g. backend SDK not installed), the CLI must…, Minimal corpus: one Go code file + one Markdown doc. Both file types are needed…, Run 1 builds a graph where OTHER.md contributes two nodes. Run 2 changes only…, Sanity counter-test: a successful chunk run keeps exit 0. Confirms the new…, #2445: an AST-pass failure on a fresh build must not be presented as a…, #1948 x #1950 interaction: a doc stamped complete on a prior run that TRUNCATES…（还有 28 个）
 
 ### 社区 32 —— "test_image_vision.py"
 凝聚度：0.06
-节点（共 55 个）：_anthropic_response_text(), _bedrock_content(), _bedrock_response_text(), _build_image_refs(), _call_bedrock(), _partition_semantic_files(), Return the first Anthropic content block that carries text. Current Claude…, Return the first Converse content block that carries text. Converse returns…（还有 47 个）
+节点（共 56 个）：_anthropic_response_text(), _bedrock_content(), _bedrock_response_text(), _build_image_refs(), _call_bedrock(), _partition_semantic_files(), Return the first Anthropic content block that carries text. Current Claude…, Return the first Converse content block that carries text. Converse returns…（还有 48 个）
 
-### 社区 33 —— "test_hooks.py"
-凝聚度：0.04
-节点（共 95 个）：_hooks_dir(), install(), Return the git hooks directory, respecting core.hooksPath if set (e.g. Husky).…, Install graphify post-commit and post-checkout hooks in the nearest git repo., Remove graphify post-commit and post-checkout hooks., Check if graphify hooks are installed., status(), uninstall()（还有 87 个）
+### 社区 33 —— "install"
+凝聚度：0.06
+节点（共 49 个）：install(), Install graphify post-commit and post-checkout hooks in the nearest git repo., Check if graphify hooks are installed., status(), _make_git_repo(), Test 2: Without .graphifyrc, generated hooks omit GRAPHIFY_VIZ_NODE_LIMIT…, Test 3: viz_node_limit from .graphifyrc is baked into both hooks., Persisting the project default must not clobber an explicit per-run…（还有 41 个）
 
 ### 社区 34 —— "test_ruby_resolution.py"
 凝聚度：0.07
-节点（共 72 个）：extract_ruby(), Extract classes, methods, singleton methods, and calls from a .rb file., test_ruby_no_error(), _find_raw_call(), _has_call_edge(), _labels(), _method_edges(), _mixes_in()（还有 64 个）
+节点（共 74 个）：extract_ruby(), Extract classes, methods, singleton methods, and calls from a .rb file., `class Sub < Base` must emit an inherits edge. Ruby exposes the base class in…, test_ruby_inherits_edge(), test_ruby_no_error(), _find_raw_call(), _has_call_edge(), _labels()（还有 66 个）
 
 ### 社区 35 —— "Communities (141 total, 52 thin omitted)"
 凝聚度：0.03
 节点（共 71 个）：Communities (141 total, 52 thin omitted), Community 0 - "Community 0", Community 10 - "Community 10", Community 11 - "Community 11", Community 12 - "Community 12", Community 13 - "Community 13", Community 14 - "Community 14", Community 15 - "Community 15"（还有 63 个）
 
-### 社区 36 —— "test_watch.py"
-凝聚度：0.04
-节点（共 67 个）：_is_read_only_event(), _notify_only(), Write a flag file and print a notification (fallback for non-code-only corpora)., True for watchdog events that mean a file was merely READ, not changed. On…, Persist corpus-shaping options under ``out_dir``. Best effort and non…, _write_build_config(), Path, Tests for watch.py - file watcher helpers (no watchdog required).（还有 59 个）
+### 社区 36 —— "file_hash"
+凝聚度：0.06
+节点（共 36 个）：file_hash(), SHA256 of file contents + path relative to root. Uses a stat-based fastpath…, A .md file with no frontmatter is hashed by its full content., Non-.md files are still hashed by their full content., cached_files reports deep-namespace entries too., Fingerprinted entries live under cache/semantic/p{fp}/, never flat., A same-length edit must change the digest even when the filesystem reports an…, The guard must not disable the cache: once a file's mtime tick has closed, the…（还有 28 个）
 
 ### 社区 37 —— "test_languages.py"
 凝聚度：0.03
-节点（共 105 个）：extract_csharp(), extract_groovy(), extract_java(), extract_php(), Extract classes, interfaces, methods, constructors, and imports from a .java…, Extract classes, methods, constructors, and imports from a .groovy/.gradle…, Extract C# type declarations, methods, namespaces, and usings from a .cs file., Extract classes, functions, methods, namespace uses, and calls from a .php file.（还有 97 个）
+节点（共 104 个）：extract_csharp(), extract_groovy(), extract_kotlin(), Extract classes, methods, constructors, and imports from a .groovy/.gradle…, Extract C# type declarations, methods, namespaces, and usings from a .cs file., Extract classes, objects, functions, and imports from a .kt/.kts file., _cpp_preprocess(), extract_fortran()（还有 96 个）
 
 ### 社区 38 —— "extract_python"
-凝聚度：0.07
-节点（共 51 个）：extract_python(), Extract classes, functions, and imports from a .py file via tree-sitter AST., All edge sources must reference a known node (targets may be external imports)., contains / method / inherits / imports edges must always be EXTRACTED., Call-graph pass must produce INFERRED calls edges., AST-resolved call edges are deterministic and should be EXTRACTED/1.0., run_analysis() calls compute_score() - must appear as a calls edge., Analyzer.process() calls run_analysis() - cross class→function calls edge.（还有 43 个）
+凝聚度：0.05
+节点（共 50 个）：extract_python(), Extract classes, functions, and imports from a .py file via tree-sitter AST., All edge sources must reference a known node (targets may be external imports)., contains / method / inherits / imports edges must always be EXTRACTED., Call-graph pass must produce INFERRED calls edges., AST-resolved call edges are deterministic and should be EXTRACTED/1.0., run_analysis() calls compute_score() - must appear as a calls edge., Analyzer.process() calls run_analysis() - cross class→function calls edge.（还有 42 个）
 
 ### 社区 39 —— "test_csharp_member_calls.py"
 凝聚度：0.06
@@ -1318,39 +1244,39 @@
 
 ### 社区 43 —— "extract_js"
 凝聚度：0.03
-节点（共 86 个）：extract_js(), Extract classes, functions, arrow functions, and imports from a…, #3035: Calls inside HOF-wrapped export callbacks (with options) are attributed…, #3035 / #1077: Arbitrary `obj.x = wrap(...)` must NOT produce a node., `Foo.prototype.bar = fn` must be captured as a method owned by Foo., `const f = function(){}` (function expression, not arrow) must be captured., A class field initialised with an arrow function (`x = () => {}`) must be…, Guard against the phantom-god-node class (#1077): an arbitrary `obj.x = fn`…（还有 78 个）
+节点（共 87 个）：extract_js(), Extract classes, functions, arrow functions, and imports from a…, #3035: Calls inside HOF-wrapped export callbacks (with options) are attributed…, #3035 / #1077: Arbitrary `obj.x = wrap(...)` must NOT produce a node., `Foo.prototype.bar = fn` must be captured as a method owned by Foo., `const f = function(){}` (function expression, not arrow) must be captured., A class field initialised with an arrow function (`x = () => {}`) must be…, Guard against the phantom-god-node class (#1077): an arbitrary `obj.x = fn`…（还有 79 个）
 
-### 社区 44 —— "fuzzy_score"
-凝聚度：0.20
-节点（共 7 个）：fuzzy_best_match(), fuzzy_score(), Fuzzy string matching tier for hybrid search. Uses rapidfuzz (already a…, Jaro-Winkler similarity in [0, 1]. Returns 0 if below threshold. Comparison is…, Find the best fuzzy match for query_token among labels. Returns ``(score,…, Return the fuzzy bonus for a (query_token, node_label) pair. Returns 0.0 when…, TestFuzzyScore
+### 社区 44 —— "_extract_with_adaptive_retry"
+凝聚度：0.04
+节点（共 50 个）：BaseException, _chunk_partial_files(), _extract_with_adaptive_retry(), _looks_like_context_exceeded(), _looks_like_timeout(), _mark_partial(), _merged_partial_files(), Heuristically classify an exception as a context-window overflow. Different…（还有 42 个）
 
-### 社区 45 —— "attach_hyperedges"
-凝聚度：0.14
-节点（共 17 个）：attach_hyperedges(), Store hyperedges in the graph's metadata dict., _node(), Hyperedges must survive the dual-slot persistence round-trip (#2485). to_json…, _roundtrip(), test_full_wipeout_emits_one_aggregate_warning(), test_nested_only_slot_is_read_and_reexported_to_both_slots(), test_top_level_slot_roundtrips_unchanged()（还有 9 个）
+### 社区 45 —— "_edges_with_relation"
+凝聚度：0.07
+节点（共 32 个）：extract_c(), Extract functions and includes from a .c/.h file., extract_elixir(), Path, Extract modules, functions, imports, and calls from a .ex/.exs file., _edges_with_relation(), `alias Foo.{Bar, Baz}` must emit one imports edge per expanded module. The…, test_c_call_edges_have_call_context()（还有 24 个）
 
 ### 社区 46 —— "test_multigraph_diagnostics.py"
-凝聚度：0.08
-节点（共 58 个）：load_graph(), _canonical_edge(), _count_extra(), diagnose_extraction(), diagnose_file(), _edge_list(), _exact_signature(), format_diagnostic_json()（还有 50 个）
+凝聚度：0.11
+节点（共 48 个）：_canonical_edge(), _count_extra(), diagnose_extraction(), diagnose_file(), _edge_list(), _exact_signature(), format_diagnostic_json(), format_diagnostic_report()（还有 40 个）
 
-### 社区 47 —— "file_hash"
-凝聚度：0.04
-节点（共 84 个）：_absolutize_ids_in(), _absolutize_source_files_in(), cache_dir(), cached_files(), cached_word_count(), _cleanup_stale_ast_entries(), _ensure_stat_index(), file_hash()（还有 76 个）
+### 社区 47 —— "cache.py"
+凝聚度：0.06
+节点（共 57 个）：_absolutize_ids_in(), _absolutize_source_files_in(), cached_files(), cached_word_count(), _cleanup_stale_ast_entries(), _ensure_stat_index(), _id_anchor(), _mtime_granularity_ns()（还有 49 个）
 
 ### 社区 48 —— "extract"
 凝聚度：0.08
 节点（共 69 个）：extract(), Extract AST nodes and edges from a list of code files. Two-pass process: 1.…, _labels_by_id(), Builtin-global receiver types must not resolve to same-named user symbols.…, test_builtin_date_type_ref_does_not_bind_to_user_DATE(), test_builtin_static_call_does_not_bind_to_user_symbol(), test_nonbuiltin_receiver_type_still_resolves(), _defs()（还有 61 个）
 
 ### 社区 49 —— "test_codebuddy.py"
-凝聚度：0.04
-节点（共 71 个）：codebuddy_install(), Install the graphify skill and CODEBUDDY.md section for CodeBuddy., Idempotently update or append a graphify-owned section in shared files. If no…, _replace_or_append_section(), _codebuddy_install_user(), _codebuddy_md_path(), Tests for graphify codebuddy install / uninstall commands., The installed hook must include Read|Glob matcher for file-read interception.（还有 63 个）
+凝聚度：0.05
+节点（共 64 个）：codebuddy_install(), codebuddy_uninstall(), Install the graphify skill and CODEBUDDY.md section for CodeBuddy., Remove the graphify skill tree (SKILL.md + references/) and the CODEBUDDY.md…, _codebuddy_install_user(), _codebuddy_md_path(), Tests for graphify codebuddy install / uninstall commands., The installed hook must include Read|Glob matcher for file-read interception.（还有 56 个）
 
-### 社区 50 —— "generate_embeddings_incremental"
-凝聚度：0.06
-节点（共 57 个）：_check_single_project(), Check one project's embedding staleness and refresh if stale. -…, build_embeddings(), _extract_embed_text_from_git_version(), generate_embeddings_for_graph(), generate_embeddings_incremental(), _git_diff_changed_node_ids(), _git_rel_path()（还有 49 个）
+### 社区 50 —— "_make_graph_json"
+凝聚度：0.13
+节点（共 21 个）：_extract_embed_text_from_git_version(), Extract embed text (desc → rationale → "") for a single node_id from the…, _commit(), _init_git_repo(), _make_graph_json(), _node(), Path, The core bug fix: desc change must be detected even though the changed line…（还有 13 个）
 
-### 社区 51 —— "normalize_id"
+### 社区 51 —— "embeddings.py"
 凝聚度：0.10
-节点（共 36 个）：given, make_id(), normalize_id(), r"""Normalize a single ID string to its canonical form. Guarantees, all…, Build a canonical node ID from one or more name parts. Parts are joined with…, _make_id(), Build a stable node ID via the single shared recipe (#1378)., parametrize（还有 28 个）
+节点（共 32 个）：_build_embed_http_client(), _embed_batch(), _embed_batch_sentence_transformers(), embed_query(), generate_embeddings_for_graph(), generate_embeddings_incremental(), load_embedding_sidecar(), ndarray（还有 24 个）
 
 ### 社区 52 —— "_extract_node_desc"
 凝聚度：0.07
@@ -1358,11 +1284,11 @@
 
 ### 社区 53 —— "_parse_llm_json"
 凝聚度：0.05
-节点（共 61 个）：_balanced_object(), _json_fragment_candidates(), _json_object_candidates(), _parse_llm_json(), Return the balanced ``{...}`` substring starting at ``start``, else None., Indices of ``{`` that plausibly start an extraction fragment. Braces followed…, Yield candidate JSON texts from a model reply, most-likely first. Two sources,…, Strip optional markdown fences and parse JSON. Returns empty fragment on…（还有 53 个）
+节点（共 55 个）：_parse_llm_json(), Strip optional markdown fences and parse JSON. Returns empty fragment on…, Force ``nodes``/``edges``/``hyperedges`` to lists of dicts, in place. A model…, _sanitize_fragment(), test_sanitize_fragment_coerces_dict_members_to_strings(), _make_envelope(), patch, Tests for `_parse_llm_json` robustness and the `_call_claude_cli` subprocess…（还有 47 个）
 
 ### 社区 54 —— "save_semantic_cache"
-凝聚度：0.07
-节点（共 51 个）：_group_has_partial_marker(), load_cached(), True if any node/edge/hyperedge in a per-file group carries the internal…, Save semantic extraction results to cache, keyed by source_file. Groups nodes…, Return cached extraction for this file if hash matches, else None. Cache key:…, save_semantic_cache(), _mark_partial(), _partial_source_files()（还有 43 个）
+凝聚度：0.08
+节点（共 43 个）：_group_has_partial_marker(), load_cached(), True if any node/edge/hyperedge in a per-file group carries the internal…, Save semantic extraction results to cache, keyed by source_file. Groups nodes…, Return cached extraction for this file if hash matches, else None. Cache key:…, save_semantic_cache(), Default save_semantic_cache replaces a file's cached entry (the final,…, #1757: an undispatched file must keep its complete cache entry when a semantic…（还有 35 个）
 
 ### 社区 55 —— "introspect_postgres"
 凝聚度：0.13
@@ -1372,13 +1298,13 @@
 凝聚度：0.04
 节点（共 54 个）：Communities, Community 0 - "nanoGPT Model Architecture", Community 10 - "micrograd README + Backprop", Community 11 - "Attention Residuals Paper", Community 12 - "Continual LoRA Paper", Community 13 - "minGPT Trainer Class", Community 14 - "NeuralWalker Paper", Community 15 - "Dataset Abstractions"（还有 46 个）
 
-### 社区 57 —— "to_json"
-凝聚度：0.05
-节点（共 52 个）：_partition(), Community detection on NetworkX graphs. Uses Leiden (graspologic) if available,…, Context manager to suppress stdout/stderr during library calls. graspologic's…, Run community detection. Returns {node_id: community_id}. Tries Leiden…, Run a second Leiden pass on a community subgraph to split it further., score_all(), _split_community(), _suppress_output()（还有 44 个）
+### 社区 57 —— "score_all"
+凝聚度：0.10
+节点（共 30 个）：cohesion_score(), _partition(), Community detection on NetworkX graphs. Uses Leiden (graspologic) if available,…, Context manager to suppress stdout/stderr during library calls. graspologic's…, Run community detection. Returns {node_id: community_id}. Tries Leiden…, Run a second Leiden pass on a community subgraph to split it further., Ratio of actual intra-community edges to maximum possible., Remap community IDs to maximize overlap with a previous assignment. Uses greedy…（还有 22 个）
 
 ### 社区 58 —— "registry.py"
-凝聚度：0.12
-节点（共 17 个）：clear_registry(), DocExtractor, _NotApplicable, Exception, Path, Try registered extractors in order; return first non-None result, or None., Extractor signals "not my file" by raising this or returning None., Test helper: clear all registered extractors.（还有 9 个）
+凝聚度：0.13
+节点（共 15 个）：clear_registry(), DocExtractor, _NotApplicable, Exception, Path, Try registered extractors in order; return first non-None result, or None., Extractor signals "not my file" by raising this or returning None., Test helper: clear all registered extractors.（还有 7 个）
 
 ### 社区 59 —— "test_skillgen.py"
 凝聚度：0.06
@@ -1393,12 +1319,12 @@
 节点（共 49 个）：aggregate_lessons(), Aggregate parsed memory docs into a deterministic lessons structure. ``now``…, Render the aggregate into the deterministic LESSONS.md markdown body., render_lessons_md(), _days_before(), _doc(), Tests for `graphify reflect` and the work-memory reflection layer. `graphify…, Corroboration (k>=2) + sign decide the bucket, not raw frequency: A is useful…（还有 41 个）
 
 ### 社区 62 —— "test_serve_http.py"
-凝聚度：0.10
-节点（共 47 个）：_build_http_app(), _main(), _max_server_contexts(), _MCPASGIApp, Raw-ASGI wrapper around the Streamable HTTP session manager. Passed to a…, Build the Starlette ASGI app for the Streamable HTTP transport. Split out from…, Start the MCP server over Streamable HTTP (MCP spec 2025-03-26). Serves the…, Return the project-context LRU capacity (default 8, minimum 1).…（还有 39 个）
+凝聚度：0.16
+节点（共 35 个）：_build_http_app(), Build the Starlette ASGI app for the Streamable HTTP transport. Split out from…, TestClient, _call_tool(), _client(), _graph_file(), _init_session(), _project_with_graph()（还有 27 个）
 
-### 社区 63 —— "test_devin.py"
-凝聚度：0.05
-节点（共 51 个）：_devin_rules_install(), Write .windsurf/rules/graphify.md for always-on Devin context., _devin_install_user(), Tests for graphify devin install / uninstall commands., The rules file installed by devin must use query-first policy., Installing rules twice does not change content and prints 'no change'., Project-scope install prints a git add hint covering .devin/ and .windsurf/., User-scope uninstall removes the skill file.（还有 43 个）
+### 社区 63 —— "test_query_cli.py"
+凝聚度：0.22
+节点（共 12 个）：Tests for graphify query CLI context filtering., #F4: query CLI must refuse to parse a graph.json that exceeds the cap., A single directed `calls` edge on an (on-disk) undirected graph.json, the…, `graphify query` must render `calls` edges caller->callee regardless of which…, Same edge, seeded from the caller side — must stay correct too., test_query_cli_explicit_context_filter(), test_query_cli_heuristic_context_filter(), test_query_cli_preserves_calls_direction_when_seeded_on_callee()（还有 4 个）
 
 ### 社区 64 —— "test_manifest_ingest.py"
 凝聚度：0.08
@@ -1406,7 +1332,7 @@
 
 ### 社区 65 —— "test_global_graph.py"
 凝聚度：0.10
-节点（共 46 个）：prefix_graph_for_global(), prune_repo_from_graph(), Return a copy of G with all node IDs prefixed with repo_tag::. Labels are…, Remove all nodes tagged with repo_tag from G in-place. Returns count removed., _file_hash(), global_add(), global_list(), global_path()（还有 38 个）
+节点（共 42 个）：prefix_graph_for_global(), prune_repo_from_graph(), Return a copy of G with all node IDs prefixed with repo_tag::. Labels are…, Remove all nodes tagged with repo_tag from G in-place. Returns count removed., _file_hash(), global_add(), global_list(), global_path()（还有 34 个）
 
 ### 社区 66 —— "gen.py"
 凝聚度：0.04
@@ -1414,15 +1340,15 @@
 
 ### 社区 67 —— "extract_cpp"
 凝聚度：0.06
-节点（共 45 个）：_blank_keeping_newlines(), extract_cpp(), _normalize_cpp_cli(), Replace a match with spaces, but keep its line breaks. Byte length alone is not…, Rewrite C++/CLI spellings to standard C++ ones, or None if not C++/CLI. The…, Extract functions, classes, and includes from a .cpp/.cc/.cxx/.hpp file.…, _labels(), parametrize（还有 37 个）
+节点（共 47 个）：_blank_keeping_newlines(), extract_cpp(), _normalize_cpp_cli(), Replace a match with spaces, but keep its line breaks. Byte length alone is not…, Rewrite C++/CLI spellings to standard C++ ones, or None if not C++/CLI. The…, Extract functions, classes, and includes from a .cpp/.cc/.cxx/.hpp file.…, _labels(), parametrize（还有 39 个）
 
 ### 社区 68 —— "extract_files_direct"
-凝聚度：0.06
-节点（共 49 个）：_backend_env_keys(), _backend_supports_vision(), detect_backend(), extract_files_direct(), _get_backend_api_key(), _ollama_host_is_link_local_or_metadata(), Return accepted API-key environment variables for a backend., Return the first configured API key for backend, or an empty string.（还有 41 个）
+凝聚度：0.07
+节点（共 43 个）：_backend_env_keys(), _backend_supports_vision(), detect_backend(), extract_files_direct(), _get_backend_api_key(), Return accepted API-key environment variables for a backend., Return the first configured API key for backend, or an empty string., Extract semantic nodes/edges from a list of files using the given backend.…（还有 35 个）
 
 ### 社区 69 —— "test_benchmark.py"
-凝聚度：0.09
-节点（共 45 个）：_estimate_tokens(), _hr(), print_benchmark(), _query_subgraph_tokens(), Token-reduction benchmark - measures how much context graphify saves vs naive…, Print a human-readable benchmark report., Return unicode_char if stdout can encode it, else ascii_fallback. Windows…, Horizontal rule that survives non-UTF-8 stdout (e.g. Windows cp1252 console).（还有 37 个）
+凝聚度：0.10
+节点（共 43 个）：_estimate_tokens(), _hr(), print_benchmark(), _query_subgraph_tokens(), Token-reduction benchmark - measures how much context graphify saves vs naive…, Print a human-readable benchmark report., Return unicode_char if stdout can encode it, else ascii_fallback. Windows…, Horizontal rule that survives non-UTF-8 stdout (e.g. Windows cp1252 console).（还有 35 个）
 
 ### 社区 70 —— "audit_coverage"
 凝聚度：0.08
@@ -1433,72 +1359,72 @@
 节点（共 44 个）：_build(), _extract(), _extract_dir(), _extract_js_dir(), Indirect dispatch edges. A function passed BY NAME as a call argument…, No recall regression: a real module fn passed by name still emits an edge., Regression: when the scan root relativizes node ids (cache_root == project…, The cross-file resolver guard in extract.py must suppress indirect_call edges…（还有 36 个）
 
 ### 社区 72 —— "build"
-凝聚度：0.06
-节点（共 49 个）：build(), _coerce_non_string_ids(), _fold_node_aliases(), Merge multiple extraction results into one graph. directed=True produces a…, Fold legacy node field aliases onto canonical keys, in place (#2194). ``name``…, Coerce numeric node ids and edge/hyperedge references to str, in place (#2326).…, #1007: manifest stores absolute paths, graph nodes store relative paths.…, #1007: prune_sources with Windows-style backslash absolute paths must still…（还有 41 个）
+凝聚度：0.05
+节点（共 53 个）：build(), _coerce_non_string_ids(), _fold_node_aliases(), Merge multiple extraction results into one graph. directed=True produces a…, Fold legacy node field aliases onto canonical keys, in place (#2194). ``name``…, Coerce numeric node ids and edge/hyperedge references to str, in place (#2326).…, #1007: manifest stores absolute paths, graph nodes store relative paths.…, #1007: prune_sources with Windows-style backslash absolute paths must still…（还有 45 个）
 
 ### 社区 73 —— "test_evidence_binding.py"
 凝聚度：0.17
 节点（共 20 个）：_bind_node_evidence(), _label_identifiers(), Identifier tokens from a node label, stripped of a trailing call/args…, Downgrade code-typed nodes whose symbol name has no evidence in the source the…, _by_label(), Tests for semantic evidence-binding in graphify.llm. A code node the model…, Drive extract_files_direct with a faked backend returning ``nodes``., _run()（还有 12 个）
 
 ### 社区 74 —— "reflect.py"
-凝聚度：0.08
-节点（共 45 个）：_build_id_label_maps(), build_learning_overlay(), _code_fingerprint(), _content_hash(), _decay(), _dedupe_by_question(), _doc_community(), _empty_bucket()（还有 37 个）
+凝聚度：0.09
+节点（共 43 个）：_build_id_label_maps(), build_learning_overlay(), _code_fingerprint(), _content_hash(), _decay(), _dedupe_by_question(), _empty_bucket(), _finalize_sources()（还有 35 个）
 
 ### 社区 75 —— "build_tree"
 凝聚度：0.16
 节点（共 24 个）：build_tree(), _common_root(), emit_html(), _make_truncation_leaf(), Any, Path, tree_html — emit a D3 v7 collapsible-tree HTML view of a graph. A self-…, Build a ``{name, total_count, children}`` hierarchy. Each leaf is either a code…（还有 16 个）
 
-### 社区 76 —— "edge_data"
-凝聚度：0.15
-节点（共 31 个）：edge_data(), Return one edge attribute dict for (u, v), tolerating MultiGraph. For…, _edge(), _extraction(), parametrize, A collapsed edge must keep the specific relation, not the alphabetical one.…, Deliberately NOT ranked against each other — `contains` vs `calls` is a cross-…, The fix chooses WHICH edge survives; it must not add or drop any.（还有 23 个）
+### 社区 76 —— "to_graphml"
+凝聚度：0.09
+节点（共 35 个）：_cap_filename(), _cypher_escape(), _cypher_label(), _obsidian_safe_stem(), Export graph as GraphML - opens in Gephi, yEd, and any GraphML-compatible tool.…, Escape a string for safe embedding in a Cypher single-quoted literal. Handles…, Sanitise a value used in identifier position (node label / rel type). Cypher…, Drop characters XML 1.0 cannot represent, leaving tab/LF/CR intact.…（还有 27 个）
 
 ### 社区 77 —— "extract_objc"
 凝聚度：0.05
-节点（共 43 个）：extract_objc(), Path, Extract interfaces, implementations, protocols, methods, and imports from…, `@protocol Derived <Base>` must emit an implements edge Derived->Base.…, `[self speak]` inside Dog.fetch must produce a calls edge. The method-body…, `+ (…)shared` is a class method and must be labeled +shared, not -shared…, A compound message `[self a:x b:y]` resolves to the compound method def (#1475)., `NSArray<Product *> *` must reference the element type Product (and the…（还有 35 个）
+节点（共 44 个）：extract_objc(), Path, Extract interfaces, implementations, protocols, methods, and imports from…, `@protocol Derived <Base>` must emit an implements edge Derived->Base.…, `[self speak]` inside Dog.fetch must produce a calls edge. The method-body…, `+ (…)shared` is a class method and must be labeled +shared, not -shared…, A compound message `[self a:x b:y]` resolves to the compound method def (#1475)., `NSArray<Product *> *` must reference the element type Product (and the…（还有 36 个）
 
 ### 社区 78 —— "Path"
-凝聚度：0.05
-节点（共 57 个）：extract_lua(), _extract_parallel(), _extract_sequential(), _extract_single_file(), _get_extractor(), _import_python(), _is_cpp_header(), _is_objc_header()（还有 49 个）
+凝聚度：0.04
+节点（共 63 个）：extract_lua(), _extract_parallel(), _extract_sequential(), _extract_single_file(), _import_python(), _is_spock_file(), _is_top_level_function_definition(), _kotlin_package_index()（还有 55 个）
 
-### 社区 79 —— "test_mcp_ingest.py"
-凝聚度：0.11
-节点（共 38 个）：extract_mcp_config(), is_mcp_config_path(), Path, Return True when ``path`` is a recognised MCP config filename., Parse an MCP config file into Graphify nodes and edges. Behaviour matches other…, _label_by_kind(), Path, Tests for graphify.mcp_ingest — MCP config file extraction.（还有 30 个）
+### 社区 79 —— "_get_extractor"
+凝聚度：0.05
+节点（共 74 个）：_extract_spock_fallback(), _get_extractor(), _is_cpp_header(), _is_objc_header(), _is_objc_source(), Any, Regex-based fallback for Spock spec files where tree-sitter-groovy cannot parse…, Whether a `.h` file is Objective-C rather than C/C++ (#1475). `.h` is shared by…（还有 66 个）
 
 ### 社区 80 —— "_score_nodes"
 凝聚度：0.06
-节点（共 40 个）：Combined query scorer returning the existing ranked `(score, node_id)` list.…, _score_nodes(), _make_random_scoring_graph(), DiGraph, parametrize, A multi-word query equal to a whole label must resolve uniquely. Regression for…, Searching for '路由' should match a node with label containing '路由'., Test-only oracle for the legacy per-term `_pick_seeds(terms=...)` loop. Re-…（还有 32 个）
+节点（共 39 个）：Combined query scorer returning the existing ranked `(score, node_id)` list.…, _score_nodes(), _make_random_scoring_graph(), parametrize, A multi-word query equal to a whole label must resolve uniquely. Regression for…, Searching for '路由' should match a node with label containing '路由'., Test-only oracle for the legacy per-term `_pick_seeds(terms=...)` loop. Re-…, Reproducible broad-match DiGraph: short constructed labels + edge noise. Labels…（还有 31 个）
 
 ### 社区 81 —— "_query_graph_text"
-凝聚度：0.09
-节点（共 24 个）：_query_graph_text(), _build_multi_seed_graph(), Graph with several equally-matchable seed candidates for top_n tests., AC14: default (top_n=1) returns single subgraph, no === Result., AC13: top_n=3 returns 3 subgraphs separated by === Result i/3 ===., AC14: explicit top_n=1 also returns single subgraph., top_n=0 should not crash — falls through to the top_n<=1 branch., When the query matches nothing, top_n>1 returns the no-match message.（还有 16 个）
+凝聚度：0.07
+节点（共 30 个）：_query_graph_text(), _build_multi_seed_graph(), Graph with several equally-matchable seed candidates for top_n tests., AC14: default (top_n=1) returns single subgraph, no === Result., AC13: top_n=3 returns 3 subgraphs separated by === Result i/3 ===., AC14: explicit top_n=1 also returns single subgraph., top_n=0 should not crash — falls through to the top_n<=1 branch., When the query matches nothing, top_n>1 returns the no-match message.（还有 22 个）
 
 ### 社区 82 —— "test_affected_cli.py"
 凝聚度：0.08
 节点（共 32 个）：resolve_seed(), A trailing path separator must not change the match (parity with explain's…, Several nodes share a source_file but none is the L1 file node and none's…, A caller whose call site (L158) differs from its own def line (L90)., An edge with no stored location honestly falls back to the node's def line., `./x.py`, an absolute path and `x.py` name one file and must resolve alike. The…, An absolute-path seed resolves off the graph's location, not the cwd (#2706).…, An absolute seed that is NOT under the derived repo root must report a clean…（还有 24 个）
 
 ### 社区 83 —— "test_query_induced_edges.py"
-凝聚度：0.14
-节点（共 32 个）：_bfs(), _complete_induced_edges(), _dfs(), _filter_graph_by_context(), Append edges between visited nodes that the traversal never recorded (#2323).…, _add(), _induced(), _link()（还有 24 个）
+凝聚度：0.15
+节点（共 30 个）：_bfs(), _complete_induced_edges(), _dfs(), Append edges between visited nodes that the traversal never recorded (#2323).…, _add(), _induced(), _link(), _pairs()（还有 22 个）
 
-### 社区 84 —— "watch.py"
+### 社区 84 —— "save_cached"
 凝聚度：0.05
-节点（共 61 个）：_apply_resource_limits(), _batch_needs_llm_flag(), _batch_triggers_rebuild(), _canonical_graph_for_compare(), _canonical_topology_for_compare(), _changed_path_candidates(), _git_head(), _has_non_code()（还有 53 个）
+节点（共 48 个）：cache_dir(), prune_semantic_cache(), Save extraction result for this file. Stores as .graph/cache/{kind}/{hash}.json…, Remove orphaned semantic cache entries, returning the count pruned. The…, Returns the cache directory for ``kind`` - creates it if needed. kind is "ast",…, save_cached(), Prune touches only cache/semantic/*.json: AST entries and atomic-write *.tmp…, #1894 follow-up to #1527: prune must sweep cache/semantic/ AND cache/semantic-…（还有 40 个）
 
-### 社区 85 —— "serve.py"
-凝聚度：0.09
-节点（共 29 个）：_ApiKeyMiddleware, _display_graph_path(), _filter_blank_stdin(), _QueryScores, Render a graph path for the query header. Relative to the CWD when it sits…, Filter blank lines from stdin before MCP reads it. Some MCP clients (Claude…, # NOTE: no decorators here — the handlers below are plain coroutines,, Start the MCP server over stdio (the default, per-developer transport).（还有 21 个）
+### 社区 85 —— "Path"
+凝聚度：0.05
+节点（共 47 个）：Path, #1348: git-hook paths are repo-root-relative even when the graph root is a…, Persisted source paths keep their meaning when invocation style changes., Pre-rebase subdirectory graphs stored source_file relative to watch_root., A rejected candidate keeps the marker paired with the existing graph., _merge_changed_paths preserves first-seen order and drops dupes., Fail-closed eviction: a file that leaves the scan corpus but still exists on…, The fail-closed preserve must not weaken true-deletion eviction: once the…（还有 39 个）
 
 ### 社区 86 —— "test_install_references.py"
 凝聚度：0.05
 节点（共 51 个）：_check_skill_version(), Path, Warn if the installed skill is from an older graphify version., Parse a version string into a comparable integer tuple (``0.9.2`` -> ``(0, 9,…, _version_tuple(), _build_wheel_names(), fake_bundle(), _first_unbuilt_progressive_host()（还有 43 个）
 
-### 社区 87 —— "_pick_seeds"
-凝聚度：0.08
-节点（共 39 个）：_pick_seeds(), Split text into word tokens, stripping punctuation and diacritics. `_` is a…, Select BFS seed nodes, stopping when score drops too far below the top.…, _search_tokens(), _bench(), _build_random_graph(), _legacy_score_and_pick(), _legacy_traversal_count()（还有 31 个）
+### 社区 87 —— "bench_query_scoring.py"
+凝聚度：0.17
+节点（共 21 个）：_get_trigram_index(), Split text into word tokens, stripping punctuation and diacritics. `_` is a…, Lazily build and cache a trigram -> node-position postings map on the graph.…, _search_tokens(), _bench(), _build_random_graph(), _legacy_score_and_pick(), _legacy_traversal_count()（还有 13 个）
 
 ### 社区 88 —— "claude_install"
-凝聚度：0.07
-节点（共 39 个）：claude_install(), Install graphify always-on hooks for Claude Code (global). Writes the…, Tests for graphify claude install / uninstall commands., claude_install also writes .claude/settings.json with PreToolUse hook., Running claude_install twice does not duplicate the PreToolUse hook., Creates CLAUDE.md when none exists., claude_uninstall removes the PreToolUse hook from settings.json., A hook relocated to .claude/settings.local.json is removed on uninstall.（还有 31 个）
+凝聚度：0.06
+节点（共 46 个）：claude_install(), claude_uninstall(), Install graphify always-on hooks for Claude Code (global). Writes the…, Remove the graphify PreToolUse hook from ~/.claude/settings.json (global)., Remove the graphify skill tree, the CLAUDE.md section, and the global hook. The…, _uninstall_claude_hook_global(), Tests for graphify claude install / uninstall commands., claude_install also writes .claude/settings.json with PreToolUse hook.（还有 38 个）
 
 ### 社区 89 —— "ingest_scip_json"
 凝聚度：0.05
@@ -1510,30 +1436,30 @@
 
 ### 社区 91 —— "User"
 凝聚度：0.06
-节点（共 28 个）：创建用户, 按邮箱查询用户, 检查邮箱唯一性, 用户不存在, 邮箱已注册, 密码变更, 用户删除, 用户恢复（还有 20 个）
+节点（共 29 个）：{名称}, {名称}, {名称}, 持久化失败, 持久化用户, 按邮箱查询用户, 检查邮箱唯一性, 用户不存在（还有 21 个）
 
 ### 社区 92 —— "聚合协作视图 — 用户管理"
 凝聚度：0.06
 节点（共 30 个）：业务流程 — 用户管理, 入口点, 入口点, 失败/补偿矩阵, 失败/补偿矩阵, 时序编排, 时序编排, 用例: 用户注册（还有 22 个）
 
 ### 社区 93 —— "_make_graph"
-凝聚度：0.05
-节点（共 51 个）：_load_graph(), Render subgraph as text, cutting at token_budget (approx 3 chars/token). seeds:…, _subgraph_to_text(), _make_graph(), A high-degree hub plus a low-degree answer node, to force the answer past a…, BUG2: a low-degree answer node passed as a seed is rendered first and survives…, BUG2 regression guard: the query path must pass seeds to the renderer (a branch…, #2601: nodes render before edges, so a budget overflow that only trims trailing…（还有 43 个）
+凝聚度：0.06
+节点（共 43 个）：Render subgraph as text, cutting at token_budget (approx 3 chars/token). seeds:…, _subgraph_to_text(), _make_graph(), A high-degree hub plus a low-degree answer node, to force the answer past a…, BUG2: a low-degree answer node passed as a seed is rendered first and survives…, BUG2 regression guard: the query path must pass seeds to the renderer (a branch…, #2601: nodes render before edges, so a budget overflow that only trims trailing…, #2784: once every node fits, edges are never dropped (#2601) — but that used to…（还有 35 个）
 
 ### 社区 94 —— "exceptions.py"
-凝聚度：0.08
-节点（共 32 个）：CloseError, ConnectTimeout, DecodingError, NetworkError, PoolTimeout, ProtocolError, ProxyError, httpx-like exception hierarchy. All exceptions inherit from HTTPError at the…（还有 24 个）
+凝聚度：0.07
+节点（共 38 个）：CloseError, ConnectTimeout, CookieConflict, DecodingError, HTTPError, HTTPStatusError, InvalidURL, NetworkError（还有 30 个）
 
 ### 社区 95 —— "raw/analyze.py"
 凝聚度：0.09
 节点（共 34 个）：_cross_community_surprises(), _cross_file_surprises(), _file_category(), god_nodes(), graph_diff(), _is_concept_node(), _is_file_node(), _node_community_map()（还有 26 个）
 
 ### 社区 96 —— "_estimate_file_tokens"
-凝聚度：0.06
-节点（共 48 个）：_estimate_file_tokens(), _get_tokenizer(), _is_vision_image(), _pack_chunks_by_tokens(), Estimate the prompt-token cost of a file or slice under `_read_files` rules.…, Greedily pack files/slices into chunks that fit a token budget. Units are first…, Return a tiktoken encoder for accurate token counts, or None if tiktoken is not…, When tiktoken is installed, the estimator should call into it for accurate…（还有 40 个）
+凝聚度：0.08
+节点（共 34 个）：_estimate_file_tokens(), _get_tokenizer(), Estimate the prompt-token cost of a file or slice under `_read_files` rules.…, Return a tiktoken encoder for accurate token counts, or None if tiktoken is not…, When tiktoken is installed, the estimator should call into it for accurate…, Without tiktoken installed, the estimator falls back to chars/4., A doc containing a literal tiktoken special token (e.g. <|endoftext|>) must not…, test_estimate_file_tokens_falls_back_to_chars_when_no_tokenizer()（还有 26 个）
 
 ### 社区 97 —— "Response"
-凝聚度：0.11
+凝聚度：0.10
 节点（共 7 个）：AsyncClient, BaseClient, Client, Asynchronous HTTP client., Shared implementation for Client and AsyncClient. Handles auth, redirects,…, Synchronous HTTP client., Response
 
 ### 社区 98 —— "3. Tier 2 扩展:提示词型解析器"
@@ -1541,24 +1467,24 @@
 节点（共 38 个）：1. 背景:graphify 的两层提取, 2.1 接口契约, 2.2 三种合并策略, 2.3 生产集成, 2.4 检索集成, 2.5 节点建模约定, 2.6 边 shape, 2.7 参考实现（还有 30 个）
 
 ### 社区 99 —— "test_cache.py"
-凝聚度：0.03
-节点（共 81 个）：_body_content(), check_semantic_cache(), Check semantic extraction cache for a list of absolute file paths. Returns…, Strip YAML frontmatter from Markdown content, returning only the body., Tests for graphify/cache.py., A .md file with no frontmatter is hashed by its full content., Non-.md files are still hashed by their full content., mode='deep' saves under cache/semantic-deep/ and reads back from it.（还有 73 个）
+凝聚度：0.05
+节点（共 55 个）：_body_content(), check_semantic_cache(), Check semantic extraction cache for a list of absolute file paths. Returns…, Strip YAML frontmatter from Markdown content, returning only the body., Tests for graphify/cache.py., mode='deep' saves under cache/semantic-deep/ and reads back from it., Deep entries must not satisfy mode=None reads (and plain entries must not…, Omitting mode writes exactly the historical cache/semantic/ layout — forward-…（还有 47 个）
 
 ### 社区 100 —— "test_obsidian_vault_migration.py"
-凝聚度：0.12
-节点（共 28 个）：_adopt_pre_manifest_notes(), _is_graphify_note(), Path, Whether a vault note carries graphify's own frontmatter signature. Every note…, Names of notes in *out* that graphify itself wrote before manifests existed.…, _export(), _graph(), _notes()（还有 20 个）
+凝聚度：0.11
+节点（共 31 个）：_adopt_pre_manifest_notes(), existing_graph_node_count(), _is_graphify_note(), Path, Node count of an existing graph.json. Returns: - an ``int`` node count when the…, Whether a vault note carries graphify's own frontmatter signature. Every note…, Names of notes in *out* that graphify itself wrote before manifests existed.…, test_existing_graph_node_count()（还有 23 个）
 
-### 社区 101 —— "save_manifest"
-凝聚度：0.07
-节点（共 46 个）：detect_incremental(), load_manifest(), _mtime_may_hide_a_rewrite(), Load the manifest from a previous run. Returns {} on any error. When ``root``…, Save current file mtimes + content hashes for change detection. kind="ast" —…, Was this manifest row written in the same tick as the file it describes? The…, Like detect(), but returns only new or modified files since the last run.…, save_manifest()（还有 38 个）
+### 社区 101 —— "export.py"
+凝聚度：0.08
+节点（共 39 个）：_cross_community_surprises(), _cross_file_surprises(), _is_file_node(), _node_community_map(), Graph analysis: god nodes (most connected), surprising connections (cross-…, Find connections that are genuinely surprising - not obvious from file…, Cross-file edges between real code/doc entities, ranked by a composite surprise…, For single-source corpora: find edges that bridge different communities. These…（还有 31 个）
 
 ### 社区 102 —— "test_user_management_e2e.py"
 凝聚度：0.06
 节点（共 19 个）：doc_anchors(), edges(), graph(), nodes(), Any, E2E tests for the DDD doc-extractor on a real user-management project. These…, Verify the graph contains BOTH code nodes AND doc-anchor nodes, proving the…, Verify ddd-unmatched.json behavior. After the anchor-matching fixes (nameIndex…（还有 11 个）
 
-### 社区 103 —— "embeddings.py"
-凝聚度：0.05
-节点（共 58 个）：_build_embed_http_client(), _embed_batch(), _embed_batch_sentence_transformers(), embed_query(), load_embedding_sidecar(), ndarray, Embedding generation and storage for hybrid semantic search. Build-time:…, Resolve (base_url, api_key, model) for an embedding backend. Configuration is…（还有 50 个）
+### 社区 103 —— "hooks.py"
+凝聚度：0.10
+节点（共 35 个）：_git_root(), _has_merge_attr(), _install_hook(), _load_graphifyrc(), _merge_attr_line(), _merge_default_graphifyrc(), _merge_driver_status(), _parse_graphifyrc_file()（还有 27 个）
 
 ### 社区 104 —— "test_querylog.py"
 凝聚度：0.12
@@ -1589,20 +1515,20 @@
 节点（共 25 个）：__global__, AuthedHttpClient, token_, Connection, resource, string, T, HttpClient（还有 17 个）
 
 ### 社区 111 —— "extract_commonlisp"
-凝聚度：0.06
-节点（共 48 个）：extract_commonlisp(), Path, Extract packages, classes, functions, methods, macros, and calls from a Common…, _needs_commonlisp, Path, `extension Foo` in a separate file from `class Foo` must resolve to a single…, _get_extractor should route .psd1 to extract_powershell_manifest., A '## heading' inside a fenced block must not produce a heading node (#1077).…（还有 40 个）
+凝聚度：0.09
+节点（共 37 个）：extract_commonlisp(), Path, Extract packages, classes, functions, methods, macros, and calls from a Common…, _needs_commonlisp, A superclass defined in another file must still yield an inherits edge. The…, The def-prefix heuristic should catch definline / definline-maybe., Functions defined via custom definers should appear in the call graph., upi=, upi<, upi> must produce distinct ids (operator chars matter).（还有 29 个）
 
 ### 社区 112 —— "callflow_html.py"
 凝聚度：0.09
 节点（共 31 个）：build_community_index(), _community_text(), derive_sections_from_communities(), _describe_node(), generate_overview_cards(), html_anchor_id(), _keyword_score(), label_for_community()（还有 23 个）
 
 ### 社区 113 —— "validate_extraction"
-凝聚度：0.18
-节点（共 19 个）：assert_valid(), Validate an extraction JSON dict against the graphify schema. Returns a list of…, Raise ValueError with all errors if extraction is invalid., validate_extraction(), test_assert_valid_passes_silently(), test_assert_valid_raises_on_errors(), test_dangling_edge_source(), test_dangling_edge_target()（还有 11 个）
+凝聚度：0.16
+节点（共 21 个）：assert_valid(), Validate an extraction JSON dict against the graphify schema. Returns a list of…, Raise ValueError with all errors if extraction is invalid., validate_extraction(), #2194: nodes carrying `name`/`path` instead of `label`/`source_file` must be…, test_legacy_node_name_path_aliases_folded(), test_assert_valid_passes_silently(), test_assert_valid_raises_on_errors()（还有 13 个）
 
 ### 社区 114 —— "test_labeling.py"
-凝聚度：0.14
-节点（共 29 个）：_community_label_lines(), generate_community_labels(), label_communities(), _placeholder_community_labels(), One prompt line per community (largest first), sampling up to ``top_k``…, Return a complete ``{cid: name}`` map using ``backend`` for naming. Communities…, CLI entry point: resolve a backend, name communities, and degrade to…, _graph()（还有 21 个）
+凝聚度：0.16
+节点（共 25 个）：generate_community_labels(), label_communities(), _placeholder_community_labels(), Return a complete ``{cid: name}`` map using ``backend`` for naming. Communities…, CLI entry point: resolve a backend, name communities, and degrade to…, _graph(), Tests for LLM-backed community labeling (issue #1097). Backend calls are mocked…, god_nodes() returns list[dict] with an 'id' key, not bare ids.（还有 17 个）
 
 ### 社区 115 —— "test_explain_cli.py"
 凝聚度：0.12
@@ -1610,11 +1536,11 @@
 
 ### 社区 116 —— "业务约束提取参考（DDD）"
 凝聚度：0.07
-节点（共 28 个）：§10 非 DDD 代码库策略, §1 方法论：读码是为了问对问题, §2 代码信号读取与提问素材生成, §4 模式识别：业务流程（Step 3）, §6 模式识别：业务事件（Step 5）, §9 隐形架构决策提取, Step 3 实现指导：共建关键业务用例, Step 5 实现指导：共建业务事件（还有 20 个）
+节点（共 28 个）：§10 非 DDD 代码库策略, §1 方法论：读码是为了问对问题, §2 代码信号读取与提问素材生成, §3 模式识别：限界上下文（Step 2）, §4 模式识别：业务流程（Step 3）, §6 模式识别：业务事件（Step 5）, Step 2 实现指导：共建业务边界图, Step 3 实现指导：共建关键业务用例（还有 20 个）
 
 ### 社区 117 —— "parametrize"
-凝聚度：0.07
-节点（共 31 个）：_pinned_python(), Return sys.executable if its path is shell-safe, else an empty string. Applies…, _launcher_payload(), parametrize, The rebuild must survive a marker written by Windows PowerShell 5.1 (#3028).…, Git for Windows' bundled shell ships no `nohup`/`setsid`, so the old `nohup ...…, The replacement detaches via Python: start_new_session on POSIX and…, Git for Windows/MSYS hooks can expose fragile pipe handles to spawned…（还有 23 个）
+凝聚度：0.08
+节点（共 25 个）：_pinned_python(), Return sys.executable if its path is shell-safe, else an empty string. Applies…, parametrize, The rebuild must survive a marker written by Windows PowerShell 5.1 (#3028).…, Git for Windows' bundled shell ships no `nohup`/`setsid`, so the old `nohup ...…, The replacement detaches via Python: start_new_session on POSIX and…, Git for Windows/MSYS hooks can expose fragile pipe handles to spawned…, The rebuild must honour the persisted scan root rather than hardcoding the repo…（还有 17 个）
 
 ### 社区 118 —— "test_minhash.py"
 凝聚度：0.11
@@ -1624,9 +1550,9 @@
 凝聚度：0.06
 节点（共 30 个）：For --cluster-only, For git commit hook, For /graphify add, For /graphify explain, For /graphify path, For /graphify query, For native CLAUDE.md integration, For --update (incremental re-extraction)（还有 22 个）
 
-### 社区 120 —— "build_merge"
-凝聚度：0.06
-节点（共 63 个）：build_merge(), _infer_merge_root(), Load existing graph.json, merge new chunks into it, and save back. Re-extracted…, Best-effort scan root for relativizing paths in build_merge when the caller…, _he_ids(), Path, skipif, Incremental --update: hyperedge preservation (#1574) and root-less prune…（还有 55 个）
+### 社区 120 —— "graphify/build.py"
+凝聚度：0.05
+节点（共 86 个）：_abs_identity(), build_merge(), _build_prune_sets(), _coerce_hyperedge_member_refs(), _coerce_id(), deduplicate_by_label(), _derive_prune_root(), _hashable()（还有 78 个）
 
 ### 社区 121 —— "skipif"
 凝聚度：0.10
@@ -1644,21 +1570,21 @@
 凝聚度：0.06
 节点（共 30 个）：For --cluster-only, For git commit hook, For /graphify add, For /graphify explain, For /graphify path, For /graphify query, For native CLAUDE.md integration, For --update (incremental re-extraction)（还有 22 个）
 
-### 社区 125 —— "sanitize_label"
-凝聚度：0.11
-节点（共 22 个）：_active_scan_root(), _build_link_index(), _first_paragraph_after(), _nfc(), Path, Markdown extractor. Moved verbatim from graphify/extract.py., The scan root of the extraction in flight, or None outside extract().…, Index every linkable document under *root* by NFC-normalized basename. Each…（还有 14 个）
+### 社区 125 —— "markdown.py"
+凝聚度：0.18
+节点（共 15 个）：_active_scan_root(), _build_link_index(), _first_paragraph_after(), _nfc(), Path, Markdown extractor. Moved verbatim from graphify/extract.py., The scan root of the extraction in flight, or None outside extract().…, Index every linkable document under *root* by NFC-normalized basename. Each…（还有 7 个）
 
 ### 社区 126 —— "_load_graphifyignore"
-凝聚度：0.11
-节点（共 26 个）：_is_ignored(), _load_graphifyignore(), Read .graphifyignore files and return (anchor_dir, pattern) pairs. Patterns are…, Return True if the path should be ignored per .graphifyignore patterns. Uses…, info/exclude is loaded at lowest priority, so a later .gitignore `!` negation…, A ! re-include cannot un-ignore a file whose parent dir is excluded (#882)., A ! re-include must still un-ignore a file when no ancestor is excluded (#882)., If the ancestor dir itself is re-included, its children should not be blocked…（还有 18 个）
+凝聚度：0.08
+节点（共 35 个）：_has_coverage_artifacts(), _has_venv_markers(), _is_ignored(), _is_noise_dir(), _load_graphifyignore(), Read .graphifyignore files and return (anchor_dir, pattern) pairs. Patterns are…, Return True if the path should be ignored per .graphifyignore patterns. Uses…, True only when *d* holds files a coverage tool actually generated. ``coverage``…（还有 27 个）
 
 ### 社区 127 —— "run_language_resolvers"
 凝聚度：0.12
 节点（共 27 个）：LanguageResolver, Path, Registry for cross-file, language-specific resolution passes. Some…, One cross-file, language-specific resolution pass. ``resolve`` has the…, Append a resolver to the global registry and return it (for inline use)., Return a copy of the registered resolvers, in registration order., Run every resolver whose suffix appears in ``paths``. Behaviorally identical to…, register()（还有 19 个）
 
-### 社区 128 —— "Cookies"
-凝聚度：0.07
-节点（共 19 个）：Invoke-Main(), Cookies, build_url_with_params(), flatten_queryparams(), is_known_encoding(), normalize_header_key(), obfuscate_sensitive_headers(), parse_content_type()（还有 11 个）
+### 社区 128 —— "client.py"
+凝聚度：0.09
+节点（共 19 个）：Invoke-Main(), Limits, The main Client and AsyncClient classes. BaseClient holds all shared logic.…, Timeout, build_url_with_params(), flatten_queryparams(), is_known_encoding(), normalize_header_key()（还有 11 个）
 
 ### 社区 129 —— "TestSubprocessEncoding"
 凝聚度：0.07
@@ -1680,13 +1606,13 @@
 凝聚度：0.12
 节点（共 28 个）：first_list(), generate_call_table_rows(), load_graph(), _node_link_payload(), Return the first list from a set of possible schema locations., Generate call table row scaffolding for a section's nodes. The Caller/Callee…, Read current graphify graph.json via NetworkX's node-link parser., Load graph.json. Returns normalized (nodes, edges, hyperedges, metadata).（还有 20 个）
 
-### 社区 134 —— "TestDart"
-凝聚度：0.14
-节点（共 6 个）：Test that the universal parser successfully extracts generic relationships,…, Test complex Dart 3+ syntax and precise Riverpod/Bloc mappings., Test that the parser successfully handles namespaces in extends/implements, and…, Test typedefs, mixin on, factories, constructor DI types, and universal…, Test all 5 roadmap bug fixes (Bug A, B, C, D, E)., TestDart
+### 社区 134 —— "_make_id"
+凝聚度：0.03
+节点（共 96 个）：Re-derive non-AST node ids from ``source_file`` using the canonical full-path…, _semantic_id_remap(), _augment_cpp_string_tests(), _extract_js_rationale(), _extract_python_rationale(), _import_csharp(), _import_java(), _import_js()（还有 88 个）
 
 ### 社区 135 —— "_extract_pascal_regex"
-凝聚度：0.09
-节点（共 29 个）：_extract_spock_fallback(), Regex-based fallback for Spock spec files where tree-sitter-groovy cannot parse…, _extract_pascal_regex(), _pascal_find_body(), _pascal_split_bases(), _pascal_split_sections(), _pascal_split_uses(), _pascal_strip_comments()（还有 21 个）
+凝聚度：0.13
+节点（共 25 个）：_extract_pascal_regex(), _pascal_find_body(), _pascal_split_bases(), _pascal_split_sections(), _pascal_split_uses(), _pascal_strip_comments(), Path, Split a uses list string, handling 'Foo in ''bar.pas''' syntax.（还有 17 个）
 
 ### 社区 136 —— "test_go_qualified_resolution.py"
 凝聚度：0.16
@@ -1701,12 +1627,12 @@
 节点（共 28 个）：_arrow_line(), _diamond_graph(), _flipped_marker_graph(), Regression tests for `graphify path` arrow direction (#849) and determinism +…, No full-token candidate -> behavior identical to the old scored[0] pick., Two equal-length routes A->P->B and A->Q->B — a tie the traversal must resolve…, #2074: the same graph must yield the same route regardless of PYTHONHASHSEED.…, #2074: the printed relation must be the edge's ACTUAL stored relation, never a…（还有 20 个）
 
 ### 社区 139 —— "Request"
-凝聚度：0.10
-节点（共 11 个）：ConnectError, Failed to establish a connection., Request, BaseTransport, ConnectionPool, HTTPTransport, MockTransport, A transport for testing that returns predefined responses. Pass a handler…（还有 3 个）
+凝聚度：0.07
+节点（共 18 个）：ConnectError, Failed to establish a connection., Request, AsyncBaseTransport, AsyncHTTPTransport, BaseTransport, ConnectionPool, HTTPTransport（还有 10 个）
 
-### 社区 140 —— "symbol_resolution.py"
-凝聚度：0.13
-节点（共 22 个）：build_label_index(), build_python_symbol_index(), existing_edge_pairs(), node_is_resolvable_symbol(), _node_source_stem(), normalise_callable_label(), Any, Deterministic symbol indexing and conservative cross-file resolution helpers.（还有 14 个）
+### 社区 140 —— "edge_data"
+凝聚度：0.08
+节点（共 45 个）：edge_data(), Return one edge attribute dict for (u, v), tolerating MultiGraph. For…, #2194: edges carrying `type`/`confidence_score` instead of…, Pre-enum graphs stored the LLM pass's float directly in `confidence`…, A numeric `confidence` next to an explicit `confidence_score` must not…, The on-disk shape of the defect: a NetworkX-serialized graph.json (`links`…, Healing must survive a round-trip: after the first load rewrites the tag to…, #1279: a semantic/LLM edge lacking source_file must inherit it from its source…（还有 37 个）
 
 ### 社区 141 —— "Spec: 混合语义检索（语义 + fuzzy 重排）"
 凝聚度：0.07
@@ -1756,9 +1682,9 @@
 凝聚度：0.38
 节点（共 11 个）：_extract(), _ind(), Reflective dispatch via getattr string literals — #1566 slice 3. ``getattr(obj,…, test_dynamic_getattr_names_emit_nothing(), test_getattr_feeds_affected(), test_getattr_non_callable_name_emits_nothing(), test_getattr_string_literal_emits_indirect_call(), test_getattr_string_not_shadowed_by_param()（还有 3 个）
 
-### 社区 153 —— "_llm_tiebreak"
-凝聚度：0.10
-节点（共 19 个）：_crossfile_fileanchored_blocked(), _is_variant_pair(), _llm_tiebreak(), _numeric_tokens_differ(), _pick_winner(), Block label-based merging of file-anchored non-code nodes across files (#1284).…, True if a and b are sibling model/SKU variants (same stem, different suffix).…, Block fuzzy merge for short labels unless it's a same-length single-char…（还有 11 个）
+### 社区 153 —— "dedup.py"
+凝聚度：0.07
+节点（共 31 个）：_crossfile_fileanchored_blocked(), _is_code(), _is_variant_pair(), _llm_tiebreak(), _make_minhash(), _merge_missing_attributes(), _numeric_tokens_differ(), _pick_winner()（还有 23 个）
 
 ### 社区 154 —— "test_vue_extraction.py"
 凝聚度：0.17
@@ -1766,11 +1692,11 @@
 
 ### 社区 155 —— "test_ddd_extractor.py"
 凝聚度：0.04
-节点（共 103 个）：_basename_without_ext(), _build_code_indices(), _build_global_node_index(), _clean_anchor(), _ddd_category_from_path(), extract_ddd(), _infer_ddd_type(), _is_class_node()（还有 95 个）
+节点（共 103 个）：_basename_without_ext(), _build_code_indices(), _build_global_node_index(), _clean_anchor(), extract_ddd(), _infer_ddd_type(), _is_class_node(), _is_file_node()（还有 95 个）
 
 ### 社区 156 —— "ExtractionResult"
 凝聚度：0.12
-节点（共 6 个）：ExtractionResult, 声明式返回：外部解析器产出的节点/边 + 合并策略。 merge_mode: "merge" — 外部 + 默认 extract_markdown 合并（保留…, Handler functions should match in the Impl class's source_file., TestCodeIndexMatching, TestOpenAPI3Extraction, TestSwagger2Extraction
+节点（共 6 个）：ExtractionResult, 声明式返回：外部解析器产出的节点/边 + 合并策略。 merge_mode: "merge" — 外部 + 默认 extract_markdown 合并（保留…, Each endpoint should have a references edge to APPPublishServiceImpl., TestCodeIndexMatching, TestOpenAPI3Extraction, TestSwagger2Extraction
 
 ### 社区 157 —— "scip_ingest.py"
 凝聚度：0.11
@@ -1792,24 +1718,24 @@
 凝聚度：0.15
 节点（共 24 个）：introspect_cargo(), _load_toml(), _member_manifest_paths(), Any, Path, Cargo manifest introspection for workspace-internal crate dependencies., Return crate nodes and internal dependency edges from Cargo manifests., Real workspace: pin raw graph fields while excluding registry-only deps.（还有 16 个）
 
-### 社区 162 —— "test_prs.py"
+### 社区 162 —— "fetch_worktrees"
 凝聚度：0.14
-节点（共 10 个）：fetch_pr_files(), fetch_worktrees(), Returns {branch: worktree_path}., datetime, Tests for graphify/prs.py., A detached HEAD (no branch line) must not associate its path with the next…, prs.py reads gh/git/claude output via subprocess.run(text=True). Without an…, Guard: the fixture's UTF-8 bytes must be undecodable as cp1252, else these…（还有 2 个）
+节点（共 8 个）：fetch_pr_files(), fetch_worktrees(), Returns {branch: worktree_path}., A detached HEAD (no branch line) must not associate its path with the next…, prs.py reads gh/git/claude output via subprocess.run(text=True). Without an…, Guard: the fixture's UTF-8 bytes must be undecodable as cp1252, else these…, TestFetchWorktrees, TestSubprocessOutputEncoding
 
 ### 社区 163 —— "detect.py"
-凝聚度：0.03
-节点（共 98 个）：Enum, _auto_follow_symlinks(), count_words(), docx_to_markdown(), _env_command_args(), extract_pdf_text(), _file_within_size_cap(), _find_vcs_root()（还有 90 个）
+凝聚度：0.04
+节点（共 81 个）：Enum, _auto_follow_symlinks(), count_words(), docx_to_markdown(), _env_command_args(), extract_pdf_text(), _file_within_size_cap(), _find_vcs_root()（还有 73 个）
 
-### 社区 164 —— "_2406_graph"
-凝聚度：0.08
-节点（共 42 个）：_2406_calls(), _2406_graph(), _2406_nid(), _2406_seed(), _2437_seed(), _2438_indirects(), _2438_seed(), (source_id, target_id) of every `calls` edge.（还有 34 个）
+### 社区 164 —— "Spec: 检索整体方案设计（双循环 + 7 通路加法打分）"
+凝聚度：0.10
+节点（共 20 个）：10. 验收标准, 11. 防护约束（来自 issue 评论区）, 12. 风险, 13. 参考文献, 1. 背景与问题, 2.1 为什么分两个循环, 2. 整体架构：双循环检索, 3.1 主循环：5 通路词法打分（trigram 放行的候选节点）（还有 12 个）
 
 ### 社区 165 —— "swagger.py"
-凝聚度：0.09
+凝聚度：0.08
 节点（共 25 个）：_basename_without_ext(), _compose_line_map(), _detect_version(), _extract_base_path(), _extract_examples(), _extract_responses(), _has_request_body(), _is_class_node()（还有 17 个）
 
 ### 社区 166 —— "multigraph_compat.py"
-凝聚度：0.17
+凝聚度：0.18
 节点（共 18 个）：_build_probe_graph(), CapabilityCheck, _check(), MultigraphCapabilityResult, _probe_duplicate_key_overwrite_semantics(), _probe_keyed_parallel_edges(), probe_multigraph_capabilities(), _probe_node_link_round_trip()（还有 10 个）
 
 ### 社区 167 —— "What You Must Do When Invoked"
@@ -1833,8 +1759,8 @@
 节点（共 28 个）：BC 级产物清单（解释性，按需加载）, --help 模式, Phase 1：业务约束（DDD）, Phase 2：技术约束, Phase 3：闭环, reverse-engineering-ddd, 与 Diátaxis 的对应, 临时文件与闭环删除（还有 20 个）
 
 ### 社区 172 —— "extract_dm"
-凝聚度：0.15
-节点（共 22 个）：extract_dm(), Extract types, procs, includes, and calls from a .dm/.dme file., _needs_dm, _calls(), Regression test for the call-walker `simple_identifier` / `identifier` rename —…, test_cl_emits_calls(), test_cuda_host_call_edges(), test_dm_ambiguous_member_call_left_unresolved()（还有 14 个）
+凝聚度：0.17
+节点（共 20 个）：extract_dm(), Extract types, procs, includes, and calls from a .dm/.dme file., _needs_dm, _calls(), test_cl_emits_calls(), test_cuda_host_call_edges(), test_dm_ambiguous_member_call_left_unresolved(), test_dm_call_edges_have_call_context()（还有 12 个）
 
 ### 社区 173 —— "google_workspace.py"
 凝聚度：0.14
@@ -1889,8 +1815,8 @@
 节点（共 24 个）：For /graphify add and --watch, For /graphify query, For the commit hook and native CLAUDE.md integration, For --update and --cluster-only, /graphify, Honesty Rules, Interpreter guard for subcommands, Part A - Structural extraction for code files（还有 16 个）
 
 ### 社区 186 —— "test_extract_code_only_cli.py"
-凝聚度：0.14
-节点（共 24 个）：_mixed_repo(), Path, `graphify extract --code-only` indexes code without an LLM key (#1734). A mixed…, #1971 persistence: once --no-gitignore is set, a later flag-less `graphify…, #2106 traceability: a file dropped by the sensitive-file filter is reported by…, #2923 regression: --code-only --force must not drop the existing semantic…, #2923 follow-up: --code-only --force preserves surviving semantic nodes but…, #2071: --code-only must be discoverable in the extract usage text, not only by…（还有 16 个）
+凝聚度：0.15
+节点（共 23 个）：_mixed_repo(), Path, `graphify extract --code-only` indexes code without an LLM key (#1734). A mixed…, #1971 persistence: once --no-gitignore is set, a later flag-less `graphify…, #2106 traceability: a file dropped by the sensitive-file filter is reported by…, #2923 regression: --code-only --force must not drop the existing semantic…, #2923 follow-up: --code-only --force preserves surviving semantic nodes but…, #2071: --code-only must be discoverable in the extract usage text, not only by…（还有 15 个）
 
 ### 社区 187 —— "test_incremental.py"
 凝聚度：0.13
@@ -1949,24 +1875,24 @@
 节点（共 24 个）：For /graphify add and --watch, For /graphify query, For the commit hook and native CLAUDE.md integration, For --update and --cluster-only, /graphify, Honesty Rules, Interpreter guard for subcommands, Part A - Structural extraction for code files（还有 16 个）
 
 ### 社区 201 —— "test_multilang.py"
-凝聚度：0.12
-节点（共 23 个）：_call_pairs(), _edges_with_relation(), Tests for multi-language AST extraction: JS/TS, Go, Rust, SQL., Scoped calls (Type::method) and blocklisted names must not produce INFERRED…, #2577: `WITH levels(a, b) AS (...)` — the name precedes a column list., #2577: the reported leak — the CTE's sourceless stub was unique corpus-wide, so…, test_cache_hit_returns_same_result(), test_cache_miss_after_file_change()（还有 15 个）
+凝聚度：0.04
+节点（共 97 个）：extract_go(), Path, Extract functions, methods, type declarations, and imports from a .go file., extract_rust(), Path, Extract functions, structs, enums, traits, impl methods, and use declarations…, Methods on the same receiver type must share one canonical type node., Type node id should be scoped to directory, not file stem.（还有 89 个）
 
 ### 社区 202 —— "_edge_labels"
-凝聚度：0.06
-节点（共 41 个）：extract_kotlin(), extract_scala(), Extract classes, objects, functions, and imports from a .kt/.kts file., Extract classes, objects, functions, and imports from a .scala file., extract_verilog(), Path, Extract modules, functions, tasks, package imports, instantiations, and…, _edge_labels()（还有 33 个）
+凝聚度：0.05
+节点（共 53 个）：extract_java(), extract_scala(), Extract classes, interfaces, methods, constructors, and imports from a .java…, Extract classes, objects, functions, and imports from a .scala file., extract_verilog(), Path, Extract modules, functions, tasks, package imports, instantiations, and…, _edge_labels()（还有 45 个）
 
 ### 社区 203 —— "test_python_import_resolution.py"
 凝聚度：0.56
 节点（共 9 个）：_has_edge(), _node_id(), Path, test_ordinary_relative_import_still_resolves(), test_overdeep_relative_import_is_unresolved_not_fatal(), test_python_package_reexport_resolves_import_and_call_to_origin_symbol(), test_python_parameter_return_and_generic_contexts(), test_relative_subpackage_import_from_targets_package_init()（还有 1 个）
 
-### 社区 204 —— "graphify/build.py"
-凝聚度：0.04
-节点（共 57 个）：_coerce_hyperedge_member_refs(), _coerce_id(), dedupe_nodes(), deduplicate_by_label(), _derive_prune_root(), _doc_twin_remap(), _fold_edge_aliases(), graph_has_legacy_ids()（还有 49 个）
+### 社区 204 —— "test_ts_inheritance.py"
+凝聚度：0.35
+节点（共 12 个）：_has_inherits(), Path, Regression tests for issue #1095: TypeScript inheritance capture. Two gaps on…, Regression guard: the originally-working imported-class case must stay., test_class_extends_same_file(), test_class_implements_same_file_interface(), test_imported_class_extends_still_works(), test_interface_extends_generic_base_same_file()（还有 4 个）
 
-### 社区 205 —— "test_community_labels_skill.py"
-凝聚度：0.20
-节点（共 15 个）：_code_blocks(), parametrize, Path, Curated community labels must reach the persisted graph.json (#2490). Two…, Same lint at the source of truth: the core fragments skillgen renders from., Passing community_labels stamps community_name on that community's nodes., Omitting the kwarg is the #2490 bug shape: no node carries community_name., Fenced code blocks of a markdown body, fence lines excluded.（还有 7 个）
+### 社区 205 —— "_hooks_dir"
+凝聚度：0.12
+节点（共 19 个）：_hooks_dir(), Raise if a hooks path looks like a Windows absolute path (#1385). On POSIX/WSL…, Return the git hooks directory, respecting core.hooksPath if set (e.g. Husky).…, _reject_windows_path(), _append_duplicate_config_entries(), Path, A Windows-style core.hooksPath must raise (loud failure), not silently create a…, A legitimate POSIX core.hooksPath (Husky-style) must still install.（还有 11 个）
 
 ### 社区 206 —— "test_swagger_e2e.py"
 凝聚度：0.08
@@ -2005,20 +1931,20 @@
 节点（共 25 个）：_build_code_indices(), _match_controller(), _match_handler(), Build nameIndex / fileIndex from AST-extracted code nodes. Indexes only…, Match a swagger ``tags`` entry to a controller class in the code index. Returns…, Match a swagger ``operationId`` to a handler function in the code index.…, _class_node(), _function_node()（还有 17 个）
 
 ### 社区 216 —— "extract_terraform"
-凝聚度：0.19
-节点（共 17 个）：extract_terraform(), Path, Extract Terraform/HCL blocks and the references between them via tree-sitter.…, Facade / registry identity guards for the per-language extractor split (#1212).…, _labels(), Path, Tests for the Terraform/HCL extractor (graphify/extract.py, issue #187)., _rel_pairs()（还有 9 个）
+凝聚度：0.26
+节点（共 16 个）：extract_terraform(), Path, Extract Terraform/HCL blocks and the references between them via tree-sitter.…, _labels(), Path, Tests for the Terraform/HCL extractor (graphify/extract.py, issue #187)., _rel_pairs(), test_cross_file_references_resolve_after_merge()（还有 8 个）
 
 ### 社区 217 —— "ingest.py"
-凝聚度：0.16
-节点（共 22 个）：_detect_url_type(), _download_binary(), _fetch_arxiv(), _fetch_html(), _fetch_tweet(), _fetch_webpage(), _html_to_markdown(), ingest()（还有 14 个）
+凝聚度：0.11
+节点（共 31 个）：_detect_url_type(), _download_binary(), _fetch_arxiv(), _fetch_html(), _fetch_tweet(), _fetch_webpage(), _html_to_markdown(), ingest()（还有 23 个）
 
 ### 社区 218 —— "test_semantic_cleanup.py"
 凝聚度：0.19
 节点（共 22 个）：Return validation errors for an untrusted semantic extraction fragment. Empty…, validate_semantic_fragment(), Tests for graphify.semantic_cleanup.validate_semantic_fragment (#825)., #1561: an alias-keyed hyperedge must not be rejected for a missing `nodes` list…, An unknown/synonym file_type is NOT a validation failure: build_from_json…, LLM output with file_type='rationale' must pass validation so the cleanup pass…, LLM output with file_type='concept' must pass validation for the same reason., test_validate_accepts_node_ids_keyed_hyperedge()（还有 14 个）
 
-### 社区 219 —— "test_export_control_characters.py"
-凝聚度：0.10
-节点（共 29 个）：_cap_filename(), _cypher_escape(), _cypher_label(), _obsidian_safe_stem(), Escape a string for safe embedding in a Cypher single-quoted literal. Handles…, Sanitise a value used in identifier position (node label / rel type). Cypher…, Cap a filename stem to ``limit`` UTF-8 bytes so it stays under the 255-byte…, Filename stem for an Obsidian note / canvas card from a node label. Strips…（还有 21 个）
+### 社区 219 —— "generate"
+凝聚度：0.16
+节点（共 27 个）：generate(), _learning_section(), _portable_root_label(), Portable label for the report header — the project directory basename.…, Mirrors export.safe_name so community hub filenames and report wikilinks always…, Append the ``## Work-memory lessons`` section, or nothing when empty., _safe_community_name(), make_inputs()（还有 19 个）
 
 ### 社区 220 —— "test_js_dynamic_import_affected.py"
 凝聚度：0.19
@@ -2028,33 +1954,33 @@
 凝聚度：0.15
 节点（共 22 个）：_env(), The Bash PreToolUse guard nudges toward the graph before grep/find searches.…, The guard resolves the graph via GRAPHIFY_OUT, not a hardcoded path., A Bash tool_input carries `command`; the Grep-shape detection must not fire…, Feed a Grep-tool-shaped payload (pattern/path/glob, no command) to the guard., _run(), _run_grep_tool(), _search_matcher()（还有 14 个）
 
-### 社区 222 —— "client.py"
-凝聚度：0.11
-节点（共 13 个）：Auth, BasicAuth, BearerAuth, NetRCAuth, Authentication handlers. Auth objects are callables that modify a request…, Load credentials from ~/.netrc based on the request host., Base class for all authentication handlers., Modify the request. May yield to inspect the response.（还有 5 个）
+### 社区 222 —— "auth.py"
+凝聚度：0.10
+节点（共 14 个）：Auth, BasicAuth, BearerAuth, DigestAuth, NetRCAuth, Authentication handlers. Auth objects are callables that modify a request…, Load credentials from ~/.netrc based on the request host., Base class for all authentication handlers.（还有 6 个）
 
 ### 社区 223 —— "extract_powershell"
 凝聚度：0.08
 节点（共 24 个）：extract_powershell(), Extract functions, classes, methods, and using statements from a .ps1 file., A PowerShell enum must be a real definition, and `[Enum]` refs resolve to it.…, Import-Module Foo at top level emits an imports_from edge., Import-Module -Name Bar.psm1 resolves to module stem 'bar'., Dot-source `. ./Shared.psm1` emits an imports_from edge., Dot-source `. .\\Utils.ps1` (backslash path) emits an imports_from edge., Import-Module inside a function body still produces an imports_from edge.（还有 16 个）
 
-### 社区 224 —— "AuthService"
-凝聚度：0.09
-节点（共 21 个）：检查用户状态, 注册, 用户已挂起, 登录, 签发令牌, 令牌刷新端点, 注册端点, 登录端点（还有 13 个）
+### 社区 224 —— "AuthController"
+凝聚度：0.29
+节点（共 6 个）：分层架构, 业务异常用 Error 抛出, POST:/rest/auth/login, POST:/rest/auth/refresh, POST:/rest/auth/register, AuthController
 
-### 社区 225 —— "build_community_labels"
-凝聚度：0.43
-节点（共 3 个）：build_community_labels(), Return {community_id: [top_labels]} extracted from graph node data., TestBuildCommunityLabels
+### 社区 225 —— "test_prs.py"
+凝聚度：0.13
+节点（共 12 个）：build_community_labels(), _classify(), format_prs_text(), Plain-text PR summary for MCP output (no ANSI)., Return {community_id: [top_labels]} extracted from graph node data., make_pr(), datetime, Tests for graphify/prs.py.（还有 4 个）
 
 ### 社区 226 —— "generate_section_flowchart"
 凝聚度：0.12
 节点（共 22 个）：generate_overview_graph(), generate_section_flowchart(), mermaid_class_defs(), mermaid_init(), mermaid_section_id(), node_kind(), node_label(), node_mermaid_id()（还有 14 个）
 
 ### 社区 227 —— "CsharpNameResolver"
-凝聚度：0.16
-节点（共 14 个）：_build_csharp_type_def_index(), CsharpNameResolver, _is_cs_file(), _metadata(), Path, C# cross-file resolution. The config-driven C# *extractor* (``extract_csharp``…, Namespace/using/alias-aware C# simple-name resolution. Factored out of…, Return deterministic ``(namespace, name) -> node_id`` C# type definitions.（还有 6 个）
+凝聚度：0.10
+节点（共 24 个）：Resolve cross-file Python qualified class-method calls (``ClassName.method()``)…, Resolve C# member calls (``recv.Method()``) to the receiver's declared type…, _resolve_csharp_member_calls(), _resolve_python_member_calls(), _build_csharp_type_def_index(), CsharpNameResolver, _is_cs_file(), _metadata()（还有 16 个）
 
-### 社区 228 —— "_extract_sql_or_skip"
+### 社区 228 —— "_2406_graph"
 凝聚度：0.08
-节点（共 25 个）：_extract_sql_or_skip(), #2953: DDL wrapped in BEGIN; ... COMMIT; must emit table nodes., #2577: a name bound by WITH ... AS (...) is scoped to its statement, not a…, ALTER TABLE ... FOREIGN KEY ... REFERENCES produces a references edge., Schema-qualified table names (Schema.Table) are preserved., ALTER TABLE with schema-qualified names produces correct edges., PL/pgSQL bodies make tree-sitter-sql emit ERROR nodes; the functions must still…, A cleanly-parsed LANGUAGE sql function in the same file is emitted once.（还有 17 个）
+节点（共 42 个）：_2406_calls(), _2406_graph(), _2406_nid(), _2406_seed(), _2437_seed(), _2438_indirects(), _2438_seed(), (source_id, target_id) of every `calls` edge.（还有 34 个）
 
 ### 社区 229 —— "test_python_decorators.py"
 凝聚度：0.26
@@ -2064,9 +1990,9 @@
 凝聚度：0.12
 节点（共 21 个）：derive_flow_chain(), edge_score(), generate_section_cards(), node_degree_scores(), node_importance(), preferred_edges(), Counter, Aggregate inter-section edge counts and relation names.（还有 13 个）
 
-### 社区 231 —— "test_symbol_resolution.py"
+### 社区 231 —— "build_label_index"
 凝聚度：0.12
-节点（共 24 个）：iter_raw_calls(), Resolve unqualified raw calls conservatively after all files are known. This…, Return raw calls from all per-file extraction fragments. Parameter is…, resolve_cross_file_raw_calls(), Tests for graphify.symbol_resolution., Two genuine NON-test defs of the same name: the god-node guard must still hold…, A real cross-file call must resolve to the SRC definition even when a same-…, One src def plus many same-named test stubs: exactly one edge to src.（还有 16 个）
+节点（共 21 个）：build_label_index(), build_python_symbol_index(), existing_edge_pairs(), node_is_resolvable_symbol(), _node_source_stem(), normalise_callable_label(), Any, Return the stem of a node's source file.（还有 13 个）
 
 ### 社区 232 —— "extract_ocaml"
 凝聚度：0.21
@@ -2076,9 +2002,9 @@
 凝聚度：0.15
 节点（共 20 个）：Save a Q&A result as markdown so it gets extracted into the graph on next…, save_query_result(), Tests for graphify.ingest.save_query_result, An outcome signal is written to both frontmatter (for `reflect`) and an ##…, Backward compatible: a result without an outcome looks exactly as before., test_answer_in_body(), test_correction_in_frontmatter_and_body(), test_file_created()（还有 12 个）
 
-### 社区 234 —— "_compute_idf"
-凝聚度：0.25
-节点（共 8 个）：_compute_idf(), IDF weights for query terms, cached in G.graph['_idf_cache']. Common terms like…, Coverage scaling must not touch full-coverage queries (coverage == 1). A…, A term matching only 1 of N nodes should get IDF > 1., A term matching most nodes should get IDF < 1., test_idf_common_term_gets_low_weight(), test_idf_rare_term_gets_high_weight(), test_score_nodes_coverage_full_coverage_query_is_unchanged()
+### 社区 234 —— "build_from_json"
+凝聚度：0.06
+节点（共 60 个）：build_from_json(), _doc_twin_remap(), _fold_edge_aliases(), Fold legacy edge field aliases onto canonical keys, in place (#2194). ``type``…, Map a markdown quick-scan's bare doc node ``<slug>`` to the semantic…, Build a NetworkX graph from an extraction dict. directed=True produces a…, attach_hyperedges(), Store hyperedges in the graph's metadata dict.（还有 52 个）
 
 ### 社区 235 —— "test_csharp_partial_classes.py"
 凝聚度：0.19
@@ -2101,8 +2027,8 @@
 节点（共 19 个）：ALL_INSTALLERS, Path, Regression tests for issue #2167: hook installers must merge into existing…, A UTF-8 BOM must not trigger the parse-error path that used to clobber., An unparseable existing file must abort the install, byte-identical on disk., Valid JSON that is not an object (e.g. a list) must also refuse, not crash., A malformed hooks value (not a dict) refuses instead of raising/clobbering., A legacy non-dict entry in the managed section must not crash the filter (the…（还有 11 个）
 
 ### 社区 240 —— "index.ts"
-凝聚度：0.17
-节点（共 12 个）：档案, AuthResult, JwtManager, TokenPayload, AppConfig, buildApp(), defaultConfig, AuthenticatedRequest（还有 4 个）
+凝聚度：0.20
+节点（共 11 个）：档案, HttpRequest, HttpResponse, AuthService, PasswordHasher, AppConfig, buildApp(), defaultConfig（还有 3 个）
 
 ### 社区 241 —— "convert_office_file"
 凝聚度：0.14
@@ -2113,12 +2039,12 @@
 节点（共 20 个）：Clean up a semantic extraction fragment in-place. Operations: 1. Removes nodes…, sanitize_semantic_fragment(), A node with file_type='rationale' is removed wholesale., Sentence-like rationale node connected via `rationale_for` → attribute on…, F3: a node with file_type='document' (allowed) that is BOTH sentence-like AND…, A short named node with a period (e.g. abbreviation) is NOT sentence-like., F4: hyperedges referencing removed nodes are repaired or dropped., A hyperedge referencing only nodes not present in the fragment is dropped.（还有 12 个）
 
 ### 社区 243 —— "resolve_bash_source_edges"
-凝聚度：0.09
-节点（共 26 个）：_file_node_id_for_path(), Path, Resolve Bash source/import edges and source-backed function calls. Defensive…, resolve_bash_source_edges(), Path, When a callee function is defined in multiple sourced files, skip it., Non-bash raw_calls inside sourced-file per_file entries are ignored., A `bash_sources` entry missing `target_path` must not raise KeyError.（还有 18 个）
+凝聚度：0.10
+节点（共 24 个）：Resolve Bash source/import edges and source-backed function calls. Defensive…, resolve_bash_source_edges(), Path, When a callee function is defined in multiple sourced files, skip it., Non-bash raw_calls inside sourced-file per_file entries are ignored., A `bash_sources` entry missing `target_path` must not raise KeyError., A node tagged as bash_function but missing `id` must not raise KeyError., A raw_call entry missing `caller_nid` must not raise KeyError.（还有 16 个）
 
 ### 社区 244 —— "UserService"
-凝聚度：0.08
-节点（共 20 个）：{业务术语名称}, {业务术语名称}, {业务术语名称}, {业务术语名称}, 用户管理服务, Injectable, Module, GET /rest/apppublishservice/v1/app/{id}（还有 12 个）
+凝聚度：0.09
+节点（共 15 个）：Injectable, Module, GET:/rest/apppublishservice/v1/app/{id}, POST:/rest/apppublishservice/v1/app, DEFAULT_ROLES, IUserRepository, USER_CONFIG, USER_REPOSITORY（还有 7 个）
 
 ### 社区 245 —— "1. 业务实现技术"
 凝聚度：0.10
@@ -2140,29 +2066,29 @@
 凝聚度：0.29
 节点（共 19 个）：_label_edges(), _node_by_id(), Path, test_java_ambiguous_implements_disambiguated_by_import(), test_java_ambiguous_reference_disambiguated_by_import(), test_java_builtin_library_types_not_emitted_as_references(), test_java_cross_file_constructor_call_resolves(), test_java_cross_file_implements_resolves_to_real_def()（还有 11 个）
 
-### 社区 250 —— "_make_graph"
+### 社区 250 —— "_run"
 凝聚度：0.10
-节点（共 22 个）：_make_graph(), CompletedProcess, argparse `choices` rejects an unknown outcome before save_query_result runs., --answer-file lets callers pass a long/multiline answer via a file instead of a…, Neither --answer nor --answer-file -> clean argparse error, not a crash., First run with no .graph/memory/ still succeeds and writes a valid doc., With a real graph.json present, reflect auto-detects it and groups lessons…, Through reflect()/CLI with a real graph.json: a cited node that isn't in the…（还有 14 个）
+节点（共 20 个）：CompletedProcess, argparse `choices` rejects an unknown outcome before save_query_result runs., --answer-file lets callers pass a long/multiline answer via a file instead of a…, Neither --answer nor --answer-file -> clean argparse error, not a crash., First run with no .graph/memory/ still succeeds and writes a valid doc., With a real graph.json present, reflect auto-detects it and groups lessons…, Through reflect()/CLI with a real graph.json: a cited node that isn't in the…, `reflect --if-stale` skips the rebuild when LESSONS.md is already current, and…（还有 12 个）
 
-### 社区 251 —— "_load_custom_providers"
-凝聚度：0.14
-节点（共 17 个）：_load_custom_providers(), A provider whose base_url uses a non-http(s) scheme is skipped on load (F1)., provider_base_url_ok rejects bad schemes and warns on plaintext-http egress…, Custom providers appear after all built-ins in detect_backend() priority., Missing pricing field defaults to zero so estimate_cost doesn't blow up., Built-in provider names are protected from being overridden., Full round-trip: add → list → show → remove via providers.json., A project-local ./.graphify/providers.json is NOT loaded by default (F1). It…（还有 9 个）
+### 社区 251 —— ".vector_bonus"
+凝聚度：0.24
+节点（共 5 个）：Vector tier bonus for a cosine similarity value. Confidence-gated:…, The vector_bonus = tier_weight × sim (not tier_weight alone)., T5: sim < 0.40 → bonus = 0., Spec §3.3: there's a deliberate jump at tier boundaries (confidence-level…, TestVectorBonusFormula
 
 ### 社区 252 —— "test_watch_manifest_location.py"
 凝聚度：0.13
 节点（共 18 个）：_corpus(), parametrize, Path, #2316: `graphify update <target>` must write manifest.json into the TARGET's…, The severe half of #2316: it is data loss, not just a misplaced file.…, #777/#1964 portability, broken here by the CWD-derived ``root=``.…, Same CWD-anchoring class as #2316, but it writes wrong data, not a wrong path.…, End of the chain: the point of the manifest is the next incremental run. A…（还有 10 个）
 
-### 社区 253 —— "test_obsidian_unicode_tags.py"
-凝聚度：0.22
-节点（共 13 个）：_obsidian_tag(), r"""Sanitize a community name for use as an Obsidian tag. Obsidian tags accept…, _graph(), Regression tests for issue #2862: community tags must survive non-ASCII labels,…, One node per community, so each community label reaches exactly one note., Before the fix every non-Latin label collapsed to '_'/'__', so all notes shared…, `.obsidian/graph.json` colour groups were built from the raw label, so on a…, _tags()（还有 5 个）
+### 社区 253 —— "_pick_seeds"
+凝聚度：0.09
+节点（共 22 个）：_pick_seeds(), Select BFS seed nodes, stopping when score drops too far below the top.…, End-to-end for #1900: a German question over a graph with German heading-noise…, FooBarService at 1000 vs error nodes at 1.0 → only 1 seed chosen., When all scores are within 20% of the top, keep up to 3 seeds., Never return more than max_k seeds even when all scores are close., G/best_seed_by_term are optional and default to None: existing callers see…, Reproduces #1445: a vague natural-language query where one term's incidental…（还有 14 个）
 
 ### 社区 254 —— "技术约束提取参考"
 凝聚度：0.09
 节点（共 23 个）：§1 方法论：约束 vs 偶然, §2 业务实现技术提取, 3 个提取维度, §3 编码规范提取, §4 合规约束提取, §6 产物写法：Why 主体，How 简写, §7 质量检查, Step 8（技术约束）质量检查（还有 15 个）
 
 ### 社区 255 —— "security.py"
-凝聚度：0.12
-节点（共 14 个）：_ip_is_blocked(), Resolve *host* once and return (family, validated_ip) for the first address…, HTTPConnection that resolves + validates DNS once, then connects to the exact…, HTTPSConnection variant of _SSRFGuardedHTTPConnection. Connects to the…, urllib handler that routes http:// through _SSRFGuardedHTTPConnection., urllib handler that routes https:// through _SSRFGuardedHTTPSConnection., Return True if *ip* falls in a private/reserved/internal range. Shared by…, _resolve_and_validate()（还有 6 个）
+凝聚度：0.08
+节点（共 24 个）：_ip_is_blocked(), _NoFileRedirectHandler, Raise ValueError if *url* is not http or https, or targets a private/internal…, Resolve *host* once and return (family, validated_ip) for the first address…, HTTPConnection that resolves + validates DNS once, then connects to the exact…, HTTPSConnection variant of _SSRFGuardedHTTPConnection. Connects to the…, urllib handler that routes http:// through _SSRFGuardedHTTPConnection., urllib handler that routes https:// through _SSRFGuardedHTTPSConnection.（还有 16 个）
 
 ### 社区 256 —— "SKILL.md"
 凝聚度：0.15
@@ -2180,9 +2106,9 @@
 凝聚度：0.15
 节点（共 13 个）：_claude_artifacts(), The default code-corpus run must be fully described inside the core., No reference fragment may duplicate the core build pipeline., Every references/<name>.md the core points at is actually rendered., claude renders exactly the eight on-demand fragments from the design., Decision A: the file_type enum is the full six-value superset., The core must not inline the execution detail of an on-demand reference. The…, test_eight_references_render_for_claude()（还有 5 个）
 
-### 社区 260 —— "export.py"
-凝聚度：0.06
-节点（共 63 个）：_node_community_map(), Invert communities dict: node_id -> community_id., _dedup_node_filenames(), prune_dangling_edges(), Export graph as an Obsidian Canvas file - communities as groups, nodes as…, Escape a value for safe embedding in a YAML double-quoted scalar (F-009). See…, Remove edges whose source or target node is not in the node set. Returns the…, Drop characters XML 1.0 cannot represent, leaving tab/LF/CR intact.…（还有 55 个）
+### 社区 260 —— "test_obsidian_unicode_tags.py"
+凝聚度：0.22
+节点（共 13 个）：_obsidian_tag(), r"""Sanitize a community name for use as an Obsidian tag. Obsidian tags accept…, _graph(), Regression tests for issue #2862: community tags must survive non-ASCII labels,…, One node per community, so each community label reaches exactly one note., Before the fix every non-Latin label collapsed to '_'/'__', so all notes shared…, `.obsidian/graph.json` colour groups were built from the raw label, so on a…, _tags()（还有 5 个）
 
 ### 社区 261 —— "sample.php"
 凝聚度：0.14
@@ -2200,17 +2126,17 @@
 凝聚度：0.11
 节点（共 17 个）：Auto-detection, Design: Incremental Updates + Entity Deduplication, Feature 1: Incremental Updates, Feature 2: Entity Deduplication, Files changed, Files changed, Incremental mode changes, Integration point（还有 9 个）
 
-### 社区 265 —— "_rebuild_code"
+### 社区 265 —— "test_watch.py"
 凝聚度：0.03
-节点（共 78 个）：Re-run AST extraction + build + optional cluster + report for code files. No…, _rebuild_code(), _add_unrelated_semantic_pair(), parametrize, #1116: graphify update (_rebuild_code with no changed_paths) must prune a…, #1118 backward-compat: a graph.json built before #1116 has no `_origin`…, A failed AST extractor must not overwrite its last good graph., A full rebuild of a subdirectory must not prune graph data outside it.（还有 70 个）
+节点（共 70 个）：_is_read_only_event(), _notify_only(), Write a flag file and print a notification (fallback for non-code-only corpora)., True for watchdog events that mean a file was merely READ, not changed. On…, _add_unrelated_semantic_pair(), Tests for watch.py - file watcher helpers (no watchdog required)., #1116: graphify update (_rebuild_code with no changed_paths) must prune a…, #1118 backward-compat: a graph.json built before #1116 has no `_origin`…（还有 62 个）
 
 ### 社区 266 —— "compute_pr_impact"
 凝聚度：0.35
 节点（共 4 个）：compute_pr_impact(), Return (communities_touched, nodes_affected) for a set of changed files. Builds…, 3 nodes across 2 communities, 2 distinct source files., TestComputePrImpact
 
-### 社区 267 —— "_claude_pretooluse_hooks"
-凝聚度：0.11
-节点（共 32 个）：_claude_pretooluse_hooks(), _gemini_hook(), _install_claude_hook(), _install_claude_hook_global(), _install_codeagent_hook(), _install_codeagent_hook_global(), _install_codebuddy_hook(), _install_codex_hook()（还有 24 个）
+### 社区 267 —— "test_hybrid_search.py"
+凝聚度：0.07
+节点（共 22 个）：cosine_similarity(), Cosine similarity of ``query_vec`` against each row of ``matrix``. Returns an…, fuzzy_best_match(), fuzzy_score(), Fuzzy string matching tier for hybrid search. Uses rapidfuzz (already a…, Jaro-Winkler similarity in [0, 1]. Returns 0 if below threshold. Comparison is…, Find the best fuzzy match for query_token among labels. Returns ``(score,…, Hybrid scorer: vector similarity + fuzzy matching tiers. Called by serve.py's…（还有 14 个）
 
 ### 社区 268 —— "Graph"
 凝聚度：0.21
@@ -2225,8 +2151,8 @@
 节点（共 17 个）：_extract_js_dir(), An import from outside the corpus must shadow indirect_call resolution.…, A `paths` entry pointing a package at its own installed copy resolves to a real…, The counter-test that bounds the fix: an import of a file INSIDE the corpus is…, Widening the shadow set must not blanket-suppress a file that also happens to…, The precise collision the fix must survive: a name that is BOTH imported…, Reported shape: an icon imported from a UI kit must not become a fabricated…, `import { Search as Find }` binds `Find` in this file, not `Search`. The shadow…（还有 9 个）
 
 ### 社区 271 —— "test_semantic_cache_out_root.py"
-凝聚度：0.14
-节点（共 19 个）：_count_cache_files(), Path, Regression tests for #1990 and #1991. #1990 — `graphify extract --out` saves…, When root=corpus and cache_root=out, source_file resolution must use corpus as…, Passing root=out_root (the old broken behaviour) silently writes 0 entries; the…, When cache_root is omitted, cache files still land under root (unchanged)., extract_corpus_parallel must accept a cache_root kwarg without raising (import…, Count .json files under a cache dir (recursively, excluding .tmp).（还有 11 个）
+凝聚度：0.16
+节点（共 17 个）：_count_cache_files(), Path, Regression tests for #1990 and #1991. #1990 — `graphify extract --out` saves…, When root=corpus and cache_root=out, source_file resolution must use corpus as…, Passing root=out_root (the old broken behaviour) silently writes 0 entries; the…, When cache_root is omitted, cache files still land under root (unchanged)., Count .json files under a cache dir (recursively, excluding .tmp)., When cache_root differs from root, cache files must land under cache_root.（还有 9 个）
 
 ### 社区 272 —— "test_ts_decorators.py"
 凝聚度：0.30
@@ -2236,13 +2162,13 @@
 凝聚度：0.15
 节点（共 12 个）：GraphifyDemo, RoutedEventArgs, RootPanel, SaveButton, UserNameBox, Window, UserName, MainWindow（还有 4 个）
 
-### 社区 274 —— "_check_shrink"
-凝聚度：0.11
-节点（共 24 个）：_check_shrink(), Return True (ok to proceed) or False (shrink refused). When False, cleans up…, Build a minimal graph-data dict with *n* placeholder nodes., Default case: smaller new graph + no force + no declared deletions = refuse., force=True bypasses the guard regardless of node delta., Caller declared deletions → shrink is expected → guard skipped silently., First-run case: no existing graph → guard inert., #1116: a symbol removed from a re-extracted file is a legitimate shrink — every…（还有 16 个）
+### 社区 274 —— "_relations"
+凝聚度：0.08
+节点（共 30 个）：extract_php(), Extract classes, functions, methods, namespace uses, and calls from a .php file., Module-level arrow functions must still emit a node and capture their calls…, _relations(), test_cpp_finds_includes(), test_cuda_finds_includes(), test_java_finds_imports(), test_js_module_level_arrow_produces_node_and_call_edges()（还有 22 个）
 
-### 社区 275 —— "test_cluster.py"
-凝聚度：0.18
-节点（共 18 个）：cohesion_score(), Ratio of actual intra-community edges to maximum possible., Remap community IDs to maximize overlap with a previous assignment. Uses greedy…, remap_communities_to_previous(), make_graph(), Clustering should not emit ANSI escape codes or other output. graspologic's…, Same as above but for stderr — ANSI codes can go to either stream., test_cluster_covers_all_nodes()（还有 10 个）
+### 社区 275 —— "UserService"
+凝聚度：0.12
+节点（共 15 个）：创建用户, 注册, 用户注册, 认证注册用户, DELETE:/rest/userservice/v1/users/{id}, GET:/rest/userservice/v1/users, GET:/rest/userservice/v1/users/{id}, POST:/rest/userservice/v1/users（还有 7 个）
 
 ### 社区 276 —— "test_wiki_link_filename_parity.py"
 凝聚度：0.21
@@ -2254,15 +2180,15 @@
 
 ### 社区 278 —— "e"
 凝聚度：0.09
-节点（共 33 个）：Processor, e(), handle_enrich(), handle_upload(), API module - exposes the document pipeline over HTTP. Thin layer over parser,…, Accept a list of file paths, run the full pipeline on each, and return a…, Re-enrich a document to pick up new cross-references., batch_parse()（还有 25 个）
+节点（共 35 个）：Processor, e(), handle_enrich(), handle_upload(), API module - exposes the document pipeline over HTTP. Thin layer over parser,…, Accept a list of file paths, run the full pipeline on each, and return a…, Re-enrich a document to pick up new cross-references., batch_parse()（还有 27 个）
 
 ### 社区 279 —— "test_merge_graphs_cli.py"
 凝聚度：0.21
 节点（共 18 个）：distinct_repo_tags(), Return a unique, human-meaningful repo tag per input graph for merge-graphs.…, Path, `graphify merge-graphs` tolerates inputs that disagree on graph type (#1606).…, For a FIXED input order, the offset assignment must be deterministic: merging…, _run(), test_distinct_repo_tags_unit(), test_merge_graphs_carries_hyperedges_from_all_inputs()（还有 10 个）
 
-### 社区 280 —— "external_extractor_extensions"
-凝聚度：0.13
-节点（共 12 个）：external_extractor_extensions(), Union of file extensions declared by all registered extractors. Used by…, Path, Tests that the post-commit hook path (_rebuild_code) now picks up .yaml swagger…, When only the .yaml changes (no code), the extractor still fires. code_index…, A non-swagger .yaml (docker-compose) should NOT enter code_files and should NOT…, swagger extractor declares .yaml/.yml so _rebuild_code includes them., Verify _rebuild_code (the post-commit hook entry point) now includes .yaml…（还有 4 个）
+### 社区 280 —— "TestRebuildCodeProcessesSwaggerYaml"
+凝聚度：0.24
+节点（共 7 个）：Path, When only the .yaml changes (no code), the extractor still fires. code_index…, A non-swagger .yaml (docker-compose) should NOT enter code_files and should NOT…, Verify _rebuild_code (the post-commit hook entry point) now includes .yaml…, Create a minimal project: src/ItemController.ts + docs/api.yaml., The key gap fix: .yaml doc files now enter code_files in _rebuild_code. We…, TestRebuildCodeProcessesSwaggerYaml
 
 ### 社区 281 —— "test_typescript_enum_members.py"
 凝聚度：0.32
@@ -2284,21 +2210,17 @@
 凝聚度：0.20
 节点（共 15 个）：_is_regular_file(), True only for regular files (symlinks followed). Named pipes, sockets and…, A repository may contain files that are not regular files. ``clone <github-…, The shape that hangs the whole run., A link to a FIFO blocks exactly like the FIFO, so stat must follow it., test_broken_symlink_is_rejected_without_raising(), test_char_device_is_rejected(), test_directory_named_like_a_source_file_is_rejected()（还有 7 个）
 
-### 社区 286 —— "affected.py"
-凝聚度：0.23
-节点（共 12 个）：AffectedHit, _as_repo_relative(), _bare_name(), format_affected(), _format_location(), _node_label(), _normalize_label(), _prefer_file_node()（还有 4 个）
-
 ### 社区 287 —— "wiki.py"
 凝聚度：0.39
 节点（共 7 个）：_community_article(), _cross_community_links(), _god_node_article(), _index_md(), _md_link(), Render a link to another wiki article as a portable relative markdown link.…, Return (community_label, edge_count) pairs for cross-community connections,…
 
-### 社区 288 —— "extract_markdown"
-凝聚度：0.08
-节点（共 27 个）：extract_markdown(), _parse_frontmatter(), _parse_frontmatter_fallback(), Parse frontmatter lines into a plain dict. Values are passed through…, Flat `key: value` parser for when PyYAML is not installed. Nested blocks and…, Extract structural nodes and edges from a Markdown file. Produces nodes for: -…, _md_link_fixture(), ### Database Migration is nested under ## Full Deploy.（还有 19 个）
+### 社区 288 —— "_clear_backend_keys"
+凝聚度：0.14
+节点（共 24 个）：_clear_backend_keys(), _failing_sql(), _manifest_row(), _node_sources(), _ok_sql(), parametrize, Seed a graph with nodes for x.py, drop x.py from the manifest (pre-#1897…, Post-#1897 state: the excluded file IS manifest-listed. It must be pruned from…（还有 16 个）
 
-### 社区 289 —— "test_indirect_call_nested_closure_shadow.py"
-凝聚度：0.22
-节点（共 15 个）：_extract_js_dir(), Indirect-call argument shadowing across untracked JS/TS closures (#2241). An…, A const-assigned arrow IS separately tracked (its own caller_nid, own…, Blast-radius traversal must not include a caller that only reached the target…, The fix must hold on a warm-cache re-extraction, not just a cold run — the…, Reported shape (#2241): a one-letter test helper `r` must not become a…, The same nested-arrow shape must still capture a REAL by-name reference that is…, Shadowing must compound through two levels of untracked inline closures: an…（还有 7 个）
+### 社区 289 —— "affected_nodes"
+凝聚度：0.15
+节点（共 21 个）：affected_nodes(), AffectedHit, _as_repo_relative(), _bare_name(), format_affected(), _format_location(), _node_label(), _normalize_label()（还有 13 个）
 
 ### 社区 290 —— "test_inferred_confidence_rubric.py"
 凝聚度：0.17
@@ -2308,9 +2230,9 @@
 凝聚度：0.40
 节点（共 15 个）：_calls(), _find(), Path, Java receiver-typed member-call resolution. Java ``method_invocation`` nodes…, test_ambiguous_receiver_type_emits_no_edge(), test_explicit_type_receiver_resolves_to_owned_method(), test_field_receiver_resolves_to_declared_type(), test_inherited_field_and_chained_receiver_are_deferred()（还有 7 个）
 
-### 社区 292 —— "extract_astro"
-凝聚度：0.28
-节点（共 14 个）：extract_astro(), Extract imports from .astro files: frontmatter (TS) + template regex fallback.…, _import_targets(), Path, Tests for `.astro` extraction (#850). Astro files have a TypeScript frontmatter…, Astro permits frontmatter-less files (pure-HTML pages). Must not raise., Without this, detect.py silently drops `.astro` from the AST pass (#850)., test_astro_is_in_code_extensions()（还有 6 个）
+### 社区 292 —— "_check_shrink"
+凝聚度：0.11
+节点（共 24 个）：_check_shrink(), Return True (ok to proceed) or False (shrink refused). When False, cleans up…, Build a minimal graph-data dict with *n* placeholder nodes., Default case: smaller new graph + no force + no declared deletions = refuse., force=True bypasses the guard regardless of node delta., Caller declared deletions → shrink is expected → guard skipped silently., First-run case: no existing graph → guard inert., #1116: a symbol removed from a re-extracted file is a legitimate shrink — every…（还有 16 个）
 
 ### 社区 293 —— "test_objc_category_interfaces.py"
 凝聚度：0.26
@@ -2322,11 +2244,11 @@
 
 ### 社区 295 —— "test_file_label_disambiguation.py"
 凝聚度：0.16
-节点（共 18 个）：_disambiguate_file_node_labels(), _file_label_reassignments(), _is_file_node_label(), Whether *label* is a file node's label for *source_file* — the bare basename,…, Shortest trailing path suffix (basename + k parent dirs) of *sf* that is unique…, Given (key, label, source_file) triples, return {key: new_label} for file nodes…, Relabel colliding-basename file nodes on a graph (#2032). Ids/edges are never…, _shortest_unique_suffix()（还有 10 个）
+节点（共 16 个）：_disambiguate_file_node_labels(), _file_label_reassignments(), Shortest trailing path suffix (basename + k parent dirs) of *sf* that is unique…, Given (key, label, source_file) triples, return {key: new_label} for file nodes…, Relabel colliding-basename file nodes on a graph (#2032). Ids/edges are never…, _shortest_unique_suffix(), _file_node(), File-node labels are disambiguated when basenames collide (#2032). In…（还有 8 个）
 
-### 社区 296 —— "paths.py"
+### 社区 296 —— "test_atomic_writes.py"
 凝聚度：0.12
-节点（共 24 个）：_save_manifest(), _atomic_replace(), Path, Single source of truth for the graphify output-directory name. The output…, Atomically replace ``path`` with content written by ``write_fn(f)``. Writes a…, Atomically write ``text`` (UTF-8) to ``path``. See :func:`_atomic_replace`., Atomically write ``obj`` as JSON to ``path``, streaming the encode into the…, write_json_atomic()（还有 16 个）
+节点（共 23 个）：_save_global_graph(), _atomic_replace(), Path, Atomically replace ``path`` with content written by ``write_fn(f)``. Writes a…, Atomically write ``text`` (UTF-8) to ``path``. See :func:`_atomic_replace`., Atomically write ``obj`` as JSON to ``path``, streaming the encode into the…, write_json_atomic(), write_text_atomic()（还有 15 个）
 
 ### 社区 297 —— "sample.json"
 凝聚度：0.13
@@ -2344,17 +2266,17 @@
 凝聚度：0.18
 节点（共 11 个）：_inline_links(), Yield (display, target) for each inline markdown link, skipping external URLs.…, Every inline markdown link target across the whole wiki must point at a file…, Labels with spaces, &, #, and parentheses must produce a link whose target IS…, A god node links its neighbours, but only communities and god nodes get article…, When two labels collide on disk and the second article gets a numeric suffix…, test_to_wiki_no_labels_uses_fallback(), test_wiki_links_resolve_to_real_files()（还有 3 个）
 
-### 社区 301 —— "extract_fortran"
-凝聚度：0.11
-节点（共 19 个）：_cpp_preprocess(), extract_fortran(), Path, Run cpp -w -P on a capital-F Fortran file and return preprocessed bytes. Falls…, Extract programs, modules, subroutines, functions, use statements, and calls…, `y = f(x)` function invocations must emit a calls edge. Function calls are…, test_fortran_capital_F_parses_preprocessed(), test_fortran_case_insensitive_names()（还有 11 个）
+### 社区 301 —— "paths.py"
+凝聚度：0.16
+节点（共 19 个）：disambiguate_ambiguous_candidates(), _is_test_path(), _path_proximity_winner(), Single source of truth for the graphify output-directory name. The output…, Classify a source path as a test path (case-insensitive, segment-aware). Shared…, Pick the candidate whose source file is closest to the call site.…, Resolve an ambiguous bare-name call to one candidate, or ``None``. Shared god-…, parametrize（还有 11 个）
 
 ### 社区 302 —— "TDataProcessor"
 凝聚度：0.16
 节点（共 7 个）：IProcessor, TObject, SampleUnit, TBaseProcessor, TDataProcessor, Process(), Reset()
 
-### 社区 303 —— "_reset_stat_index"
-凝聚度：0.08
-节点（共 27 个）：_graph_ids(), _portability_corpus(), Path, A same-length edit must change the digest even when the filesystem reports an…, The guard must not disable the cache: once a file's mtime tick has closed, the…, allowed_source_files=None must leave the result untouched (same contract as…, The stat-index location/anchor are chosen once per process via module globals…, A corpus covering every id/path carrier a cache entry can hold. Deliberately…（还有 19 个）
+### 社区 303 —— "Path"
+凝聚度：0.14
+节点（共 15 个）：_graph_ids(), _portability_corpus(), Path, allowed_source_files=None must leave the result untouched (same contract as…, A corpus covering every id/path carrier a cache entry can hold. Deliberately…, Node ids + edge endpoint pairs — the granularity #2257 is about. Deliberately…, #2257: extract corpus under root A (populating the cache), copy the tree AND…, A relative ``root`` (what save_semantic_cache forwards) must not be used as an…（还有 7 个）
 
 ### 社区 304 —— "test_cross_repo_shared_types.py"
 凝聚度：0.28
@@ -2372,9 +2294,9 @@
 凝聚度：0.21
 节点（共 14 个）：C# generic type arguments in FIELD position. The field_declaration handler read…, The non-generic path must be unchanged., Extract, returning {(source_label, target_label)} for `references` edges., A field and a property of the same type must produce the same references., `T item` must not create a node for the type parameter itself., _refs(), test_bare_type_parameter_is_not_fabricated(), test_field_generic_argument_produces_edge()（还有 6 个）
 
-### 社区 308 —— "extract_julia"
-凝聚度：0.11
-节点（共 19 个）：extract_julia(), Path, Extract modules, structs, functions, imports, and calls from a .jl file., Qualified (`using Base.Threads`) and relative (`using ..Mod`) imports must emit…, `abstract type Dog <: Animal end` must yield a node and an inherits edge. The…, test_julia_abstract_concrete_hierarchy_inherits(), test_julia_abstract_type_with_supertype_is_extracted(), test_julia_finds_abstract_type()（还有 11 个）
+### 社区 308 —— "test_semantic_similarity.py"
+凝聚度：0.18
+节点（共 16 个）：_make_extraction_with_semantic_edge(), _make_graph_with_semantic_edge(), _make_report_with_semantic_surprise(), _make_two_edge_graph(), Tests for semantically_similar_to edge support., Two nodes in separate files connected by a semantically_similar_to edge., Non-semantic edges must not get the [semantically similar] tag., Graph with one semantically_similar_to edge and one references edge, both…（还有 8 个）
 
 ### 社区 309 —— "test_src_layout_import_resolution.py"
 凝聚度：0.21
@@ -2389,8 +2311,8 @@
 节点（共 14 个）：_assert_spied(), _capture_dedup(), _corpus(), `graphify extract --no-dedup` (#2881). The incremental merge path hardcoded…, Run the CLI and return its exit code (0 when main() simply returns)., Record the `dedup` kwarg both build entry points are called with. Patching…, Fail loudly if the spy never fired, so no assertion is vacuous., _run()（还有 6 个）
 
 ### 社区 312 —— "storage.py"
-凝聚度：0.12
-节点（共 27 个）：enrich_document(), extract_keywords(), find_cross_references(), normalize_text(), process_and_save(), Processor module - transforms validated documents into enriched records ready…, Lowercase, strip extra whitespace, remove control characters., Pull non-stopword tokens from text, deduplicated.（还有 19 个）
+凝聚度：0.09
+节点（共 33 个）：handle_delete(), handle_get(), handle_search(), Fetch a document by ID and return it., Delete a document by ID., Simple keyword search over the index. Returns documents whose keyword list…, enrich_document(), extract_keywords()（还有 25 个）
 
 ### 社区 313 —— "string"
 凝聚度：0.21
@@ -2437,12 +2359,12 @@
 节点（共 13 个）：_has_node(), _node_label(), Path, Regression tests: TypeScript namespace/module container nodes. `namespace Foo…, The container node must not cost us the members the default recurse reached., The handler is TS-only; plain JS has no namespace syntax to confuse it., test_ambient_string_module_quotes_stripped(), test_module_keyword_is_node()（还有 5 个）
 
 ### 社区 324 —— "test_ts_receiver_member_calls.py"
-凝聚度：0.25
-节点（共 13 个）：_calls(), _cross_file_edges(), TS/JS receiver-typed member calls beyond `this.field` (#1630). The #1316…, Edges (any relation) whose source node lives in src_file and target in tgt_file., test_array_typed_receiver_emits_no_edge(), test_closure_over_typed_param_receiver(), test_genuinely_imported_type_still_resolves_inferred(), test_local_new_binding_receiver()（还有 5 个）
+凝聚度：0.16
+节点（共 23 个）：_edges(), _extract(), _find(), Kotlin anonymous-object members (#2347). `object : Foo { ... }` (node type…, Keep-the-bar: named `object` declarations and plain classes extract exactly as…, test_named_object_and_plain_class_unchanged(), test_object_literal_implements_supertype(), test_object_literal_member_calls_sibling_member()（还有 15 个）
 
-### 社区 325 —— "push_to_falkordb"
-凝聚度：0.24
-节点（共 9 个）：push_to_falkordb(), Push graph directly to a running FalkorDB instance via the Python SDK.…, _connect(), db(), Integration test for push_to_falkordb against a real FalkorDB instance. Runs…, Return a connected FalkorDB client, or skip if none is reachable., MERGE-based push is safe to re-run - counts must not grow., test_push_to_falkordb_creates_expected_graph()（还有 1 个）
+### 社区 325 —— "skipif"
+凝聚度：0.11
+节点（共 22 个）：Per-repo advisory lock around a rebuild. Yields True if acquired, False if…, _rebuild_lock(), skipif, GH-858: a non-blocking caller that fails to acquire the lock must not truncate…, gh-928: the watch Handler must short-circuit paths matching .graphifyignore so…, gh-928: .graphifyignore must be parsed exactly once at watch() startup, not per…, End-to-end probe of the post-commit-delete bug fix. Build a tiny graph, delete…, Changed files under followed symlinks retain their watched lexical path.（还有 14 个）
 
 ### 社区 326 —— "Communities"
 凝聚度：0.14
@@ -2504,25 +2426,25 @@
 凝聚度：0.28
 节点（共 12 个）：_edges(), _label(), Path, ObjC receiver typing must not treat a ``@protocol`` as a message receiver…, {(source_label, target_label, confidence)} for edges of one relation., No class named Reload exists, so `[Reload reload]` is untypable -> ZERO edges.…, A protocol and a class may share a name; the class must still resolve.…, The exclusion is scoped to receiver typing: adoption edges are unaffected.（还有 4 个）
 
-### 社区 341 —— "test_ts_inheritance.py"
-凝聚度：0.35
-节点（共 12 个）：_has_inherits(), Path, Regression tests for issue #1095: TypeScript inheritance capture. Two gaps on…, Regression guard: the originally-working imported-class case must stay., test_class_extends_same_file(), test_class_implements_same_file_interface(), test_imported_class_extends_still_works(), test_interface_extends_generic_base_same_file()（还有 4 个）
+### 社区 341 —— "test_swift_builtin_noise.py"
+凝聚度：0.32
+节点（共 7 个）：_labels_by_id(), parametrize, Swift/Foundation/SwiftUI builtins must not become god nodes or bind to user…, Swift framework symbols must be filtered from god_nodes output. Constructs a…, test_god_nodes_excludes_swift_builtin_labels(), test_swift_builtin_receiver_does_not_bind_to_user_symbol(), test_swift_user_receiver_type_still_resolves()
 
 ### 社区 342 —— "Graph Report - worked/mixed-corpus/raw  (2026-04-05)"
 凝聚度：0.15
 节点（共 12 个）：Communities, Community 0 - "Community 0", Community 1 - "Community 1", Community 2 - "Community 2", Community 3 - "Community 3", Community 4 - "Community 4", Corpus Check, God Nodes (most connected - your core abstractions)（还有 4 个）
 
-### 社区 343 —— "test_query_cli.py"
-凝聚度：0.22
-节点（共 12 个）：Tests for graphify query CLI context filtering., #F4: query CLI must refuse to parse a graph.json that exceeds the cap., A single directed `calls` edge on an (on-disk) undirected graph.json, the…, `graphify query` must render `calls` edges caller->callee regardless of which…, Same edge, seeded from the caller side — must stay correct too., test_query_cli_explicit_context_filter(), test_query_cli_heuristic_context_filter(), test_query_cli_preserves_calls_direction_when_seeded_on_callee()（还有 4 个）
+### 社区 343 —— "parametrize"
+凝聚度：0.10
+节点（共 21 个）：parametrize, A failed AST extractor must not overwrite its last good graph., A full rebuild of a subdirectory must not prune graph data outside it., Build a code-only graph, then add guide.md represented ONLY semantically.…, Like ``_seed_semantic_doc_graph``, but guide.md's semantic layer is ONLY…, #1915: a full _rebuild_code must not AST-quick-scan a doc whose semantic (LLM)…, #1954: a doc represented ONLY by concept/rationale nodes (no…, #1915: an incremental rebuild whose change set includes a semantic-backed doc…（还有 13 个）
 
-### 社区 344 —— "PRInfo"
-凝聚度：0.29
-节点（共 5 个）：attach_graph_impact(), _load_graph_json(), PRInfo, Path, Fetch PR file lists concurrently, compute graph impact, return community labels.
+### 社区 344 —— "_replace_or_append_section"
+凝聚度：0.33
+节点（共 8 个）：Idempotently update or append a graphify-owned section in shared files. If no…, _replace_or_append_section(), #1688 - graphify's shared-file section update must not destroy user content.…, test_append_when_no_real_heading(), test_inline_reference_to_marker_is_not_treated_as_the_section(), test_prefers_last_heading_when_duplicated(), test_real_section_is_replaced_in_place(), test_reinstall_is_idempotent()
 
-### 社区 345 —— "_detect_default_branch"
-凝聚度：0.24
-节点（共 6 个）：_detect_default_branch(), fetch_prs(), _gh(), Auto-detect the repo's default branch via gh, then git, then fall back to…, gh returns data but with no defaultBranchRef — should still fall back., TestDetectDefaultBranch
+### 社区 345 —— "_build_server"
+凝聚度：0.17
+节点（共 12 个）：_detect_default_branch(), fetch_prs(), _gh(), Auto-detect the repo's default branch via gh, then git, then fall back to…, _build_server(), _max_server_contexts(), Build the configured low-level MCP Server (shared by every transport). All…, Return the project-context LRU capacity (default 8, minimum 1).…（还有 4 个）
 
 ### 社区 346 —— "test_swift_computed_properties.py"
 凝聚度：0.47
@@ -2549,8 +2471,8 @@
 节点（共 15 个）：4.1 新建 `graphify/prompt_registry.py`(~120 LOC), 4.2 改 `graphify/llm.py` `extract_files_direct()`(~15 LOC), 4.3 改 `graphify/cli.py` semantic extraction 分组(~40 LOC), 4.4 扩展 `graphify/validate.py`(~30 LOC), 4.5 测试, Gap-1: 解除 Tier 1 扫描范围硬编码, Gap-2: 内置目录自动扫描, Gap-3: 项目级目录 + 优先级（还有 7 个）
 
 ### 社区 352 —— "test_install_strings.py"
-凝聚度：0.15
-节点（共 9 个）：_skill_registration(), Regression tests for install-time instruction strings. These strings live in…, The fix demotes GRAPH_REPORT.md, it doesn't delete the reference. Most install…, All ten install surfaces must point the assistant at `graphify query` as the…, The pre-fix instructions told assistants to read GRAPH_REPORT.md as their first…, test_every_install_surface_recommends_graphify_query(), test_no_install_surface_demands_reading_the_full_report_first(), test_report_is_still_referenced_as_fallback()（还有 1 个）
+凝聚度：0.17
+节点（共 8 个）：Regression tests for install-time instruction strings. These strings live in…, The fix demotes GRAPH_REPORT.md, it doesn't delete the reference. Most install…, All ten install surfaces must point the assistant at `graphify query` as the…, The pre-fix instructions told assistants to read GRAPH_REPORT.md as their first…, test_every_install_surface_recommends_graphify_query(), test_no_install_surface_demands_reading_the_full_report_first(), test_report_is_still_referenced_as_fallback(), test_skill_registration_uses_host_generic_instruction()
 
 ### 社区 353 —— "test_js_callback_calls.py"
 凝聚度：0.35
@@ -2568,17 +2490,17 @@
 凝聚度：0.26
 节点（共 7 个）：_extract(), _labels(), Path, TypeScript module extensions (`.mts` / `.cts`) are treated as code. `.mts`…, test_cts_uses_the_typescript_grammar(), test_mts_uses_the_typescript_grammar(), test_uppercase_typescript_extensions_use_typescript_grammar()
 
-### 社区 357 —— "_plant_skill_tree"
-凝聚度：0.18
-节点（共 14 个）：_plant_skill_tree(), parametrize, Path, `graphify uninstall --project` (codebuddy branch) must not delete ~/.codebuddy…, Create <root>/<dot_dir>/skills/graphify/{SKILL.md, references/x.md,…, fn(project_dir) removes only the project skill tree (#2215 trap closed)., fn() with no args keeps the historical CLI behavior: global skill removed., fn(pd, remove_user_skill=True) removes the global skill, leaves the project…（还有 6 个）
+### 社区 357 —— "test_uninstall_scope.py"
+凝聚度：0.19
+节点（共 15 个）：_plant_skill_tree(), parametrize, Path, Scope regression tests for the uninstall API trap (issue #2215).…, `graphify uninstall --project` (codebuddy branch) must not delete ~/.codebuddy…, Create <root>/<dot_dir>/skills/graphify/{SKILL.md, references/x.md,…, fn(project_dir) removes only the project skill tree (#2215 trap closed)., fn() with no args keeps the historical CLI behavior: global skill removed.（还有 7 个）
 
 ### 社区 358 —— "_make_scip_node_id"
 凝聚度：0.12
 节点（共 16 个）：_make_scip_node_id(), Derive a stable Graphify node ID from a SCIP symbol identifier. Uses SHA-1…, Symbol with # uses suffix after last #., Symbol without # uses the full symbol (sanitised) as suffix., Non-alphanumeric characters are replaced with underscores., Same inputs always produce the same id., Different source_file produces different hash., Different symbol produces different hash.（还有 8 个）
 
-### 社区 359 —— "HTTPStatusError"
-凝聚度：0.18
-节点（共 9 个）：CookieConflict, HTTPError, HTTPStatusError, InvalidURL, Exception, A 4xx or 5xx response was received., Base class for all httpx exceptions., URL is improperly formed or cannot be parsed.（还有 1 个）
+### 社区 359 —— "watch"
+凝聚度：0.12
+节点（共 19 个）：_batch_needs_llm_flag(), _batch_triggers_rebuild(), True when a debounced watch batch needs an immediate rebuild. Code changes…, True when the batch contains a non-code file that still exists on disk. Only…, Watch watch_path for new or modified files and auto-update the graph. For code-…, watch(), Deleted doc + still-existing modified doc in one debounce window: rebuild fires…, End-to-end pin for #2580: the full rebuild the watcher now triggers on a doc-…（还有 11 个）
 
 ### 社区 360 —— "Case Study: rsl-siege-manager (Python + TypeScript monorepo)"
 凝聚度：0.17
@@ -2593,8 +2515,8 @@
 节点（共 11 个）：Follow-up ideas, Goals, Non-goals, Option A: `summary` attribute in `graph.json`, Option B: sidecar `node-summaries.json`, Problem, Proposed summary contents, Questions for maintainers and users（还有 3 个）
 
 ### 社区 363 —— "test_prompt_registry.py"
-凝聚度：0.15
-节点（共 16 个）：PromptSpec, A YAML-declared custom Tier 2 extraction prompt., Validate extraction JSON against a prompt spec's ``output_schema``. Runs AFTER…, validate_prompt_schema(), prompt_dir(), Tests for the Tier 2 prompt registry (Gap-4). Covers: - load_prompts_from_dir:…, Create a .graph/extension/prompts/ dir with two specs., validate_prompt_schema should catch issues validate_extraction doesn't.（还有 8 个）
+凝聚度：0.27
+节点（共 10 个）：Validate extraction JSON against a prompt spec's ``output_schema``. Runs AFTER…, validate_prompt_schema(), Tests for the Tier 2 prompt registry (Gap-4). Covers: - load_prompts_from_dir:…, validate_prompt_schema should catch issues validate_extraction doesn't., test_validate_prompt_schema_invalid_confidence(), test_validate_prompt_schema_invalid_file_type(), test_validate_prompt_schema_invalid_relation(), test_validate_prompt_schema_none_returns_empty()（还有 2 个）
 
 ### 社区 364 —— "extract_swagger"
 凝聚度：0.12
@@ -2612,25 +2534,25 @@
 凝聚度：0.17
 节点（共 11 个）：API 测试规格（可选）, {BC 名称} — 限界上下文索引, operation → 业务契约映射（可选）, 业务约束, 关键概念, 契约文件清单, 工件链接, 技术契约索引（还有 3 个）
 
-### 社区 368 —— "test_zig_enum_and_union_methods_are_extracted"
-凝聚度：0.67
-节点（共 3 个）：_needs_zig, Methods declared inside a Zig enum or tagged union must be captured. Only…, test_zig_enum_and_union_methods_are_extracted()
+### 社区 368 —— "backup_if_protected"
+凝聚度：0.11
+节点（共 18 个）：backup_if_protected(), Snapshot graph artifacts to a dated subfolder before an overwrite. Triggers…, No graph.json → no backup., graph.json present but no sentinel and no curated labels → no backup., graph.json + .graphify_semantic_marker → backup taken., graph.json + non-default label in .graphify_labels.json → backup taken., All-default labels → no backup (not curated)., Same content on same day returns existing backup dir without re-copying.（还有 10 个）
 
 ### 社区 369 —— "graphify"
 凝聚度：0.25
 节点（共 8 个）：graphify, Worked examples, 你会得到什么, 安装, 工作原理, 常驻 hook 和显式触发的区别, 平台支持, 用法
 
-### 社区 370 —— "llm.py"
-凝聚度：0.04
-节点（共 59 个）：_anthropic_content(), _azure_client(), _backend_pkg_hint(), _bedrock_inference_config(), _call_azure(), _call_claude(), _chunk_partial_files(), _image_notes()（还有 51 个）
+### 社区 370 —— "_load_custom_providers"
+凝聚度：0.12
+节点（共 20 个）：_custom_providers_path(), _load_custom_providers(), provider_base_url_ok(), Structural safety check for a custom-provider base_url. A custom provider…, A provider whose base_url uses a non-http(s) scheme is skipped on load (F1)., provider_base_url_ok rejects bad schemes and warns on plaintext-http egress…, Custom providers appear after all built-ins in detect_backend() priority., Missing pricing field defaults to zero so estimate_cost doesn't blow up.（还有 12 个）
 
 ### 社区 371 —— "parse_memory_doc"
 凝聚度：0.18
 节点（共 11 个）：parse_memory_doc(), Parse the frontmatter of a memory doc into a dict, or None if it has none.…, Reverse the double-quoted escaping that ingest._yaml_str applies., _yaml_unescape(), parse_memory_doc reads back exactly what save_query_result wrote, including an…, A plain markdown file with no frontmatter is skipped, not crashed on., save -> parse preserves tricky characters in the question, the correction, and…, test_parse_handles_crlf()（还有 3 个）
 
-### 社区 372 —— "to_wiki"
-凝聚度：0.11
-节点（共 19 个）：Path, Generate a Wikipedia-style wiki from the graph. Writes: - index.md — agent…, to_wiki(), On a MultiGraph each parallel edge is its own row in the split (#2633).…, Communities with more than 25 nodes show a truncation notice., Cross-community links must work even when nodes have no 'community' attribute…, God node article must show community name even when node has no 'community'…, source_file=None on a node must not crash sorted() with TypeError (#1016).（还有 11 个）
+### 社区 372 —— "symbol_resolution.py"
+凝聚度：0.14
+节点（共 17 个）：_file_node_id_for_path(), find_unique_python_symbol(), ImportedSymbol, _module_stem(), parse_python_import_aliases(), Path, Deterministic symbol indexing and conservative cross-file resolution helpers., Return the final module component used to match Graphify source stems.（还有 9 个）
 
 ### 社区 373 —— "_git"
 凝聚度：0.13
@@ -2652,17 +2574,17 @@
 凝聚度：0.42
 节点（共 10 个）：_extract(), _ind(), Indirect dispatch via assignment + return references — #1566 slice 2. A…, test_assignment_and_return_emit_indirect_call(), test_assignment_feeds_affected(), test_local_shadow_emits_nothing(), test_module_level_assignment_emits_indirect_call(), test_multiple_assignment_emits_for_each()（还有 2 个）
 
-### 社区 378 —— "test_kotlin_object_literal.py"
-凝聚度：0.45
-节点（共 10 个）：_edges(), _extract(), _find(), Kotlin anonymous-object members (#2347). `object : Foo { ... }` (node type…, Keep-the-bar: named `object` declarations and plain classes extract exactly as…, test_named_object_and_plain_class_unchanged(), test_object_literal_implements_supertype(), test_object_literal_member_calls_sibling_member()（还有 2 个）
+### 社区 378 —— "extract_powershell_manifest"
+凝聚度：0.12
+节点（共 17 个）：extract_powershell_manifest(), Path, Extract module dependency edges from a PowerShell .psd1 manifest file. .psd1…, RootModule = 'MyModule.psm1' produces an imports_from edge to 'mymodule'., NestedModules = @('Helpers.psm1', 'Logger.psm1') produces edges for both., RequiredModules string form 'PSReadLine' produces an imports_from edge., RequiredModules hashtable form @{{ ModuleName='Pester' }} produces an…, ModuleVersion values ('5.0', '1.0.0') must NOT appear as import targets.（还有 9 个）
 
 ### 社区 379 —— "test_partial_extraction_warning.py"
 凝聚度：0.31
 节点（共 9 个）：_partial_parse_fixture(), The partial-extraction warning must be actionable and must not misdirect. It…, A file the parser ACCEPTS only through ERROR recovery — an unclosed table…, The line number was the one actionable thing the old message had; it must…, _run(), test_a_clean_file_is_silent(), test_warning_carries_no_hardcoded_issue_number(), test_warning_names_the_file_and_how_much_survived()（还有 1 个）
 
-### 社区 380 —— "test_pascal_call_scoping.py"
-凝聚度：0.47
-节点（共 10 个）：_class_node_id(), _extractors(), _has_call(), _method_node_id(), parametrize, Regression tests for scoped call resolution in the Pascal/Delphi extractor.…, test_calls_do_not_cross_unrelated_classes(), test_calls_resolve_via_ancestor_chain()（还有 2 个）
+### 社区 380 —— "test_indirect_call_nested_closure_shadow.py"
+凝聚度：0.22
+节点（共 15 个）：_extract_js_dir(), Indirect-call argument shadowing across untracked JS/TS closures (#2241). An…, A const-assigned arrow IS separately tracked (its own caller_nid, own…, Blast-radius traversal must not include a caller that only reached the target…, The fix must hold on a warm-cache re-extraction, not just a cold run — the…, Reported shape (#2241): a one-letter test helper `r` must not become a…, The same nested-arrow shape must still capture a REAL by-name reference that is…, Shadowing must compound through two levels of untracked inline closures: an…（还有 7 个）
 
 ### 社区 381 —— "test_php_type_resolution.py"
 凝聚度：0.53
@@ -2672,9 +2594,9 @@
 凝聚度：0.25
 节点（共 10 个）：_expected_artifacts(), _has_build(), parametrize, Path, Packaging guard (#1121 follow-up): the 5 skillgen guards check the *repo tree*,…, Every distinct skill body a platform installs (the SKILL.md is copied from one…, Every committed skill body + references/*.md (per host) + always_on/*.md block., _skill_bodies()（还有 2 个）
 
-### 社区 383 —— "_glob_match"
-凝聚度：0.50
-节点（共 4 个）：_glob_match(), _match_globstar(), Match a relative posix path against a glob pattern. Supports ``**`` (cross-…, Recursive ``**`` matcher: ``**`` matches zero or more path segments.
+### 社区 383 —— "prompt_registry.py"
+凝聚度：0.29
+节点（共 6 个）：_glob_match(), _match_globstar(), PromptSpec, Match a relative posix path against a glob pattern. Supports ``**`` (cross-…, Recursive ``**`` matcher: ``**`` matches zero or more path segments., A YAML-declared custom Tier 2 extraction prompt.
 
 ### 社区 384 —— "支付"
 凝聚度：0.15
@@ -2689,12 +2611,12 @@
 节点（共 9 个）：File Map, Incremental Updates + Entity Deduplication Implementation Plan, Self-Review, Task 1: Add `datasketch` and `rapidfuzz` to dependencies, Task 2: Create `graphify/dedup.py` — entropy gate + MinHash/LSH + Jaro-Winkler, Task 3: Wire dedup into `build.py`, Task 4: Incremental updates — semantic cache + manifest in `__main__.py`, Task 5: Add `--dedup-llm` tiebreaker to `dedup.py`（还有 1 个）
 
 ### 社区 387 —— "prs.py"
-凝聚度：0.23
-节点（共 26 个）：_default_model_for_backend(), Return configured model override or backend default model., default_graph_json(), Default ``graph.json`` path under the configured output dir. The package-wide…, bold(), _c(), _ci_icon(), cmd_prs()（还有 18 个）
+凝聚度：0.19
+节点（共 29 个）：_default_model_for_backend(), Return configured model override or backend default model., attach_graph_impact(), bold(), _c(), _ci_icon(), cmd_prs(), cyan()（还有 21 个）
 
-### 社区 388 —— "prompt_fingerprint"
+### 社区 388 —— "test_query_names_its_graph.py"
 凝聚度：0.17
-节点（共 12 个）：prompt_fingerprint(), Return a short stable fingerprint of an extraction prompt. ``prompt`` is either…, The fingerprint is stable for identical prompts and differs when the prompt…, A CRLF checkout of the same spec must not look like a prompt change — otherwise…, Fingerprinted entries live under cache/semantic/p{fp}/, never flat., #2927 healing: a legacy on-disk cache entry containing edges but no nodes or…, #1920 / #2927: an existing on-disk cache entry with hyperedges but no nodes…, test_existing_hyperedge_only_cache_entry_remains_hit()（还有 4 个）
+节点（共 19 个）：_display_graph_path(), Render a graph path for the query header. Relative to the CWD when it sits…, _graph(), _header(), A query answer must say which graph it came from. `.graph/` resolves against…, A display helper must not be the reason a query fails., The end-to-end point: the parent and the subproject must not look alike., The case the issue is about: the answer came from somewhere else.（还有 11 个）
 
 ### 社区 389 —— "§7 模式识别：聚合协作（Step 6）"
 凝聚度：0.22
@@ -2716,9 +2638,9 @@
 凝聚度：0.20
 节点（共 9 个）：description, devDependencies, typescript, typescript, name, scripts, build, type（还有 1 个）
 
-### 社区 394 —— "list_records"
-凝聚度：0.50
-节点（共 4 个）：handle_list(), List all document IDs in storage., list_records(), Return all record IDs currently in storage.
+### 社区 394 —— "JwtManager"
+凝聚度：0.22
+节点（共 5 个）：签发令牌, JwtManager, TokenPayload, AuthenticatedRequest, AuthMiddleware
 
 ### 社区 396 —— "test_indirect_call_for_of_binding_shadow.py"
 凝聚度：0.33
@@ -2728,9 +2650,9 @@
 凝聚度：0.56
 节点（共 9 个）：_calls(), Path, #1659 — a JS/TS call with no local definition and no import must not bind to a…, test_imported_cross_file_call_still_resolves(), test_many_files_do_not_collapse_onto_one_export(), test_non_js_single_candidate_cross_file_still_resolves(), test_same_file_call_unaffected(), test_unimported_cross_package_call_emits_no_edge()（还有 1 个）
 
-### 社区 398 —— "test_paths.py"
-凝聚度：0.16
-节点（共 18 个）：disambiguate_ambiguous_candidates(), _is_test_path(), _path_proximity_winner(), Classify a source path as a test path (case-insensitive, segment-aware). Shared…, Pick the candidate whose source file is closest to the call site.…, Resolve an ambiguous bare-name call to one candidate, or ``None``. Shared god-…, parametrize, Tests for graphify.paths — the shared test-path classifier (#1553).（还有 10 个）
+### 社区 398 —— "test_corrupt_graph_json.py"
+凝聚度：0.31
+节点（共 10 个）：load_graph(), Read a JSON graph after applying Graphify's graph-load size cap., _read_json_file(), _corrupt(), Corrupt graph.json produces an actionable error, not a raw traceback…, Happy path unchanged: a well-formed graph.json loads without raising., test_affected_load_graph_corrupt_raises_runtimeerror(), test_build_merge_corrupt_graph_raises_runtimeerror()（还有 2 个）
 
 ### 社区 399 —— "render_always_on"
 凝聚度：0.24
@@ -2752,25 +2674,25 @@
 凝聚度：0.22
 节点（共 9 个）：4.1 新建 `graphify/prompt_registry.py`, 4.2 `cli.py` 集成 prompt registry, 4.3 声明文件目录, Gap-4: Tier 2 prompt registry, 改动, 测试, 现状, 目标（还有 1 个）
 
-### 社区 404 —— "_shortest_path_text"
-凝聚度：0.28
-节点（共 9 个）：_pick_scored_endpoint(), Body of the `shortest_path` MCP tool (module-level so tests can call it without…, Pick a path endpoint from a _score_nodes result, preferring full-token matches.…, _shortest_path_text(), _directed_chain(), alpha --calls--> beta --calls--> gamma, as _load_graph would load it (directed…, test_shortest_path_tool_directed_backwards_is_no_path(), test_shortest_path_tool_directed_respects_direction()（还有 1 个）
+### 社区 404 —— "_community_label_lines"
+凝聚度：0.50
+节点（共 4 个）：_community_label_lines(), One prompt line per community (largest first), sampling up to ``top_k``…, The prompt line used to read "Community {cid}: ..." — the exact string of the…, test_label_prompt_lines_use_bare_cid_keys()
 
 ### 社区 405 —— "sample.csproj"
 凝聚度：0.22
 节点（共 6 个）：net8.0, FluentValidation (11.9.0), MediatR (12.2.0), Microsoft.AspNetCore.Authentication.JwtBearer (8.0.0), Swashbuckle.AspNetCore (6.5.0), Microsoft.NET.Sdk.Web
 
-### 社区 406 —— "extract_rust"
-凝聚度：0.14
-节点（共 18 个）：extract_rust(), Path, Extract functions, structs, enums, traits, impl methods, and use declarations…, _edge_labels(), _normalize_symbol_label(), Enum variant payload types must emit `references` edges. Tuple variants…, Tuple struct fields (`struct Wrapper(A, B);`) nest their positional types under…, test_go_embeds_struct_field()（还有 10 个）
+### 社区 406 —— "resolve_python_import_guided_calls"
+凝聚度：0.13
+节点（共 15 个）：Resolve raw Python calls using explicit import evidence. Only ``from module…, resolve_python_import_guided_calls(), Strong regression for #cycle-2.7-Codex-v2: monkeypatch the alias parser so the…, Python import-guided resolver also tolerates malformed raw_calls., A non-dict per_file slot (e.g. a string) must not raise AttributeError., per_file shorter than paths must not raise IndexError., A None per_file slot is treated as empty fragment (no crash, no edges)., Edge metadata produced by the import-guided resolver must pass through…（还有 7 个）
 
 ### 社区 407 —— "graphify reference: extra exports and benchmark"
 凝聚度：0.22
 节点（共 8 个）：graphify reference: extra exports and benchmark, Step 6b - Wiki (only if --wiki flag), Step 7 - Neo4j export (only if --neo4j or --neo4j-push flag), Step 7a - FalkorDB export (only if --falkordb or --falkordb-push flag), Step 7b - SVG export (only if --svg flag), Step 7c - GraphML export (only if --graphml flag), Step 7d - MCP server (only if --mcp flag), Step 8 - Token reduction benchmark (only if total_words > 5000)
 
-### 社区 408 —— "dedup.py"
-凝聚度：0.07
-节点（共 33 个）：_collision_rank(), _defines_id(), _id_prefixes(), _is_code(), _lifecycle_penalty(), _make_minhash(), _merge_missing_attributes(), Path（还有 25 个）
+### 社区 408 —— "_collision_rank"
+凝聚度：0.22
+节点（共 10 个）：_collision_rank(), _lifecycle_penalty(), Path, _rank_path(), 0 for active/in-progress paths, 2 for archived/done paths, 1 otherwise. Judged…, The root-relative form of ``source_file`` used for collision ranking. Mirrors…, A total order for choosing the survivor of an ID collision, independent of the…, #2532: `plans/_done` sorts before `plans/in-progress` lexically ('_' < 'i'), so…（还有 2 个）
 
 ### 社区 409 —— "graphify reference: extra exports and benchmark"
 凝聚度：0.22
@@ -2780,17 +2702,17 @@
 凝聚度：0.25
 节点（共 8 个）：3.1 code 文件（.py / .ts / .go / .rs / .java / ...）, 3.2 配置 JSON（package.json / tsconfig.json / composer.json / ...）, 3.3 包清单（pyproject.toml / Cargo.toml / go.mod / pom.xml / apm.yml）, 3.4 markdown 文档（.md / .mdx / .qmd / .rst / .txt）, 3.5 YAML 文件（.yaml / .yml）, 3.6 DDD 文档（context-map / technical-constraints / business-flow / invariants / contracts / domain-events / domain-model）, 3.7 PDF / 图片, 3. 各文件类型的建模方式
 
-### 社区 411 —— "skipif"
+### 社区 411 —— "_run_extract"
 凝聚度：0.14
-节点（共 18 个）：Per-repo advisory lock around a rebuild. Yields True if acquired, False if…, _rebuild_lock(), skipif, GH-858: a non-blocking caller that fails to acquire the lock must not truncate…, gh-928: the watch Handler must short-circuit paths matching .graphifyignore so…, gh-928: .graphifyignore must be parsed exactly once at watch() startup, not per…, End-to-end probe of the post-commit-delete bug fix. Build a tiny graph, delete…, #1059: when the rebuild lock is held, an incremental hook must queue its…（还有 10 个）
+节点（共 14 个）：#1939: cache-check --prompt-file only counts entries produced by that same…, #2927 end-to-end: a semantic extraction where a dispatched doc produces edges…, #2927 healing: a manifest poisoned BEFORE #2927 (carrying a live semantic_hash…, #1948 caller-side guard: an incremental run that only re-dispatches the CHANGED…, cache-check --mode deep consults cache/semantic-deep/; without the flag it…, #1925: `graphify extract --code-only` with a MISSING manifest.json must not…, _run_extract(), test_cache_check_mode_deep_reads_deep_namespace()（还有 6 个）
 
-### 社区 412 —— "merge_raw_extraction"
-凝聚度：0.15
-节点（共 17 个）：_abs_identity(), _build_prune_sets(), _is_ast_tier(), _load_existing_graph(), merge_raw_extraction(), _norm_source_file(), Path, Load (nodes, edges, hyperedges, directed) from an existing graph.json for an…（还有 9 个）
+### 社区 412 —— "_run_hook_guard"
+凝聚度：0.19
+节点（共 13 个）：_hook_strict_enabled(), _mark_session_denied(), _query_stamp_fresh(), Resolve strict mode: GRAPHIFY_HOOK_STRICT env overrides the baked-in flag…, True if a query/explain/path ran within GRAPHIFY_HOOK_STRICT_TTL (default…, Atomically claim a one-time strict block for this session. Returns True only on…, Shell-agnostic PreToolUse guard (#522). Reads the tool-call JSON from stdin…, Guard the strict deny: only block a read of a file the graph actually indexes.…（还有 5 个）
 
-### 社区 413 —— "graphify reference: extra exports and benchmark"
-凝聚度：0.22
-节点（共 8 个）：graphify reference: extra exports and benchmark, Step 6b - Wiki (only if --wiki flag), Step 7 - Neo4j export (only if --neo4j or --neo4j-push flag), Step 7a - FalkorDB export (only if --falkordb or --falkordb-push flag), Step 7b - SVG export (only if --svg flag), Step 7c - GraphML export (only if --graphml flag), Step 7d - MCP server (only if --mcp flag), Step 8 - Token reduction benchmark (only if total_words > 5000)
+### 社区 413 —— "日志不变式"
+凝聚度：0.18
+节点（共 6 个）：日志不变式, Logger, Logger, log, Logger, log
 
 ### 社区 414 —— "_path_match"
 凝聚度：0.43
@@ -2849,8 +2771,8 @@
 节点（共 8 个）：_call_edges(), Path, Cross-language call resolution — a call in one language must never bind by name…, test_jvm_interop_kotlin_call_to_java_still_resolves(), test_python_call_does_not_bind_to_kotlin_function(), test_same_language_callback_still_resolves(), test_tsx_callback_does_not_bind_to_kotlin_method(), _write()
 
 ### 社区 428 —— "test_gemini_hook.py"
-凝聚度：0.33
-节点（共 7 个）：_env(), The Gemini CLI BeforeTool guard nudges toward the graph, shell-agnostically.…, _run(), test_allows_and_nudges_with_graph(), test_allows_without_nudge_when_no_graph(), test_matcher_and_command_shape(), test_never_blocks()
+凝聚度：0.25
+节点（共 9 个）：_gemini_hook(), Gemini CLI BeforeTool hook, resolved to a shell-agnostic `graphify` call., _env(), The Gemini CLI BeforeTool guard nudges toward the graph, shell-agnostically.…, _run(), test_allows_and_nudges_with_graph(), test_allows_without_nudge_when_no_graph(), test_matcher_and_command_shape()（还有 1 个）
 
 ### 社区 429 —— "test_god_nodes_cli.py"
 凝聚度：0.47
@@ -2924,9 +2846,9 @@
 凝聚度：0.22
 节点（共 8 个）：graphify reference: extra exports and benchmark, Step 6b - Wiki (only if --wiki flag), Step 7 - Neo4j export (only if --neo4j or --neo4j-push flag), Step 7a - FalkorDB export (only if --falkordb or --falkordb-push flag), Step 7b - SVG export (only if --svg flag), Step 7c - GraphML export (only if --graphml flag), Step 7d - MCP server (only if --mcp flag), Step 8 - Token reduction benchmark (only if total_words > 5000)
 
-### 社区 447 —— "AsyncHTTPTransport"
-凝聚度：0.22
-节点（共 4 个）：AsyncBaseTransport, AsyncHTTPTransport, Async transport interface., The async variant of HTTPTransport.
+### 社区 447 —— "_queue_pending"
+凝聚度：0.17
+节点（共 12 个）：_queue_pending(), Append ``changed_paths`` to ``out_dir/.pending_changes`` (one per line). Used…, _queue_pending writes one path per line; _drain_pending reads + unlinks and…, Repeated appends across concurrent contenders must dedupe; partial writes…, Empty change set must not create an empty .pending_changes file., #1059: the process that acquires the lock must drain .pending_changes and pass…, #1059: changed_paths=None means a full-corpus rebuild — the queue must not be…, test_drain_pending_dedupes_and_skips_blank_lines()（还有 4 个）
 
 ### 社区 448 —— "Graph Report - .  (2026-05-13)"
 凝聚度：0.22
@@ -2964,9 +2886,9 @@
 凝聚度：0.25
 节点（共 8 个）：generate_section_intro(), group_nodes_by_file(), is_zh(), Group selected nodes by source file for Mermaid subgraphs., Generate the section introductory paragraph., Return a short, safe display path., Return true when localized strings should be Chinese., safe_file_path()
 
-### 社区 457 —— "{名称}"
-凝聚度：0.17
-节点（共 12 个）：{名称}, {名称}, {名称}, 持久化失败, 持久化用户, 用户持久化承诺, 用户查询承诺, 邮箱全局唯一（还有 4 个）
+### 社区 457 —— "load_all_prompts"
+凝聚度：0.20
+节点（共 11 个）：load_all_prompts(), load_builtin_prompts(), Path, Scan the built-in ``graphify/prompts/*.yaml`` directory. These ship with the…, Load built-in + project-level prompts, project-level first (priority). Mirrors…, load_all_prompts returns project-level specs before built-in., Built-in prompts dir (graphify/prompts/) is currently empty., Project-level specs are prepended so first-match-wins favours them.（还有 3 个）
 
 ### 社区 458 —— "label_communities_by_hub"
 凝聚度：0.21
@@ -2988,29 +2910,25 @@
 凝聚度：0.25
 节点（共 8 个）：load_validated_semantic_fragment(), Path, Load and validate a semantic chunk, rejecting oversize files before parsing.…, Invalid JSON returns an error instead of raising., Oversize files are rejected by stat() — payload is never parsed., test_load_validated_semantic_fragment_accepts_valid(), test_load_validated_semantic_fragment_rejects_invalid_json(), test_load_validated_semantic_fragment_rejects_oversize_before_parse()
 
-### 社区 463 —— "§3 模式识别：限界上下文（Step 2）"
-凝聚度：0.33
-节点（共 6 个）：§3 模式识别：限界上下文（Step 2）, Step 2 实现指导：共建业务边界图, 关系类型 — 问业务性质, 战略分类 — 必须问用户, 目录结构信号, 统一语言 — 从命名提取候选术语
+### 社区 463 —— "Cookies"
+凝聚度：0.18
+节点（共 3 个）：Cookies, Clear all cookies from a cookie jar in place., unset_all_cookies()
 
-### 社区 464 —— "PasswordHasher"
-凝聚度：0.24
-节点（共 6 个）：哈希密码, 密码错误, 验证密码, 密码最短8字符, 密码哈希算法, PasswordHasher
+### 社区 464 —— ".login"
+凝聚度：0.14
+节点（共 10 个）：哈希密码, 密码错误, 检查用户状态, 用户已挂起, 登录, 验证密码, 用户登录, 认证查询用户（还有 2 个）
 
-### 社区 465 —— "make_pr"
-凝聚度：0.38
-节点（共 4 个）：_classify(), make_pr(), Build a minimal PRInfo with sensible defaults., TestClassify
+### 社区 465 —— "to_json"
+凝聚度：0.06
+节点（共 44 个）：_strip_diacritics(), to_json(), _code_blocks(), parametrize, Path, Curated community labels must reach the persisted graph.json (#2490). Two…, Same lint at the source of truth: the core fragments skillgen renders from., Passing community_labels stamps community_name on that community's nodes.（还有 36 个）
 
-### 社区 466 —— "extract_powershell_manifest"
-凝聚度：0.12
-节点（共 17 个）：extract_powershell_manifest(), Path, Extract module dependency edges from a PowerShell .psd1 manifest file. .psd1…, RootModule = 'MyModule.psm1' produces an imports_from edge to 'mymodule'., NestedModules = @('Helpers.psm1', 'Logger.psm1') produces edges for both., RequiredModules string form 'PSReadLine' produces an imports_from edge., RequiredModules hashtable form @{{ ModuleName='Pester' }} produces an…, ModuleVersion values ('5.0', '1.0.0') must NOT appear as import targets.（还有 9 个）
+### 社区 466 —— "llm.py"
+凝聚度：0.04
+节点（共 59 个）：_anthropic_content(), _azure_client(), _backend_pkg_hint(), _balanced_object(), _bedrock_inference_config(), _call_azure(), _call_claude(), _image_notes()（还有 51 个）
 
 ### 社区 467 —— "gen_demo_path.py"
 凝聚度：0.29
 节点（共 6 个）：kt(), op0(), pairs of (keyTime, value) -> (values_str, keyTimes_str)., initial opacity for a revealable element (1 when baking a static frame)., opacity reveal at time t (s), hold, fade out before loop., reveal()
-
-### 社区 468 —— "collect_files"
-凝聚度：0.13
-节点（共 16 个）：collect_files(), #2339 as reported: collect_files returned [] for a real coverage package, both…, test_collect_files_keeps_coverage_code_namespace(), _legacy_collect_files(), The pre-#1261 rglob-per-extension implementation, kept as a parity oracle., collect_files must scan every directory at most once and never descend into…, test_case_insensitive_suffix_filtering(), test_collect_files_follows_symlinked_directory()（还有 8 个）
 
 ### 社区 469 —— "TestDDDDocAnchorNodes"
 凝聚度：0.25
@@ -3036,9 +2954,9 @@
 凝聚度：0.33
 节点（共 6 个）：§4 临时文件 vs 产物：清晰边界, 临时文件（`docs/draft/`）—— 中间态，闭环即删, 产物文件 —— 干净态，长期保留, 代码锚点引用决策树, 何时写入产物, 表格标签体系
 
-### 社区 476 —— "test_phantom_external_import.py"
-凝聚度：0.39
-节点（共 7 个）：Path, #1638 — an unresolved bare npm import must not alias onto an unrelated same-…, test_multiple_tsx_files_do_not_all_alias_onto_one_python_file(), test_no_phantom_edge_from_tsx_to_unrelated_python_file(), test_scoped_package_import_is_ref_namespaced(), test_unresolved_bare_import_is_ref_namespaced(), _write()
+### 社区 476 —— "extract_astro"
+凝聚度：0.28
+节点（共 14 个）：extract_astro(), Extract imports from .astro files: frontmatter (TS) + template regex fallback.…, _import_targets(), Path, Tests for `.astro` extraction (#850). Astro files have a TypeScript frontmatter…, Astro permits frontmatter-less files (pure-HTML pages). Must not raise., Without this, detect.py silently drops `.astro` from the AST pass (#850)., test_astro_is_in_code_extensions()（还有 6 个）
 
 ### 社区 477 —— "用例: {用例名称}"
 凝聚度：0.33
@@ -3048,9 +2966,9 @@
 凝聚度：0.61
 节点（共 7 个）：_import_edges(), _module_nodes(), Path, test_swift_import_edges_survive_build(), test_swift_import_resolves_to_module_node(), test_swift_same_module_imported_twice_collapses_to_one_node(), _write()
 
-### 社区 479 —— "DigestAuth"
-凝聚度：0.32
-节点（共 4 个）：DigestAuth, HTTP Digest Authentication. Requires a full request/response cycle: sends the…, Extract digest parameters from the WWW-Authenticate header., Compute the Authorization header value for a digest challenge.
+### 社区 479 —— "_shortest_path_text"
+凝聚度：0.24
+节点（共 10 个）：_pick_scored_endpoint(), Body of the `shortest_path` MCP tool (module-level so tests can call it without…, Pick a path endpoint from a _score_nodes result, preferring full-token matches.…, _shortest_path_text(), _directed_chain(), DiGraph, alpha --calls--> beta --calls--> gamma, as _load_graph would load it (directed…, test_shortest_path_tool_directed_backwards_is_no_path()（还有 2 个）
 
 ### 社区 480 —— "Graph Report - /home/safi/graphify-benchmark  (2026-04-04)"
 凝聚度：0.25
@@ -3076,21 +2994,13 @@
 凝聚度：0.33
 节点（共 5 个）：A-001: {模糊点描述}, {BC 名称} — Step {N}, 假设草稿 — {系统名称}, 汇总, 评审记录（Step 9 闭环时填写）
 
-### 社区 486 —— "_make_noisy_graph"
-凝聚度：0.33
-节点（共 6 个）：_make_noisy_graph(), FooBarService error handling' should expand from FooBarService, not from error-…, 20 error-handler nodes + 1 rare identifier: FooBarService., error' matches 20 nodes, 'foobarservice' matches 1 — IDF should make…, test_idf_downweights_common_terms(), test_query_seeds_from_identifier_not_noise()
+### 社区 488 —— "extract_markdown"
+凝聚度：0.04
+节点（共 56 个）：extract_markdown(), _parse_frontmatter(), _parse_frontmatter_fallback(), Parse frontmatter lines into a plain dict. Values are passed through…, Flat `key: value` parser for when PyYAML is not installed. Nested blocks and…, Extract structural nodes and edges from a Markdown file. Produces nodes for: -…, _md_extract(), _md_link_fixture()（还有 48 个）
 
-### 社区 487 —— "test_maybe_reload_detects_graph_change"
-凝聚度：0.33
-节点（共 6 个）：Write a minimal graph.json with the given node IDs., serve() picks up a new graph.json written after startup (#874)., mtime_ns + size uniquely identifies a graph version (#874)., test_load_graph_cache_key_changes_with_content(), test_maybe_reload_detects_graph_change(), _write_graph()
-
-### 社区 488 —— "_md_extract"
-凝聚度：0.12
-节点（共 16 个）：_md_extract(), Write *src* to a temp .md file and extract it., Headings must be filterable. file_type is 'document' for both, so a consumer…, A plain document must not grow an empty frontmatter dict., `#` inside frontmatter is a YAML comment, not an H1., A `---` that is not on line 1 is a horizontal rule., An opening `---` with no closing fence must not swallow the document., Nested blocks (a coherence_check: record) must not be flattened away.（还有 8 个）
-
-### 社区 489 —— "extract_go"
-凝聚度：0.13
-节点（共 15 个）：extract_go(), Path, Extract functions, methods, type declarations, and imports from a .go file., Methods on the same receiver type must share one canonical type node., Type node id should be scoped to directory, not file stem., test_go_receiver_methods_share_type_node(), test_go_receiver_uses_pkg_scope(), _confidences()（还有 7 个）
+### 社区 489 —— "iter_raw_calls"
+凝聚度：0.25
+节点（共 8 个）：iter_raw_calls(), Return raw calls from all per-file extraction fragments. Parameter is…, A non-dict per_file entry (e.g. junk fragment) must be silently skipped., `raw_calls` that isn't a list must yield empty., Items inside `raw_calls` list that aren't dicts must be dropped., test_iter_raw_calls_drops_non_dict_items_in_list(), test_iter_raw_calls_skips_non_dict_per_file_entries(), test_iter_raw_calls_skips_non_list_raw_calls()
 
 ### 社区 490 —— "§8 模式识别：业务不变式（Step 7）"
 凝聚度：0.40
@@ -3100,13 +3010,13 @@
 凝聚度：0.40
 节点（共 4 个）：Q-001, 已问记录, 提问记录 — {系统名称}, 提问队列
 
-### 社区 492 —— "resolve_python_import_guided_calls"
-凝聚度：0.13
-节点（共 15 个）：Resolve raw Python calls using explicit import evidence. Only ``from module…, resolve_python_import_guided_calls(), Strong regression for #cycle-2.7-Codex-v2: monkeypatch the alias parser so the…, Python import-guided resolver also tolerates malformed raw_calls., A non-dict per_file slot (e.g. a string) must not raise AttributeError., per_file shorter than paths must not raise IndexError., A None per_file slot is treated as empty fragment (no crash, no edges)., Edge metadata produced by the import-guided resolver must pass through…（还有 7 个）
+### 社区 492 —— "check_update"
+凝聚度：0.25
+节点（共 8 个）：check_update(), Check for pending semantic update flag and notify the user if set. Cron-safe:…, check_update returns True and is silent when needs_update flag is absent., check_update returns True and prints notification when flag exists., check_update never removes the needs_update flag (clearing is LLM's job)., test_check_update_does_not_clear_flag(), test_check_update_no_flag_returns_true(), test_check_update_with_flag_returns_true_and_prints()
 
-### 社区 493 —— "parse_python_import_aliases"
-凝聚度：0.15
-节点（共 14 个）：find_unique_python_symbol(), ImportedSymbol, _module_stem(), parse_python_import_aliases(), Return the final module component used to match Graphify source stems., Parse deterministic Python import aliases from one source file. Supported…, A Python imported name that can be used as deterministic resolution evidence., Resolve one imported symbol to exactly one Graphify node id.（还有 6 个）
+### 社区 493 —— "§9 隐形架构决策提取"
+凝聚度：0.33
+节点（共 6 个）：§9 隐形架构决策提取, 产物写法：规则而非过程, 决策信号的代码定位点, 提问策略, 设计决策不再单独产出, 隐形架构的维度
 
 ### 社区 494 —— "上下文图 — User Management System"
 凝聚度：0.29
@@ -3117,8 +3027,8 @@
 节点（共 4 个）：Verify DDD code anchors produced references edges to code nodes., TC-001's `User` anchor links to the User class code node., business-flow.md references AuthService.register → should link to AuthService., TestCodeAnchorMatching
 
 ### 社区 496 —— "test_security.py"
-凝聚度：0.06
-节点（共 54 个）：check_graph_file_size_cap(), _max_graph_file_bytes(), Any, Path, Resolve *path* and verify it stays inside *base*. *base* defaults to the…, Reject *path* if its size exceeds the configured graph-file cap. Protects…, Return the graph.json size cap in bytes. Honors the…, Return a control-character-free, HTML-escaped, bounded string.（还有 46 个）
+凝聚度：0.05
+节点（共 64 个）：check_graph_file_size_cap(), _max_graph_file_bytes(), Any, Path, Resolve *path* and verify it stays inside *base*. *base* defaults to the…, Reject *path* if its size exceeds the configured graph-file cap. Protects…, Return the graph.json size cap in bytes. Honors the…, Strip control characters and cap length. Safe for embedding in JSON data…（还有 56 个）
 
 ### 社区 497 —— "TestNodeShape"
 凝聚度：0.29
@@ -3140,9 +3050,9 @@
 凝聚度：0.29
 节点（共 7 个）：parametrize, The node whose source_file is the file its ID encodes survives, whichever chunk…, Exact-ID dedup combines AST precision with semantic enrichment (#2091)., The #2182 fix is gated to high-entropy `concept` nodes with provenance on BOTH…, test_crossfile_identical_labels_stay_distinct_for_guarded_types(), test_defining_file_wins_over_referencing_file(), test_same_id_same_entity_retains_complementary_attributes()
 
-### 社区 502 —— "test_home_sandbox.py"
-凝聚度：0.29
-节点（共 3 个）：Regression tests for the repo-wide HOME sandbox (issue #2168). The autouse…, Global skill deletes land inside the sandbox home, never the real one. Since…, test_global_uninstall_is_captured_by_sandbox()
+### 社区 502 —— "TestCodeAnchorConfidence"
+凝聚度：0.33
+节点（共 4 个）：Verify DDD code anchors carry correct confidence/confidence_score fields…, Unique-match describes edges → confidence=EXTRACTED, score=1.0. Only checks…, Logger anchor (two Logger classes in fixture) → AMBIGUOUS 0.3. The fixture has…, TestCodeAnchorConfidence
 
 ### 社区 503 —— "Research Notes"
 凝聚度：0.29
@@ -3160,17 +3070,17 @@
 凝聚度：0.33
 节点（共 5 个）：0. 改动总览, 11. 回 upstream 策略, 12. 实施顺序（推荐）, 13. 关键设计决策记录, Plan: 混合语义检索（语义 + fuzzy 重排）
 
-### 社区 507 —— "safe_fetch"
-凝聚度：0.18
-节点（共 12 个）：_build_opener(), Fetch *url* and return raw bytes. Protections applied: - URL scheme validated…, safe_fetch(), OpenerDirector, _make_mock_response(), test_safe_fetch_raises_on_non_2xx(), test_safe_fetch_raises_on_size_exceeded(), test_safe_fetch_rejects_file_url()（还有 4 个）
+### 社区 507 —— "test_extract_codeonly_succeeds_without_api_key"
+凝聚度：0.33
+节点（共 6 个）：_code_only_corpus(), A corpus with only code — no docs/papers/images., A code-only corpus must run with no LLM API key. Regression: graphify extract…, `extract --out DIR` routes every artifact to DIR/.graph/ and the scanned…, test_extract_codeonly_succeeds_without_api_key(), test_extract_out_keeps_project_root_clean()
 
 ### 社区 508 —— "graphify reference: query, path, explain"
 凝聚度：0.33
 节点（共 5 个）：For /graphify explain, For /graphify path, graphify reference: query, path, explain, Step 0 — Constrained query expansion (REQUIRED before traversal), Step 1 — Traversal
 
-### 社区 509 —— "_inferred_uses"
-凝聚度：0.17
-节点（共 12 个）：_inferred_uses(), (source, target) pairs of every INFERRED cross-file `uses` edge., A cross-file INFERRED `uses` edge binds to the symbol that actually references…, Positive control: a class that genuinely uses the imported symbol still gets…, `from helpers import Helper as H` attributes via the local alias `H`, so a body…, Each symbol that references the import gets its own edge, and only those…, A reference at true module top level has no enclosing symbol to anchor on, so…, test_inferred_uses_edge_attributes_to_the_referencing_symbol()（还有 4 个）
+### 社区 509 —— "{业务术语名称}"
+凝聚度：0.40
+节点（共 5 个）：{业务术语名称}, {业务术语名称}, {业务术语名称}, {业务术语名称}, 用户管理服务
 
 ### 社区 510 —— "graphify reference: query, path, explain"
 凝聚度：0.33
@@ -3184,21 +3094,21 @@
 凝聚度：0.50
 节点（共 3 个）：.opencode/plugins/graphify.js, plugin, $schema
 
-### 社区 513 —— "日志不变式"
-凝聚度：0.18
-节点（共 6 个）：日志不变式, Logger, Logger, log, Logger, log
+### 社区 513 —— "default_graph_json"
+凝聚度：0.20
+节点（共 12 个）：default_graph_json(), Default ``graph.json`` path under the configured output dir. The package-wide…, _filter_blank_stdin(), _main(), Filter blank lines from stdin before MCP reads it. Some MCP clients (Claude…, Start the MCP server over stdio (the default, per-developer transport)., Start the MCP server over Streamable HTTP (MCP spec 2025-03-26). Serves the…, serve()（还有 4 个）
 
-### 社区 514 —— "graphify reference: query, path, explain"
-凝聚度：0.33
-节点（共 5 个）：For /graphify explain, For /graphify path, graphify reference: query, path, explain, Step 0 — Constrained query expansion (REQUIRED before traversal), Step 1 — Traversal
+### 社区 514 —— "_inferred_uses"
+凝聚度：0.17
+节点（共 12 个）：_inferred_uses(), (source, target) pairs of every INFERRED cross-file `uses` edge., A cross-file INFERRED `uses` edge binds to the symbol that actually references…, Positive control: a class that genuinely uses the imported symbol still gets…, `from helpers import Helper as H` attributes via the local alias `H`, so a body…, Each symbol that references the import gets its own edge, and only those…, A reference at true module top level has no enclosing symbol to anchor on, so…, test_inferred_uses_edge_attributes_to_the_referencing_symbol()（还有 4 个）
 
-### 社区 515 —— "_resolve_max_retry_depth"
-凝聚度：0.50
-节点（共 4 个）：How deep adaptive retry may bisect a truncated chunk. A chunk of N files can…, _resolve_max_retry_depth(), #2880: max_retry_depth was a Python-API kwarg only, so a `graphify extract`…, test_max_retry_depth_reads_the_env_var()
+### 社区 515 —— "_bash_assignment_base"
+凝聚度：0.40
+节点（共 5 个）：_bash_assignment_base(), Path, True if *target* is *ceiling* or lives beneath it, compared lexically…, Resolve a top-level assignment's value to a directory, or None if untracked.…, _within_tree()
 
-### 社区 516 —— "_queue_pending"
-凝聚度：0.15
-节点（共 14 个）：_drain_pending(), _queue_pending(), Append ``changed_paths`` to ``out_dir/.pending_changes`` (one per line). Used…, Read + unlink ``out_dir/.pending_changes`` and return deduplicated paths.…, _queue_pending writes one path per line; _drain_pending reads + unlinks and…, Repeated appends across concurrent contenders must dedupe; partial writes…, Empty change set must not create an empty .pending_changes file., #1059: the process that acquires the lock must drain .pending_changes and pass…（还有 6 个）
+### 社区 516 —— "_norm"
+凝聚度：0.12
+节点（共 17 个）：_defines_id(), _id_prefixes(), _norm(), Lowercase + collapse non-alphanumeric runs to space (Unicode-aware)., The ID prefixes a node extracted from ``source_file`` may legitimately mint. An…, True when the node's own source_file is the file its ID encodes. A doc that…, Report an ID collision in proportion to what dropping the loser actually costs.…, _report_id_collision()（还有 9 个）
 
 ### 社区 517 —— "graphify reference: query, path, explain"
 凝聚度：0.33
@@ -3352,57 +3262,45 @@
 凝聚度：0.20
 节点（共 10 个）：§11 质量检查, Step 0-1（全局意图 + 结构）质量检查, Step 2（边界）质量检查, Step 3（流程）质量检查, Step 4（契约）质量检查, Step 5（事件）质量检查, Step 6（聚合协作）质量检查, Step 7（不变式）质量检查（还有 2 个）
 
-### 社区 557 —— "validate_url"
-凝聚度：0.18
-节点（共 10 个）：_NoFileRedirectHandler, Raise ValueError if *url* is not http or https, or targets a private/internal…, Redirect handler that re-validates every redirect target. Prevents open-…, validate_url(), test_validate_url_accepts_http(), test_validate_url_accepts_https(), test_validate_url_rejects_data(), test_validate_url_rejects_empty_scheme()（还有 2 个）
+### 社区 557 —— "_write_build_config"
+凝聚度：0.40
+节点（共 5 个）：Persist corpus-shaping options under ``out_dir``. Best effort and non…, _write_build_config(), #1886: `--exclude` recorded at extract time must survive into update/watch/…, test_rebuild_honors_persisted_excludes(), test_rebuild_honors_persisted_no_gitignore()
 
-### 社区 558 —— "_communities_from_graph"
-凝聚度：0.18
-节点（共 9 个）：_communities_from_graph(), _GraphContextCache, Thread-safe graph contexts: one pinned default plus an LRU of projects., Build one entry for an already-resolved path and known file key.…, Return a fresh context, retaining project contexts by LRU order.…, Reconstruct community dict from community property stored on nodes., test_communities_from_graph_basic(), test_communities_from_graph_isolated()（还有 1 个）
+### 社区 558 —— "_GraphContextCache"
+凝聚度：0.33
+节点（共 4 个）：_GraphContextCache, Thread-safe graph contexts: one pinned default plus an LRU of projects., Build one entry for an already-resolved path and known file key.…, Return a fresh context, retaining project contexts by LRU order.…
 
 ### 社区 559 —— "_translate_bash_block"
 凝聚度：0.21
 节点（共 12 个）：The translator is strict: a bash line it does not recognize fails the render…, test_powershell_translator_rejects_unknown_bash(), _core_to_powershell(), Turn one line of a bash ``-c "..."`` body into its verbatim (here-string) form.…, Translate a ``rm -f FILE...`` line (with optional ``2>/dev/null [|| true]``)., Translate the body of one ```` ```bash ```` fence to PowerShell., Translate inline `` `rm -f ...` `` code spans in prose to Remove-Item., Render the composed POSIX core body as strict PowerShell (#2528).（还有 4 个）
 
-### 社区 560 —— "_norm"
-凝聚度：0.18
-节点（共 11 个）：_entropy(), _norm(), Lowercase + collapse non-alphanumeric runs to space (Unicode-aware)., Shannon entropy in bits/char of the normalised label., The prefix-extension guard must not fire for same-length pairs — only strict…, The prefix-extension guard must fire for pairs where one is a strict prefix of…, test_entropy_empty_string(), test_entropy_normal_label_high()（还有 3 个）
-
-### 社区 561 —— "affected_nodes"
-凝聚度：0.33
-节点（共 9 个）：affected_nodes(), _g(), #1669 — affected <Class> must reach callers that bind to the class's method…, test_class_affected_reaches_method_bound_caller(), test_class_level_caller_still_works(), test_member_method_node_not_reported_as_hit(), test_method_contains_still_excluded_from_general_walk(), Emitting the edge is only half the fix: while `dynamic_import` was absent from…（还有 1 个）
+### 社区 561 —— "test_symbol_resolution.py"
+凝聚度：0.14
+节点（共 19 个）：Resolve unqualified raw calls conservatively after all files are known. This…, resolve_cross_file_raw_calls(), Tests for graphify.symbol_resolution., Two genuine NON-test defs of the same name: the god-node guard must still hold…, A real cross-file call must resolve to the SRC definition even when a same-…, One src def plus many same-named test stubs: exactly one edge to src., A test file calling save() with both a src def and a test-local def present…, _bash_make_id must produce identical output to _make_id for Unicode inputs. The…（还有 11 个）
 
 ### 社区 562 —— "cli.py"
 凝聚度：0.03
-节点（共 103 个）：disambiguate_file_labels_in_nodes(), Relabel colliding-basename file nodes on a raw node-dict list, in place…, _clone_repo(), _default_graph_path(), dispatch_command(), _do_embedding_refresh(), _enforce_graph_size_cap_or_exit(), _hook_strict_enabled()（还有 95 个）
+节点（共 84 个）：disambiguate_file_labels_in_nodes(), Relabel colliding-basename file nodes on a raw node-dict list, in place…, _clone_repo(), _default_graph_path(), dispatch_command(), _do_embedding_refresh(), _enforce_graph_size_cap_or_exit(), _is_wsl()（还有 76 个）
 
-### 社区 564 —— "_detached_launch"
-凝聚度：0.50
-节点（共 4 个）：_detached_launch(), Return a POSIX-sh line that runs ``rebuild_body`` as a detached background…, The launcher must run via the resolved $GRAPHIFY_PYTHON, not a bare `python`,…, test_detached_launch_targets_graphify_python()
+### 社区 563 —— "test_embedding_incremental.py"
+凝聚度：0.15
+节点（共 11 个）：_git_diff_changed_node_ids(), _git_rel_path(), Return the git-repo-relative path for ``graph_json_path``. ``git show…, Return the set of node_ids whose lines changed in graph.json between…, Tests for the incremental embedding update logic. Verifies: 1.…, When old_commit is empty, should return None (no basis to diff)., When the path is not in a git repo, should return None., Verify _schedule_status looks for the correct command string.（还有 3 个）
+
+### 社区 564 —— "test_hooks.py"
+凝聚度：0.06
+节点（共 36 个）：_detached_launch(), Return a POSIX-sh line that runs ``rebuild_body`` as a detached background…, _launcher_payload(), Tests for hooks.py - git hook install/uninstall., Test 1: .graphifyrc parsing for valid and invalid values., Hook script must skip shebang extraction for .exe binaries (Windows)., The detection fallback must emit a message to stderr rather than bare exit 0. A…, graphify hook-check must not emit additionalContext — Codex Desktop rejects it.（还有 28 个）
 
 ### 社区 565 —— "render"
 凝聚度：0.06
 节点（共 38 个）：The agents skill body is amp's body verbatim (it re-homes amp's bundle). The…, Every platform now carries one unified frontmatter description, byte for byte.…, aider and devin render one inline body, no split and no references dir., Each monolith is diff-clean vs v8 except the file_type enum unification., Every line that differs from pristine v8 is a sanctioned change-class. The…, The four #1392 data-loss/correctness fixes are present in both monoliths. The…, #1757: generated monoliths pass the dispatched-file allowlist when replacing…, devin renders inline, so its 4+-field frontmatter is preserved verbatim.（还有 30 个）
 
 ### 社区 566 —— "_score_query"
-凝聚度：0.07
-节点（共 30 个）：HybridScorer, Holds loaded embedding matrix + query embedding cache. One instance per loaded…, True iff the embedding sidecar loaded AND a backend is configured., Vector tier bonus for a cosine similarity value. Public so tests can assert the…, Single-pass combined scorer that optionally also records the best seed for each…, _score_query(), _load_graph(), _load_queries()（还有 22 个）
+凝聚度：0.06
+节点（共 36 个）：HybridScorer, Holds loaded embedding matrix + query embedding cache. One instance per loaded…, True iff the embedding sidecar loaded AND a backend is configured., Return ``{node_id: cosine_sim}`` for all nodes, or ``None`` if unavailable. The…, Return the fuzzy bonus for a (query_token, node_label) pair. Returns 0.0 when…, _QueryScores, Per-query scoring result, returned by the private `_score_query` helper.…, Single-pass combined scorer that optionally also records the best seed for each…（还有 28 个）
 
-### 社区 567 —— "cosine_similarity"
-凝聚度：0.31
-节点（共 4 个）：cosine_similarity(), Cosine similarity of ``query_vec`` against each row of ``matrix``. Returns an…, Return ``{node_id: cosine_sim}`` for all nodes, or ``None`` if unavailable. The…, TestCosineSimilarity
-
-### 社区 568 —— "graphify reference: extra exports and benchmark"
-凝聚度：0.22
-节点（共 8 个）：graphify reference: extra exports and benchmark, Step 6b - Wiki (only if --wiki flag), Step 7 - Neo4j export (only if --neo4j or --neo4j-push flag), Step 7a - FalkorDB export (only if --falkordb or --falkordb-push flag), Step 7b - SVG export (only if --svg flag), Step 7c - GraphML export (only if --graphml flag), Step 7d - MCP server (only if --mcp flag), Step 8 - Token reduction benchmark (only if total_words > 5000)
-
-### 社区 569 —— "graphify reference: extra exports and benchmark"
-凝聚度：0.22
-节点（共 8 个）：graphify reference: extra exports and benchmark, Step 6b - Wiki (only if --wiki flag), Step 7 - Neo4j export (only if --neo4j or --neo4j-push flag), Step 7a - FalkorDB export (only if --falkordb or --falkordb-push flag), Step 7b - SVG export (only if --svg flag), Step 7c - GraphML export (only if --graphml flag), Step 7d - MCP server (only if --mcp flag), Step 8 - Token reduction benchmark (only if total_words > 5000)
-
-### 社区 570 —— "graphify reference: extra exports and benchmark"
-凝聚度：0.22
-节点（共 8 个）：graphify reference: extra exports and benchmark, Step 6b - Wiki (only if --wiki flag), Step 7 - Neo4j export (only if --neo4j or --neo4j-push flag), Step 7a - FalkorDB export (only if --falkordb or --falkordb-push flag), Step 7b - SVG export (only if --svg flag), Step 7c - GraphML export (only if --graphml flag), Step 7d - MCP server (only if --mcp flag), Step 8 - Token reduction benchmark (only if total_words > 5000)
+### 社区 569 —— "dm.py"
+凝聚度：0.09
+节点（共 25 个）：_dmm_type_path(), extract_dmf(), extract_dmi(), extract_dmm(), Path, Dm extractor. Moved verbatim from graphify/extract.py., Pull the BYOND metadata text out of a .dmi PNG, or empty string on failure., Extract icon state names from a .dmi (BYOND PNG icon sheet).（还有 17 个）
 
 ### 社区 571 —— "User Management Test Project"
 凝聚度：0.40
@@ -3488,9 +3386,9 @@
 凝聚度：0.50
 节点（共 4 个）：generate_header(), generate_nav(), Generate the sticky navigation bar., Generate the HTML header, title, subtitle, and nav.
 
-### 社区 595 —— "test_swift_builtin_noise.py"
-凝聚度：0.32
-节点（共 7 个）：_labels_by_id(), parametrize, Swift/Foundation/SwiftUI builtins must not become god nodes or bind to user…, Swift framework symbols must be filtered from god_nodes output. Constructs a…, test_god_nodes_excludes_swift_builtin_labels(), test_swift_builtin_receiver_does_not_bind_to_user_symbol(), test_swift_user_receiver_type_still_resolves()
+### 社区 595 —— "test_phantom_external_import.py"
+凝聚度：0.39
+节点（共 7 个）：Path, #1638 — an unresolved bare npm import must not alias onto an unrelated same-…, test_multiple_tsx_files_do_not_all_alias_onto_one_python_file(), test_no_phantom_edge_from_tsx_to_unrelated_python_file(), test_scoped_package_import_is_ref_namespaced(), test_unresolved_bare_import_is_ref_namespaced(), _write()
 
 ### 社区 596 —— "graphify reference: add a URL and watch a folder"
 凝聚度：0.50
@@ -3504,17 +3402,9 @@
 凝聚度：0.50
 节点（共 3 个）：For --cluster-only, For --update (incremental re-extraction), graphify reference: incremental update and cluster-only
 
-### 社区 599 —— "graphify reference: extra exports and benchmark"
-凝聚度：0.22
-节点（共 8 个）：graphify reference: extra exports and benchmark, Step 6b - Wiki (only if --wiki flag), Step 7 - Neo4j export (only if --neo4j or --neo4j-push flag), Step 7a - FalkorDB export (only if --falkordb or --falkordb-push flag), Step 7b - SVG export (only if --svg flag), Step 7c - GraphML export (only if --graphml flag), Step 7d - MCP server (only if --mcp flag), Step 8 - Token reduction benchmark (only if total_words > 5000)
-
 ### 社区 600 —— "_match_anchored_ignore_pattern"
 凝聚度：0.33
 节点（共 6 个）：_match_anchored_ignore_pattern(), _match_globstar_parts(), Recursive ``**``-aware segment match, memoized via an explicit dict. Lifted out…, Match an anchored gitignore pattern without letting ``*`` cross ``/``., `_match_anchored_ignore_pattern` must not leak a reference cycle per call, as…, test_globstar_matcher_leaves_no_reference_cycle()
-
-### 社区 601 —— "graphify reference: extra exports and benchmark"
-凝聚度：0.22
-节点（共 8 个）：graphify reference: extra exports and benchmark, Step 6b - Wiki (only if --wiki flag), Step 7 - Neo4j export (only if --neo4j or --neo4j-push flag), Step 7a - FalkorDB export (only if --falkordb or --falkordb-push flag), Step 7b - SVG export (only if --svg flag), Step 7c - GraphML export (only if --graphml flag), Step 7d - MCP server (only if --mcp flag), Step 8 - Token reduction benchmark (only if total_words > 5000)
 
 ### 社区 602 —— "graphify reference: add a URL and watch a folder"
 凝聚度：0.50
@@ -3528,41 +3418,17 @@
 凝聚度：0.50
 节点（共 3 个）：For --cluster-only, For --update (incremental re-extraction), graphify reference: incremental update and cluster-only
 
-### 社区 605 —— "graphify reference: extra exports and benchmark"
-凝聚度：0.22
-节点（共 8 个）：graphify reference: extra exports and benchmark, Step 6b - Wiki (only if --wiki flag), Step 7 - Neo4j export (only if --neo4j or --neo4j-push flag), Step 7a - FalkorDB export (only if --falkordb or --falkordb-push flag), Step 7b - SVG export (only if --svg flag), Step 7c - GraphML export (only if --graphml flag), Step 7d - MCP server (only if --mcp flag), Step 8 - Token reduction benchmark (only if total_words > 5000)
-
-### 社区 606 —— "graphify reference: extra exports and benchmark"
-凝聚度：0.22
-节点（共 8 个）：graphify reference: extra exports and benchmark, Step 6b - Wiki (only if --wiki flag), Step 7 - Neo4j export (only if --neo4j or --neo4j-push flag), Step 7a - FalkorDB export (only if --falkordb or --falkordb-push flag), Step 7b - SVG export (only if --svg flag), Step 7c - GraphML export (only if --graphml flag), Step 7d - MCP server (only if --mcp flag), Step 8 - Token reduction benchmark (only if total_words > 5000)
+### 社区 605 —— "§5 模式识别：契约（Step 4）"
+凝聚度：0.33
+节点（共 6 个）：§5 模式识别：契约（Step 4）, Step 4 实现指导：共建业务契约, 区分上下文内 vs 跨上下文 — 问用户, 契约的业务语义 — 必须问, 技术契约关联（Step 4 子步骤）, 端口接口信号
 
 ### 社区 607 —— "_content_token_swap"
 凝聚度：0.25
 节点（共 8 个）：_content_token_swap(), True when tokens x and y read as one word misspelt, not two words (#2576). A…, True when two equal-token-count labels differ in at least one swapped content…, _same_word_variant(), _content_token_swap fires when any same-position pair is a swap of two distinct…, _same_word_variant separates one-word misspellings from two words (#2576 DELTA…, test_content_token_swap_helper(), test_same_word_variant_helper()
 
-### 社区 608 —— "check_update"
-凝聚度：0.25
-节点（共 8 个）：check_update(), Check for pending semantic update flag and notify the user if set. Cron-safe:…, check_update returns True and is silent when needs_update flag is absent., check_update returns True and prints notification when flag exists., check_update never removes the needs_update flag (clearing is LLM's job)., test_check_update_does_not_clear_flag(), test_check_update_no_flag_returns_true(), test_check_update_with_flag_returns_true_and_prints()
-
-### 社区 609 —— "graphify-dark Design System"
-凝聚度：0.25
-节点（共 7 个）：Anti-slop compliance, Color decisions, Glass effect, graphify-dark Design System, Tokens, Typography decisions, When to use
-
-### 社区 610 —— "_write_two_tier_graph"
-凝聚度：0.25
-节点（共 8 个）：A graph where docs/readme.md carries BOTH tiers (#2333 COEXIST): an AST layer…, #2333/#2336 (COEXIST): a semantic-only re-extract of a file replaces only that…, #2333/#2336 inverse: an AST-only re-extract of a file replaces only that file's…, #2333 raw-path mirror: merge_raw_extraction (extract --no-cluster incremental)…, test_build_merge_ast_reextract_preserves_semantic_layer(), test_build_merge_semantic_reextract_preserves_ast_layer(), test_merge_raw_extraction_tier_scoped(), _write_two_tier_graph()
-
-### 社区 614 —— "graphify reference: add a URL and watch a folder"
-凝聚度：0.50
-节点（共 3 个）：For /graphify add, For --watch, graphify reference: add a URL and watch a folder
-
-### 社区 615 —— "graphify reference: commit hook and native CLAUDE.md integration"
-凝聚度：0.50
-节点（共 3 个）：For git commit hook, For native CLAUDE.md integration, graphify reference: commit hook and native CLAUDE.md integration
-
-### 社区 616 —— "graphify reference: incremental update and cluster-only"
-凝聚度：0.50
-节点（共 3 个）：For --cluster-only, For --update (incremental re-extraction), graphify reference: incremental update and cluster-only
+### 社区 614 —— "test_zig_enum_and_union_methods_are_extracted"
+凝聚度：0.67
+节点（共 3 个）：_needs_zig, Methods declared inside a Zig enum or tagged union must be captured. Only…, test_zig_enum_and_union_methods_are_extracted()
 
 ### 社区 623 —— "graphify reference: add a URL and watch a folder"
 凝聚度：0.50
@@ -3824,17 +3690,13 @@
 凝聚度：0.67
 节点（共 3 个）：8.1 新增 `--embed-backend` flag, 8.2 extract 完成后触发 embedding 生成, 8. 步骤 8：修改 `graphify/cli.py`（build-time embed 命令）
 
-### 社区 717 —— "TestLaunchEmbeddingRefresh"
-凝聚度：0.25
-节点（共 5 个）：Verify _launch_embedding_refresh passes correct env + cwd., Default GRAPHIFY_OUT='.graph' should be passed to child as-is., Custom GRAPHIFY_OUT should be passed to child as-is., Child cwd should be the project root (graph_dir.parent)., TestLaunchEmbeddingRefresh
+### 社区 713 —— "to_wiki"
+凝聚度：0.11
+节点（共 19 个）：Path, Generate a Wikipedia-style wiki from the graph. Writes: - index.md — agent…, to_wiki(), On a MultiGraph each parallel edge is its own row in the split (#2633).…, Communities with more than 25 nodes show a truncation notice., Cross-community links must work even when nodes have no 'community' attribute…, God node article must show community name even when node has no 'community'…, source_file=None on a node must not crash sorted() with TypeError (#1016).（还有 11 个）
 
-### 社区 718 —— "_labels"
-凝聚度：0.25
-节点（共 8 个）：_labels(), test_go_finds_constructor(), test_go_finds_struct(), test_rust_finds_impl_methods(), test_rust_finds_struct(), test_ts_finds_class(), test_ts_finds_function(), test_ts_finds_methods()
-
-### 社区 721 —— "test_word_count_cache.py"
-凝聚度：0.29
-节点（共 7 个）：Path, #1656 — word counts are cached against each file's stat signature so detect()…, A pre-#1989 entry carrying a bare "hash" (no salt) is never trusted., Backdate mtime past the racily-clean window so the stat fastpath is allowed to…, _settle(), test_file_hash_ignores_legacy_unsalted_entry(), test_word_count_cached_until_file_changes()
+### 社区 717 —— "patch"
+凝聚度：0.09
+节点（共 22 个）：_check_single_project(), Check one project's embedding staleness and refresh if stale. -…, _make_sidecar(), patch, When the sidecar is corrupt, should fall back to full rebuild., When not a git repo, should use set comparison (new/deleted only, no desc-…, Tests for the staleness detection logic in _check_single_project. Covers: - BUG…, Create a project dir with graph.json + embedding sidecar.（还有 14 个）
 
 ### 社区 722 —— "Skill 命令（在 AI 编码助手里输入）"
 凝聚度：0.29
@@ -4488,53 +4350,9 @@
 凝聚度：0.67
 节点（共 3 个）：I:\\games\\raid\\siege-web\\.worktrees\\experiment-graphify-dry-run-doc\\frontend\\vitest.config.ts, hash, mtime
 
-### 社区 936 —— "test_hyperedge_member_shapes.py"
-凝聚度：0.48
-节点（共 6 个）：_node(), Dict-shaped hyperedge member refs must never abort a build (#2486).…, test_dict_members_coerced_via_canonical_nodes_key(), test_dict_members_coerced_via_members_alias(), test_hyperedge_losing_all_members_is_dropped_not_fatal(), test_member_object_without_id_dropped_with_one_warning()
-
-### 社区 939 —— "test_ollama_retry_cap.py"
-凝聚度：0.48
-节点（共 6 个）：_capture_client_kwargs(), #1686 - a wedged local Ollama request must not multiply --api-timeout by the…, test_api_timeout_is_passed_to_client(), test_cloud_backend_keeps_default_retries(), test_ollama_defaults_to_zero_sdk_retries(), test_ollama_honors_explicit_max_retries()
-
-### 社区 1021 —— "graphify reference: query, path, explain"
-凝聚度：0.33
-节点（共 5 个）：For /graphify explain, For /graphify path, graphify reference: query, path, explain, Step 0 — Constrained query expansion (REQUIRED before traversal), Step 1 — Traversal
-
-### 社区 1022 —— "graphify reference: query, path, explain"
-凝聚度：0.33
-节点（共 5 个）：For /graphify explain, For /graphify path, graphify reference: query, path, explain, Step 0 — Constrained query expansion (REQUIRED before traversal), Step 1 — Traversal
-
-### 社区 1023 —— "graphify reference: query, path, explain"
-凝聚度：0.33
-节点（共 5 个）：For /graphify explain, For /graphify path, graphify reference: query, path, explain, Step 0 — Constrained query expansion (REQUIRED before traversal), Step 1 — Traversal
-
-### 社区 1024 —— "graphify reference: query, path, explain"
-凝聚度：0.33
-节点（共 5 个）：For /graphify explain, For /graphify path, graphify reference: query, path, explain, Step 0 — Constrained query expansion (REQUIRED before traversal), Step 1 — Traversal
-
-### 社区 1025 —— "graphify reference: query, path, explain"
-凝聚度：0.33
-节点（共 5 个）：For /graphify explain, For /graphify path, graphify reference: query, path, explain, Step 0 — Constrained query expansion (REQUIRED before traversal), Step 1 — Traversal
-
-### 社区 1026 —— "graphify reference: query, path, explain"
-凝聚度：0.33
-节点（共 5 个）：For /graphify explain, For /graphify path, graphify reference: query, path, explain, Step 0 — Constrained query expansion (REQUIRED before traversal), Step 1 — Traversal
-
-### 社区 1027 —— "graphify reference: query, path, explain"
-凝聚度：0.33
-节点（共 5 个）：For /graphify explain, For /graphify path, graphify reference: query, path, explain, Step 0 — Constrained query expansion (REQUIRED before traversal), Step 1 — Traversal
-
-### 社区 1028 —— "§5 模式识别：契约（Step 4）"
-凝聚度：0.33
-节点（共 6 个）：§5 模式识别：契约（Step 4）, Step 4 实现指导：共建业务契约, 区分上下文内 vs 跨上下文 — 问用户, 契约的业务语义 — 必须问, 技术契约关联（Step 4 子步骤）, 端口接口信号
-
 ### 社区 1029 —— "TestThreePhaseExtraction"
 凝聚度：0.33
 节点（共 4 个）：Verify the three-phase pipeline (code+manifests → config JSON → doc) ran,…, package.json processed by json_config.py → config key/ref nodes., tsconfig.json processed by json_config.py → config nodes., TestThreePhaseExtraction
-
-### 社区 1030 —— "TestCodeAnchorConfidence"
-凝聚度：0.33
-节点（共 4 个）：Verify DDD code anchors carry correct confidence/confidence_score fields…, Unique-match describes edges → confidence=EXTRACTED, score=1.0. Only checks…, Logger anchor (two Logger classes in fixture) → AMBIGUOUS 0.3. The fixture has…, TestCodeAnchorConfidence
 
 ### 社区 1032 —— "1. 节点模型"
 凝聚度：0.40
@@ -4543,110 +4361,6 @@
 ### 社区 1034 —— "pascal_resolution.py"
 凝聚度：0.50
 节点（共 4 个）：_pascal_raw_calls(), Cross-file resolution for Pascal/Delphi calls to inherited methods. The per-…, Resolve Pascal/Delphi calls to a method inherited across file boundaries.…, resolve_pascal_inherited_calls()
-
-### 社区 1035 —— "format_prs_text"
-凝聚度：0.50
-节点（共 3 个）：format_prs_text(), Plain-text PR summary for MCP output (no ANSI)., TestFormatPrsText
-
-### 社区 1036 —— "_bash_make_id"
-凝聚度：0.40
-节点（共 5 个）：_bash_make_id(), Bash symbol node ID via the single shared recipe (#1378). Previously an inline…, _bash_make_id must produce identical output to _make_id for Unicode inputs. The…, test_bash_make_id_identical_to_make_id(), test_bash_make_id_unicode_matches_make_id()
-
-### 社区 1037 —— "estimate_cost"
-凝聚度：0.50
-节点（共 4 个）：estimate_cost(), Estimate USD cost for a given token count using published pricing., test_backend_registered_with_zero_cost(), test_estimate_cost_azure_no_keyerror()
-
-### 社区 1038 —— "graphify reference: add a URL and watch a folder"
-凝聚度：0.50
-节点（共 3 个）：For /graphify add, For --watch, graphify reference: add a URL and watch a folder
-
-### 社区 1039 —— "graphify reference: commit hook and native AGENTS.md integration"
-凝聚度：0.50
-节点（共 3 个）：For git commit hook, For native AGENTS.md integration, graphify reference: commit hook and native AGENTS.md integration
-
-### 社区 1040 —— "graphify reference: incremental update and cluster-only"
-凝聚度：0.50
-节点（共 3 个）：For --cluster-only, For --update (incremental re-extraction), graphify reference: incremental update and cluster-only
-
-### 社区 1041 —— "graphify reference: add a URL and watch a folder"
-凝聚度：0.50
-节点（共 3 个）：For /graphify add, For --watch, graphify reference: add a URL and watch a folder
-
-### 社区 1042 —— "graphify reference: commit hook and native AGENTS.md integration"
-凝聚度：0.50
-节点（共 3 个）：For git commit hook, For native AGENTS.md integration (OpenClaw), graphify reference: commit hook and native AGENTS.md integration
-
-### 社区 1043 —— "graphify reference: incremental update and cluster-only"
-凝聚度：0.50
-节点（共 3 个）：For --cluster-only, For --update (incremental re-extraction), graphify reference: incremental update and cluster-only
-
-### 社区 1044 —— "graphify reference: add a URL and watch a folder"
-凝聚度：0.50
-节点（共 3 个）：For /graphify add, For --watch, graphify reference: add a URL and watch a folder
-
-### 社区 1045 —— "graphify reference: commit hook and native AGENTS.md integration"
-凝聚度：0.50
-节点（共 3 个）：For git commit hook, For native AGENTS.md integration (Codex), graphify reference: commit hook and native AGENTS.md integration
-
-### 社区 1046 —— "graphify reference: incremental update and cluster-only"
-凝聚度：0.50
-节点（共 3 个）：For --cluster-only, For --update (incremental re-extraction), graphify reference: incremental update and cluster-only
-
-### 社区 1047 —— "graphify reference: add a URL and watch a folder"
-凝聚度：0.50
-节点（共 3 个）：For /graphify add, For --watch, graphify reference: add a URL and watch a folder
-
-### 社区 1048 —— "graphify reference: commit hook and native AGENTS.md integration"
-凝聚度：0.50
-节点（共 3 个）：For git commit hook, For native AGENTS.md integration (GitHub Copilot), graphify reference: commit hook and native AGENTS.md integration
-
-### 社区 1049 —— "graphify reference: incremental update and cluster-only"
-凝聚度：0.50
-节点（共 3 个）：For --cluster-only, For --update (incremental re-extraction), graphify reference: incremental update and cluster-only
-
-### 社区 1050 —— "graphify reference: add a URL and watch a folder"
-凝聚度：0.50
-节点（共 3 个）：For /graphify add, For --watch, graphify reference: add a URL and watch a folder
-
-### 社区 1051 —— "graphify reference: commit hook and native CLAUDE.md integration"
-凝聚度：0.50
-节点（共 3 个）：For git commit hook, For native CLAUDE.md integration, graphify reference: commit hook and native CLAUDE.md integration
-
-### 社区 1052 —— "graphify reference: incremental update and cluster-only"
-凝聚度：0.50
-节点（共 3 个）：For --cluster-only, For --update (incremental re-extraction), graphify reference: incremental update and cluster-only
-
-### 社区 1053 —— "graphify reference: add a URL and watch a folder"
-凝聚度：0.50
-节点（共 3 个）：For /graphify add, For --watch, graphify reference: add a URL and watch a folder
-
-### 社区 1099 —— "graphify reference: commit hook and native CLAUDE.md integration"
-凝聚度：0.50
-节点（共 3 个）：For git commit hook, For native CLAUDE.md integration, graphify reference: commit hook and native CLAUDE.md integration
-
-### 社区 1100 —— "graphify reference: incremental update and cluster-only"
-凝聚度：0.50
-节点（共 3 个）：For --cluster-only, For --update (incremental re-extraction), graphify reference: incremental update and cluster-only
-
-### 社区 1101 —— "graphify reference: add a URL and watch a folder"
-凝聚度：0.50
-节点（共 3 个）：For /graphify add, For --watch, graphify reference: add a URL and watch a folder
-
-### 社区 1102 —— "graphify reference: commit hook and native CLAUDE.md integration"
-凝聚度：0.50
-节点（共 3 个）：For git commit hook, For native CLAUDE.md integration, graphify reference: commit hook and native CLAUDE.md integration
-
-### 社区 1103 —— "graphify reference: incremental update and cluster-only"
-凝聚度：0.50
-节点（共 3 个）：For --cluster-only, For --update (incremental re-extraction), graphify reference: incremental update and cluster-only
-
-### 社区 1104 —— "test_build_dedup_preserves_semantic_attributes"
-凝聚度：0.33
-节点（共 4 个）：The default build path must not discard semantic enrichment (#2091)., #2182 determinism, #1753/#2074 precedent: the survivor must not depend on…, test_build_dedup_preserves_semantic_attributes(), test_crossfile_concept_merge_deterministic_across_hash_seeds()
-
-### 社区 1105 —— "TestScheduleStatus"
-凝聚度：0.50
-节点（共 3 个）：Verify _schedule_status looks for the correct command string., When cron has 'graphify check --all', status should find it., TestScheduleStatus
 
 ## 歧义边——需复核
 - `.handleRegister()` → `业务异常用 Error 抛出`  [AMBIGUOUS]
@@ -4671,19 +4385,19 @@
   tests/e2e/resources/user-management/docs/features/user-management/contracts.md · 关系：references
 - `UserService` → `用户管理服务`  [AMBIGUOUS]
   tests/e2e/resources/user-management/docs/features/user-management/domain-model.md · 关系：references
-- `UserService` → `DELETE /rest/userservice/v1/users/{id}`  [AMBIGUOUS]
+- `UserService` → `DELETE:/rest/userservice/v1/users/{id}`  [AMBIGUOUS]
   tests/e2e/resources/user-management/docs/user-api.yaml · 关系：references
-- `UserService` → `GET /rest/userservice/v1/users`  [AMBIGUOUS]
+- `UserService` → `GET:/rest/userservice/v1/users`  [AMBIGUOUS]
   tests/e2e/resources/user-management/docs/user-api.yaml · 关系：references
-- `UserService` → `GET /rest/userservice/v1/users/{id}`  [AMBIGUOUS]
+- `UserService` → `GET:/rest/userservice/v1/users/{id}`  [AMBIGUOUS]
   tests/e2e/resources/user-management/docs/user-api.yaml · 关系：references
-- `UserService` → `POST /rest/userservice/v1/users`  [AMBIGUOUS]
+- `UserService` → `POST:/rest/userservice/v1/users`  [AMBIGUOUS]
   tests/e2e/resources/user-management/docs/user-api.yaml · 关系：references
-- `UserService` → `POST /rest/userservice/v1/users/{id}/reactivate`  [AMBIGUOUS]
+- `UserService` → `POST:/rest/userservice/v1/users/{id}/reactivate`  [AMBIGUOUS]
   tests/e2e/resources/user-management/docs/user-api.yaml · 关系：references
-- `UserService` → `POST /rest/userservice/v1/users/{id}/suspend`  [AMBIGUOUS]
+- `UserService` → `POST:/rest/userservice/v1/users/{id}/suspend`  [AMBIGUOUS]
   tests/e2e/resources/user-management/docs/user-api.yaml · 关系：references
-- `UserService` → `PUT /rest/userservice/v1/users/{id}`  [AMBIGUOUS]
+- `UserService` → `PUT:/rest/userservice/v1/users/{id}`  [AMBIGUOUS]
   tests/e2e/resources/user-management/docs/user-api.yaml · 关系：references
 - `Logger` → `日志不变式`  [AMBIGUOUS]
   tests/e2e/resources/user-management/docs/features/user-management/invariants.md · 关系：references
@@ -4691,31 +4405,31 @@
   tests/e2e/resources/user-management/docs/features/user-management/invariants.md · 关系：references
 - `Logger` → `日志不变式`  [AMBIGUOUS]
   tests/e2e/resources/user-management/docs/features/user-management/invariants.md · 关系：references
-- `.create()` → `POST /rest/apppublishservice/v1/app`  [AMBIGUOUS]
+- `.create()` → `POST:/rest/apppublishservice/v1/app`  [AMBIGUOUS]
   tests/fixtures/swagger/apppublish.yaml · 关系：references
 - `UserService` → `用户管理服务`  [AMBIGUOUS]
   tests/e2e/resources/user-management/docs/features/user-management/domain-model.md · 关系：references
-- `UserService` → `DELETE /rest/userservice/v1/users/{id}`  [AMBIGUOUS]
+- `UserService` → `DELETE:/rest/userservice/v1/users/{id}`  [AMBIGUOUS]
   tests/e2e/resources/user-management/docs/user-api.yaml · 关系：references
-- `UserService` → `GET /rest/userservice/v1/users`  [AMBIGUOUS]
+- `UserService` → `GET:/rest/userservice/v1/users`  [AMBIGUOUS]
   tests/e2e/resources/user-management/docs/user-api.yaml · 关系：references
-- `UserService` → `GET /rest/userservice/v1/users/{id}`  [AMBIGUOUS]
+- `UserService` → `GET:/rest/userservice/v1/users/{id}`  [AMBIGUOUS]
   tests/e2e/resources/user-management/docs/user-api.yaml · 关系：references
-- `UserService` → `POST /rest/userservice/v1/users`  [AMBIGUOUS]
+- `UserService` → `POST:/rest/userservice/v1/users`  [AMBIGUOUS]
   tests/e2e/resources/user-management/docs/user-api.yaml · 关系：references
-- `UserService` → `POST /rest/userservice/v1/users/{id}/reactivate`  [AMBIGUOUS]
+- `UserService` → `POST:/rest/userservice/v1/users/{id}/reactivate`  [AMBIGUOUS]
   tests/e2e/resources/user-management/docs/user-api.yaml · 关系：references
-- `UserService` → `POST /rest/userservice/v1/users/{id}/suspend`  [AMBIGUOUS]
+- `UserService` → `POST:/rest/userservice/v1/users/{id}/suspend`  [AMBIGUOUS]
   tests/e2e/resources/user-management/docs/user-api.yaml · 关系：references
-- `UserService` → `PUT /rest/userservice/v1/users/{id}`  [AMBIGUOUS]
+- `UserService` → `PUT:/rest/userservice/v1/users/{id}`  [AMBIGUOUS]
   tests/e2e/resources/user-management/docs/user-api.yaml · 关系：references
-- `.create()` → `POST /rest/apppublishservice/v1/app`  [AMBIGUOUS]
+- `.create()` → `POST:/rest/apppublishservice/v1/app`  [AMBIGUOUS]
   tests/fixtures/swagger/apppublish.yaml · 关系：references
 
 ## 知识空白
-- **2868 个孤立节点：** `$schema`, `.opencode/plugins/graphify.js`, `generated`, `sections`, `$schema`（还有 2863 个）
+- **2749 个孤立节点：** `$schema`, `.opencode/plugins/graphify.js`, `$schema`, `.opencode/plugins/graphify.js`, `name`（还有 2744 个）
   这些节点的连接数 ≤1——可能漏掉了边，或组件未文档化。
-- **223 个稀疏社区（<3 个节点）已从报告中省略** —— 运行 `graphify query` 探索孤立节点。
+- **202 个稀疏社区（<3 个节点）已从报告中省略** —— 运行 `graphify query` 探索孤立节点。
 
 ## 建议提问
 _这张图谱特别适合回答以下问题：_

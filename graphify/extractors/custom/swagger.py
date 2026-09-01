@@ -468,18 +468,28 @@ def _make_endpoint_node(
     operation: dict,
     line_num: int,
 ) -> dict:
-    """Build one REST endpoint node from a ``paths.<path>.<method>`` block."""
+    """Build one REST endpoint node from a ``paths.<path>.<method>`` block.
+
+    Only graphify generic node fields are populated — no swagger-specific
+    columns.  ``label`` follows the ``METHOD:/full/path`` convention so the
+    URL is recoverable from the label alone.  ``desc`` merges description
+    and x-examples (summary is intentionally excluded — it is redundant
+    with description in swagger specs) so ``graphify query`` / ``explain``
+    return the full human-readable context for the endpoint without needing
+    swagger-specific fields on the node.
+    """
     full_path = (base_path or "") + path
     method_upper = method.upper()
-    summary = operation.get("summary", "") or ""
     description = operation.get("description", "") or ""
-    desc = f"{summary}\n\n{description}".strip() if summary and description else (summary or description)
-    operation_id = operation.get("operationId", "") or ""
-    swagger_tags = operation.get("tags", []) or []
-    if not isinstance(swagger_tags, list):
-        swagger_tags = []
-    produces = operation.get("produces", []) or []
-    consumes = operation.get("consumes", []) or []
+    examples = _extract_examples(operation)
+
+    # desc = description + examples (summary excluded — redundant with description)
+    parts: list[str] = []
+    if description:
+        parts.append(description)
+    if examples:
+        parts.extend(examples)
+    desc = "\n\n".join(parts)
 
     # ID: swagger_ep_<stem>_<method>_<normalized full_path>
     norm_path = full_path.lstrip("/").replace("/", "_").replace("{", "").replace("}", "")
@@ -488,28 +498,13 @@ def _make_endpoint_node(
 
     return {
         "id": endpoint_id,
-        "label": f"{method_upper} {full_path}",
+        "label": f"{method_upper}:{full_path}",
         "file_type": "concept",
         "source_file": doc_path,
         "source_location": f"L{line_num}" if line_num else None,
         "node_kind": "rest_endpoint",
         "desc": desc,
-        "tags": ["swagger", "rest_endpoint"],
-        # Structured properties (queryable via graphify query / path / explain):
-        "method": method_upper,
-        "path": path,
-        "base_path": base_path,
-        "full_path": full_path,
-        "summary": summary,
-        "description": description,
-        "operation_id": operation_id,
-        "swagger_tags": [str(t) for t in swagger_tags],
-        "produces": [str(p) for p in produces] if isinstance(produces, list) else [],
-        "consumes": [str(c) for c in consumes] if isinstance(consumes, list) else [],
-        "has_request_body": _has_request_body(operation, _version_from_op(operation)),
-        "response_codes": [r["code"] for r in _extract_responses(operation, _version_from_op(operation))],
-        "responses": _extract_responses(operation, _version_from_op(operation)),
-        "examples": _extract_examples(operation),
+        "tags": ["url"],
     }
 
 
@@ -636,11 +631,17 @@ def extract_swagger(
             ))
 
             # --- Code association: tags -> controller class ---
-            swagger_tags = ep_node.get("swagger_tags", [])
+            # Read directly from the operation dict — the node no longer
+            # carries swagger_tags/operation_id as fields (they were only
+            # needed for matching, and the references edge now carries
+            # that relationship for downstream consumers).
+            raw_tags = operation.get("tags", []) or []
+            if not isinstance(raw_tags, list):
+                raw_tags = []
             controller_matches: list[tuple[dict, str, float]] = []
-            if swagger_tags:
+            if raw_tags:
                 # Use the first tag (Spring/Swagger convention: tags[0] = controller class)
-                primary_tag = str(swagger_tags[0])
+                primary_tag = str(raw_tags[0])
                 controller_matches = _match_controller(primary_tag, indices)
                 if controller_matches:
                     for matched_node, conf, score in controller_matches:
@@ -663,7 +664,7 @@ def extract_swagger(
                     })
 
             # --- Code association: operationId -> handler function ---
-            operation_id = ep_node.get("operation_id", "")
+            operation_id = operation.get("operationId", "") or ""
             if operation_id:
                 handler_matches = _match_handler(operation_id, controller_matches, indices)
                 if handler_matches:

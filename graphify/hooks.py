@@ -453,12 +453,6 @@ def _parse_graphifyrc_file(rc_path: Path) -> dict[str, str | int]:
             # the caller (hybrid_scorer._embed_backend_from_env) so we keep
             # the raw value here for round-trip fidelity.
             cfg[key] = val
-        elif key == "vector_sim_tiers":
-            # Comma-separated 4 floats, e.g. "0.85,0.70,0.55,0.40".
-            # Stored as raw string; parsing/validation deferred to
-            # _parse_vector_sim_tiers in hybrid_scorer at query time —
-            # a bad value falls back to defaults there, never crashing.
-            cfg["vector_sim_tiers"] = val
     return cfg
 
 

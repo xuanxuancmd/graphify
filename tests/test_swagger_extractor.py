@@ -122,27 +122,20 @@ class TestSwagger2Extraction:
 
     def test_get_list_endpoint(self, result: ExtractionResult) -> None:
         eps = [n for n in result.nodes if n.get("node_kind") == "rest_endpoint"]
-        get_list = next(e for e in eps if e["method"] == "GET" and "list" in e["path"])
-        assert get_list["label"] == "GET /rest/apppublishservice/v1/app/list"
-        assert get_list["method"] == "GET"
-        assert get_list["path"] == "/apppublishservice/v1/app/list"
-        assert get_list["base_path"] == "/rest"
-        assert get_list["full_path"] == "/rest/apppublishservice/v1/app/list"
-        assert get_list["summary"] == "查询所有APP信息"
-        assert get_list["operation_id"] == "query"
-        assert get_list["swagger_tags"] == ["APPPublishService"]
-        assert get_list["produces"] == ["application/json"]
-        assert get_list["has_request_body"] is False
-        assert "200" in get_list["response_codes"]
+        get_list = next(e for e in eps if "list" in e["label"])
+        assert get_list["label"] == "GET:/rest/apppublishservice/v1/app/list"
+        assert get_list["tags"] == ["url"]
+        assert "查询所有APP信息" in get_list["desc"]
         assert get_list["source_location"] is not None
         assert get_list["source_location"].startswith("L")
 
     def test_post_endpoint_has_request_body(self, result: ExtractionResult) -> None:
+        # With the slim node model, we verify the POST endpoint exists and
+        # carries a desc.  Request-body presence is no longer a node field;
+        # the references edge to the handler is the source of truth.
         eps = [n for n in result.nodes if n.get("node_kind") == "rest_endpoint"]
-        post_ep = next(e for e in eps if e["method"] == "POST")
-        assert post_ep["operation_id"] == "create"
-        assert post_ep["has_request_body"] is True
-        assert "application/json" in post_ep["consumes"]
+        post_ep = next(e for e in eps if e["label"].startswith("POST:"))
+        assert "创建" in post_ep["desc"]
 
     def test_contains_edges(self, result: ExtractionResult) -> None:
         contains = [e for e in result.edges if e["relation"] == "contains"]
@@ -206,20 +199,23 @@ class TestOpenAPI3Extraction:
         assert len(eps) == 3
 
     def test_post_has_request_body_3x(self, result: ExtractionResult) -> None:
+        # Slim node model — verify POST endpoint exists.
+        # desc may be empty: this fixture's POST has only summary (no
+        # description/examples), and summary is intentionally excluded from desc.
         eps = [n for n in result.nodes if n.get("node_kind") == "rest_endpoint"]
-        post_ep = next(e for e in eps if e["method"] == "POST")
-        assert post_ep["has_request_body"] is True  # requestBody present in 3.x
+        post_ep = next(e for e in eps if e["label"].startswith("POST:"))
+        assert "POST:" in post_ep["label"]
 
     def test_get_no_request_body_3x(self, result: ExtractionResult) -> None:
         eps = [n for n in result.nodes if n.get("node_kind") == "rest_endpoint"]
-        get_ep = next(e for e in eps if e["method"] == "GET" and e["path"] == "/users")
-        assert get_ep["has_request_body"] is False
+        get_ep = next(e for e in eps if e["label"].startswith("GET:") and "/users" in e["label"])
+        # GET /users has description "Returns a list of all users"
+        assert "Returns a list of all users" in get_ep["desc"]
 
     def test_full_path_with_base(self, result: ExtractionResult) -> None:
         eps = [n for n in result.nodes if n.get("node_kind") == "rest_endpoint"]
-        get_users = next(e for e in eps if e["method"] == "GET" and e["path"] == "/users")
-        assert get_users["full_path"] == "/v1/users"
-        assert get_users["label"] == "GET /v1/users"
+        get_users = next(e for e in eps if e["label"].startswith("GET:") and "/users" in e["label"])
+        assert get_users["label"] == "GET:/v1/users"
 
 
 # ---------------------------------------------------------------------------
@@ -261,7 +257,7 @@ class TestCodeIndexMatching:
 
     def test_endpoint_links_to_controller(self, result_with_code: ExtractionResult) -> None:
         eps = [n for n in result_with_code.nodes if n.get("node_kind") == "rest_endpoint"]
-        get_list = next(e for e in eps if e["operation_id"] == "query")
+        get_list = next(e for e in eps if "list" in e["label"])
         # get_list endpoint should have a references edge to the APPPublishService class node
         controller_id = "src_apppublishservice_apppublishservice"
         refs_to_controller = [
@@ -274,7 +270,7 @@ class TestCodeIndexMatching:
 
     def test_endpoint_links_to_handler(self, result_with_code: ExtractionResult) -> None:
         eps = [n for n in result_with_code.nodes if n.get("node_kind") == "rest_endpoint"]
-        get_list = next(e for e in eps if e["operation_id"] == "query")
+        get_list = next(e for e in eps if "list" in e["label"])
         handler_id = "src_apppublishservice_query_fn"
         refs_to_handler = [
             e for e in result_with_code.edges
@@ -334,7 +330,7 @@ class TestAmbiguousMatching:
         result = extract_swagger(fixture, root=tmp_path, nodes=_code_index(code_nodes))
         assert result is not None
         eps = [n for n in result.nodes if n.get("node_kind") == "rest_endpoint"]
-        get_list = next(e for e in eps if e["operation_id"] == "query")
+        get_list = next(e for e in eps if "list" in e["label"])
         handler_refs = [
             e for e in result.edges
             if e["relation"] == "references"

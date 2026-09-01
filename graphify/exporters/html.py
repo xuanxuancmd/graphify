@@ -229,6 +229,40 @@ def _html_styles() -> str:
   .comm-stats { display:flex; gap:16px; font-size:0.6875rem; color:var(--gf-text-muted); }
   .comm-stat b { color:var(--gf-text-secondary); font-weight:500; }
 
+  /* BC bubble diagram */
+  .bc-bubble-svg { width:100%; height:420px; display:block; }
+  .bc-bubble-line { stroke:var(--gf-border-medium); stroke-width:1.5; opacity:0.35; }
+  .bc-bubble-line-thick { stroke-width:3; opacity:0.5; }
+  .bc-bubble-circle { cursor:pointer; transition:filter var(--gf-transition); }
+  .bc-bubble-circle:hover { filter: brightness(1.2); }
+  .bc-bubble-label { font-family:var(--gf-font-heading); font-size:10px; font-weight:600; fill:var(--gf-text-primary); text-anchor:middle; pointer-events:none; }
+  .bc-bubble-count { font-family:var(--gf-font-mono); font-size:8px; fill:var(--gf-text-muted); text-anchor:middle; pointer-events:none; }
+  .bc-edge-label { font-family:var(--gf-font-mono); font-size:7px; fill:var(--gf-text-faint); text-anchor:middle; pointer-events:none; }
+
+  /* Overview two-column */
+  .ovw-two-col { display:flex; gap:16px; margin-bottom:16px; }
+  .ovw-left { flex:0 0 320px; display:flex; flex-direction:column; gap:12px; }
+  .ovw-right { flex:1; min-width:0; }
+  .ovw-info-card { background:var(--gf-surface); border:1px solid var(--gf-border-subtle); border-radius:var(--gf-radius-lg); padding:16px; box-shadow:var(--gf-shadow-sm); }
+  .ovw-info-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--gf-border-subtle); }
+  .ovw-info-row:last-child { border-bottom:none; }
+  .ovw-info-label { font-size:0.75rem; color:var(--gf-text-muted); }
+  .ovw-info-value { font-size:0.75rem; font-weight:600; color:var(--gf-text-primary); font-family:var(--gf-font-mono); }
+  .ovw-lang-bar { display:flex; align-items:center; gap:4px; margin-top:8px; }
+  .ovw-lang-seg { height:20px; border-radius:3px; display:flex; align-items:center; justify-content:center; font-size:9px; color:#fff; font-weight:600; font-family:var(--gf-font-mono); overflow:hidden; }
+  .ovw-tech-tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; }
+  .ovw-tech-tag { padding:2px 8px; border-radius:12px; background:var(--gf-panel); border:1px solid var(--gf-border-medium); font-size:0.6875rem; color:var(--gf-text-secondary); font-family:var(--gf-font-mono); }
+
+  /* Tab pages visibility */
+  .ovw-hero-card { background:var(--gf-surface); border:1px solid var(--gf-border-subtle); border-radius:var(--gf-radius-lg); padding:24px 32px; margin-bottom:24px; box-shadow:var(--gf-shadow-sm); display:flex; align-items:center; gap:24px; }
+  .ovw-hero-info { flex:1; }
+  .ovw-hero-lang { font-family:var(--gf-font-heading); font-size:1.5rem; font-weight:700; color:var(--gf-text-primary); }
+  .ovw-hero-meta { font-size:0.75rem; color:var(--gf-text-muted); margin-top:4px; }
+  .ovw-hero-stats { display:flex; gap:20px; }
+  .ovw-hero-stat { text-align:center; }
+  .ovw-hero-stat-val { font-family:var(--gf-font-heading); font-size:1.5rem; font-weight:700; color:var(--gf-text-primary); }
+  .ovw-hero-stat-lbl { font-size:0.6875rem; color:var(--gf-text-muted); text-transform:uppercase; letter-spacing:0.08em; font-weight:600; }
+
   /* Tab pages visibility */
   .tab-page { display:none; flex:1; min-height:0; }
   .tab-page.active { display:flex; }
@@ -314,7 +348,7 @@ def _review_queue_script(review_json: str) -> str:
     return ""
 
 
-def _html_script(nodes_json: str, edges_json: str, legend_json: str, type_index_json: str, tag_index_json: str, review_json: str = "[]") -> str:
+def _html_script(nodes_json: str, edges_json: str, legend_json: str, type_index_json: str, tag_index_json: str, review_json: str = "[]", bc_bubbles_json: str = "[]", bc_links_json: str = "[]", lang_donut_json: str = "[]", lang_total: int = 0, bc_details_json: str = "[]") -> str:
     return f"""<script>
 const RAW_NODES = {nodes_json};
 const RAW_EDGES = {edges_json};
@@ -323,6 +357,11 @@ const TYPE_INDEX = {type_index_json};
 const TAG_INDEX = {tag_index_json};
 const REVIEW = {review_json};
 const COMMUNITY_COLORS = ["#4E79A7","#F28E2B","#E15759","#76B7B2","#59A14F","#EDC948","#B07AA1","#FF9DA7","#9C755F","#BAB0AC"];
+const BC_BUBBLES = {bc_bubbles_json};
+const BC_LINKS = {bc_links_json};
+const LANG_DONUT = {lang_donut_json};
+const LANG_TOTAL = {lang_total};
+const BC_DETAILS = {bc_details_json};
 
 // HTML-escape helper - prevents XSS when injecting graph data into innerHTML
 function esc(s) {{
@@ -717,25 +756,136 @@ document.addEventListener('click', e => {{
   }}
 }});
 
+// == Render BC bubble diagram with 3D-style spheres ==
+(function() {{
+  const svg = document.getElementById('bc-bubbles');
+  if (!svg || !BC_BUBBLES.length) return;
+  const ns = 'http://www.w3.org/2000/svg';
+  // Define radial gradients for 3D sphere effect
+  const defs = document.createElementNS(ns, 'defs');
+  BC_BUBBLES.forEach((b, i) => {{
+    // Lighten color for highlight
+    const grad = document.createElementNS(ns, 'radialGradient');
+    grad.setAttribute('id', 'bc-grad-' + i);
+    grad.setAttribute('cx', '38%');
+    grad.setAttribute('cy', '32%');
+    grad.setAttribute('r', '72%');
+    const stop1 = document.createElementNS(ns, 'stop');
+    stop1.setAttribute('offset', '0%');
+    stop1.setAttribute('stop-color', b.color);
+    stop1.setAttribute('stop-opacity', '1');
+    const stop2 = document.createElementNS(ns, 'stop');
+    stop2.setAttribute('offset', '50%');
+    stop2.setAttribute('stop-color', b.color);
+    stop2.setAttribute('stop-opacity', '0.55');
+    const stop3 = document.createElementNS(ns, 'stop');
+    stop3.setAttribute('offset', '100%');
+    stop3.setAttribute('stop-color', b.color);
+    stop3.setAttribute('stop-opacity', '0.2');
+    grad.appendChild(stop1);
+    grad.appendChild(stop2);
+    grad.appendChild(stop3);
+    defs.appendChild(grad);
+  }});
+  svg.appendChild(defs);
+  // Draw links
+  BC_LINKS.forEach(link => {{
+    const line = document.createElementNS(ns, 'line');
+    line.setAttribute('x1', link.x1); line.setAttribute('y1', link.y1);
+    line.setAttribute('x2', link.x2); line.setAttribute('y2', link.y2);
+    line.setAttribute('class', 'bc-bubble-line' + (link.weight > 5 ? ' bc-bubble-line-thick' : ''));
+    svg.appendChild(line);
+    const mx = (link.x1 + link.x2) / 2; const my = (link.y1 + link.y2) / 2;
+    const t = document.createElementNS(ns, 'text');
+    t.setAttribute('x', mx); t.setAttribute('y', my); t.setAttribute('class', 'bc-edge-label');
+    t.textContent = link.weight;
+    svg.appendChild(t);
+  }});
+  // Draw 3D-style sphere bubbles
+  BC_BUBBLES.forEach((b, i) => {{
+    // Shadow (drop shadow for 3D depth)
+    const shadow = document.createElementNS(ns, 'ellipse');
+    shadow.setAttribute('cx', b.x + 2);
+    shadow.setAttribute('cy', b.y + b.r * 0.15);
+    shadow.setAttribute('rx', b.r * 0.9);
+    shadow.setAttribute('ry', b.r * 0.3);
+    shadow.setAttribute('fill', 'rgba(0,0,0,0.08)');
+    shadow.style.pointerEvents = 'none';
+    svg.appendChild(shadow);
+    // Main sphere with radial gradient
+    const c = document.createElementNS(ns, 'circle');
+    c.setAttribute('cx', b.x); c.setAttribute('cy', b.y); c.setAttribute('r', b.r);
+    c.setAttribute('fill', 'url(#bc-grad-' + i + ')');
+    c.setAttribute('stroke', b.color);
+    c.setAttribute('stroke-width', 2);
+    c.setAttribute('stroke-opacity', '0.6');
+    c.setAttribute('class', 'bc-bubble-circle');
+    c.dataset.bcId = b.id;
+    c.addEventListener('click', () => showBcDetail(b.id));
+    svg.appendChild(c);
+    // Specular highlight (glossy dot)
+    const gloss = document.createElementNS(ns, 'ellipse');
+    gloss.setAttribute('cx', b.x - b.r * 0.3);
+    gloss.setAttribute('cy', b.y - b.r * 0.4);
+    gloss.setAttribute('rx', b.r * 0.3);
+    gloss.setAttribute('ry', b.r * 0.2);
+    gloss.setAttribute('fill', '#ffffff');
+    gloss.setAttribute('opacity', '0.45');
+    gloss.style.pointerEvents = 'none';
+    svg.appendChild(gloss);
+    // Label
+    const label = document.createElementNS(ns, 'text');
+    label.setAttribute('x', b.x); label.setAttribute('y', b.y + 2);
+    label.setAttribute('class', 'bc-bubble-label');
+    label.textContent = b.name.length > 22 ? b.name.slice(0, 20) + '..' : b.name;
+    svg.appendChild(label);
+    // Node count
+    const count = document.createElementNS(ns, 'text');
+    count.setAttribute('x', b.x); count.setAttribute('y', b.y + 14);
+    count.setAttribute('class', 'bc-bubble-count');
+    count.textContent = b.size + ' nodes';
+    svg.appendChild(count);
+  }});
+
+  function showBcDetail(bcId) {{
+    const detail = BC_DETAILS.find(d => d.id === bcId) || BC_DETAILS.find(d => d.name === bcId);
+    if (!detail) return;
+    const panel = document.getElementById('bc-detail-panel');
+    const hint = document.getElementById('bc-detail-hint');
+    panel.style.display = 'block';
+    hint.style.display = 'none';
+    document.getElementById('bc-detail-name').textContent = detail.name;
+    document.getElementById('bc-detail-name').style.color = detail.color;
+    document.getElementById('bc-detail-stats').textContent = detail.nodeCount + ' nodes | ' + detail.fileCount + ' files';
+    const conceptsDiv = document.getElementById('bc-detail-concepts');
+    if (detail.concepts && detail.concepts.length) {{
+      conceptsDiv.innerHTML = '<div style="font-size:0.6875rem;color:var(--gf-text-muted);text-transform:uppercase;letter-spacing:0.04em;font-weight:600;margin-bottom:4px">DDD Concepts</div><div style="display:flex;flex-wrap:wrap;gap:3px">' + detail.concepts.map(c => '<span class="detail-tag">' + esc(c) + '</span>').join('') + '</div>';
+    }} else {{
+      conceptsDiv.innerHTML = '';
+    }}
+    const filesDiv = document.getElementById('bc-detail-files');
+    let filesHtml = '';
+    if (detail.codeFiles && detail.codeFiles.length) {{
+      filesHtml += '<div style="font-size:0.6875rem;color:var(--gf-text-muted);text-transform:uppercase;letter-spacing:0.04em;font-weight:600;margin:8px 0 4px">Code Files</div>';
+      filesHtml += detail.codeFiles.map(f => '<div style="font-family:var(--gf-font-mono);font-size:0.6875rem;color:var(--gf-text-secondary);padding:1px 0">' + esc(f) + '</div>').join('');
+    }}
+    if (detail.docFiles && detail.docFiles.length) {{
+      filesHtml += '<div style="font-size:0.6875rem;color:var(--gf-text-muted);text-transform:uppercase;letter-spacing:0.04em;font-weight:600;margin:8px 0 4px">Doc Files</div>';
+      filesHtml += detail.docFiles.map(f => '<div style="font-family:var(--gf-font-mono);font-size:0.6875rem;color:var(--gf-text-secondary);padding:1px 0">' + esc(f) + '</div>').join('');
+    }}
+    filesDiv.innerHTML = filesHtml;
+    const jumpBtn = document.getElementById('bc-detail-jump');
+    jumpBtn.onclick = () => {{
+      const tab = document.querySelector('.mode-tab[data-tab="review"]');
+      if (tab) tab.click();
+    }};
+  }}
+}})();
+
 // == Initialize ==
 renderFilterChips();
 renderNodeList();
 updateStats();
-// Render overview community cards
-const ovwComm = document.getElementById('overview-communities');
-if (ovwComm) {{
-  LEGEND.slice(0, 6).forEach(c => {{
-    const card = document.createElement('div');
-    card.className = 'comm-card';
-    card.style.setProperty('--comm-color', c.color);
-    card.innerHTML = `<div class="comm-head"><span class="comm-dot" style="background:${{c.color}}"></span><span class="comm-name">${{esc(c.label)}}</span><span class="comm-count">${{c.count}} 节点</span></div><div class="comm-desc">点击进入审核模式查看该社区详情</div>`;
-    card.addEventListener('click', () => {{
-      const tab = document.querySelector('.mode-tab[data-tab="review"]');
-      if (tab) tab.click();
-    }});
-    ovwComm.appendChild(card);
-  }});
-}}
 </script>"""
 
 
@@ -1055,6 +1205,253 @@ def to_html(
     title = _html.escape(sanitize_label(_html_document_title(output_path)))
     stats = f"{G.number_of_nodes()} 节点 &middot; {G.number_of_edges()} 条边 &middot; {len(communities)} 个社区"
 
+    # Compute project overview data for the overview tab
+    _src_files = set()
+    _ft_lang_map = {"code": "Code", "concept": "Docs/Concepts", "rationale": "Rationale", "document": "Documents", "config": "Config", "": "Other"}
+    for _n in vis_nodes:
+        _sf = _n.get("source_file", "")
+        if _sf:
+            _src_files.add(_sf)
+    _num_files = len(_src_files)
+    # Detect primary language from file extensions
+    _ext_counts: dict[str, int] = {}
+    for _sf in _src_files:
+        _dot = _sf.rfind(".")
+        if _dot >= 0:
+            _ext = _sf[_dot+1:].lower()
+            _ext_counts[_ext] = _ext_counts.get(_ext, 0) + 1
+    _lang_map = {"py": "Python", "ts": "TypeScript", "js": "JavaScript", "go": "Go", "rs": "Rust", "java": "Java", "cs": "C#", "cpp": "C++", "c": "C", "rb": "Ruby", "php": "PHP", "kt": "Kotlin", "scala": "Scala", "md": "Markdown", "yaml": "YAML", "yml": "YAML", "json": "JSON", "toml": "TOML", "txt": "Text"}
+    _lang_counts: dict[str, int] = {}
+    for _ext, _cnt in _ext_counts.items():
+        _lang = _lang_map.get(_ext, _ext)
+        _lang_counts[_lang] = _lang_counts.get(_lang, 0) + _cnt
+    _primary_lang = max(_lang_counts, key=_lang_counts.get) if _lang_counts else "Unknown"
+    _lang_list = ", ".join(f"{k} ({v})" for k, v in sorted(_lang_counts.items(), key=lambda x: -x[1])[:5])
+    # Community -> files mapping for BC/feature tree
+    _comm_files: dict[int, set[str]] = {}
+    for _vn in vis_nodes:
+        _cid = _vn.get("community", 0)
+        _sf = _vn.get("source_file", "")
+        if _sf:
+            _comm_files.setdefault(_cid, set()).add(_sf)
+    # Project name from title (strip .graph/graph.html suffix)
+    _proj_name = title.replace(".graph/graph.html", "").strip("/")
+    if not _proj_name:
+        # Fallback: use parent directory name of output_path
+        from pathlib import Path as _P
+        _proj_name = _P(output_path).parent.parent.name or _P(output_path).parent.name or "Project"
+
+    # Compute BC cross-community relationship data for bubble diagram
+    _node_comm_map: dict[str, int] = {}
+    for _vn in vis_nodes:
+        _node_comm_map[_vn["id"]] = _vn.get("community", 0)
+    _bc_cross: dict[tuple, int] = {}
+    for _u, _v, _d in G.edges(data=True):
+        _cu = _node_comm_map.get(_u)
+        _cv = _node_comm_map.get(_v)
+        if _cu is not None and _cv is not None and _cu != _cv:
+            _pair = (min(_cu, _cv), max(_cu, _cv))
+            _bc_cross[_pair] = _bc_cross.get(_pair, 0) + 1
+    # BC bubble data: list of {id, name, color, size, x, y}
+    _bc_bubbles = []
+    _bc_links = []
+    _significant = [c for c in legend_data if c["count"] > 3]
+    _n_bubbles = len(_significant)
+    import math as _math
+    for _i, _c in enumerate(_significant):
+        # Place bubbles in a circle layout
+        _angle = 2 * _math.pi * _i / max(1, _n_bubbles) - _math.pi / 2
+        _r = 160 if _n_bubbles > 1 else 0
+        _bx = 250 + _r * _math.cos(_angle)
+        _by = 210 + _r * _math.sin(_angle)
+        _bubble_r = 14 + min(40, _c["count"] * 1.4)  # radius proportional to node count, capped
+        _bc_bubbles.append({
+            "id": _c["cid"], "name": _c["label"], "color": _c["color"],
+            "size": _c["count"], "r": _bubble_r, "x": _bx, "y": _by,
+        })
+    for (_a, _b), _w in sorted(_bc_cross.items(), key=lambda x: -x[1])[:15]:
+        _ba = next((x for x in _bc_bubbles if x["id"] == _a), None)
+        _bb = next((x for x in _bc_bubbles if x["id"] == _b), None)
+        if _ba and _bb:
+            _bc_links.append({"from": _a, "to": _b, "weight": _w, "x1": _ba["x"], "y1": _ba["y"], "x2": _bb["x"], "y2": _bb["y"]})
+    _bc_bubbles_json = _js_safe(_bc_bubbles)
+    _bc_links_json = _js_safe(_bc_links)
+
+    # BC detail data: for each BC (community), collect concepts, flows, key files
+    _bc_details = {}
+    for _c in _significant:
+        _cid = _c["cid"]
+        _bc_nodes = [_vn for _vn in vis_nodes if _vn.get("community") == _cid]
+        _concepts = [n["label"] for n in _bc_nodes if n.get("file_type") in ("concept", "rationale")]
+        _code_files = sorted({n["source_file"] for n in _bc_nodes if n.get("file_type") == "code" and n.get("source_file")})
+        _doc_files = sorted({n["source_file"] for n in _bc_nodes if n.get("file_type") in ("concept", "rationale", "document") and n.get("source_file")})
+        _bc_details[_cid] = {
+            "name": _c["label"], "color": _c["color"], "nodeCount": _c["count"],
+            "concepts": _concepts[:8], "codeFiles": _code_files[:6], "docFiles": _doc_files[:4],
+            "fileCount": len(_comm_files.get(_cid, set())),
+        }
+    _bc_details_json = _js_safe(list(_bc_details.values()))
+
+    # Try to read README for service description
+    _service_desc = ""
+    try:
+        from pathlib import Path as _P
+        _readme_path = _P(output_path).parent.parent / "README.md"
+        if _readme_path.exists():
+            _readme_text = _readme_path.read_text(encoding="utf-8")
+            for _line in _readme_text.split("\n"):
+                _line = _line.strip()
+                if _line and not _line.startswith("#") and not _line.startswith("```") and not _line.startswith("-") and len(_line) > 20:
+                    _service_desc = sanitize_label(_line)
+                    break
+    except Exception:
+        pass
+    if not _service_desc:
+        _service_desc = f"{_primary_lang} project with {len(_significant)} modules"
+
+    # Compute code lines from source files
+    _code_lines = 0
+    _code_file_lines = {}
+    try:
+        from pathlib import Path as _P
+        _proj_root = _P(output_path).parent.parent
+        for _vn in vis_nodes:
+            if _vn.get("file_type") == "code":
+                _sf = _vn.get("source_file", "")
+                if _sf and _sf not in _code_file_lines:
+                    _fp = _proj_root / _sf
+                    if _fp.exists():
+                        _lines = sum(1 for _ in _fp.open(encoding="utf-8", errors="replace"))
+                        _code_file_lines[_sf] = _lines
+                        _code_lines += _lines
+    except Exception:
+        pass
+
+    # Detect tech stack from package.json, pyproject.toml, etc
+    _tech_stack = []
+    _tech_stack_detail = []
+    try:
+        from pathlib import Path as _P
+        import json as _json
+        _proj_root = _P(output_path).parent.parent
+        _pkg_path = _proj_root / "package.json"
+        if _pkg_path.exists():
+            _pkg = _json.loads(_pkg_path.read_text(encoding="utf-8"))
+            _deps = _pkg.get("dependencies", {})
+            _dev_deps = _pkg.get("devDependencies", {})
+            # Map common deps to tech categories
+            _dep_map = {
+                "express": "Express.js", "fastify": "Fastify", "koa": "Koa",
+                "jsonwebtoken": "JWT", "bcrypt": "bcrypt", "passport": "Passport",
+                "typeorm": "TypeORM", "prisma": "Prisma", "mongoose": "Mongoose",
+                "react": "React", "vue": "Vue", "next": "Next.js",
+                "jest": "Jest", "vitest": "Vitest", "mocha": "Mocha",
+                "winston": "Winston", "pino": "Pino",
+            }
+            for _dep, _ver in list(_deps.items()) + list(_dev_deps.items()):
+                _tech_name = _dep_map.get(_dep, _dep)
+                _tech_stack.append(_tech_name)
+                _tech_stack_detail.append({{"name": _tech_name, "version": _ver, "dep": _dep}})
+            _tech_stack = _tech_stack[:12]
+    except Exception:
+        pass
+    # Also check pyproject.toml for Python projects
+    if not _tech_stack:
+        try:
+            from pathlib import Path as _P
+            _py_path = _P(output_path).parent.parent / "pyproject.toml"
+            if _py_path.exists():
+                _py_text = _py_path.read_text(encoding="utf-8")
+                import re as _re
+                _deps = _re.findall(r'[\w-]+', _py_text.split("dependencies")[-1].split("]")[0].split("}")[0]) if "dependencies" in _py_text else []
+                _tech_stack = _deps[:12]
+        except Exception:
+            pass
+
+    # Detect DDD BC nodes from the graph (actual Bounded Contexts, not Leiden communities)
+    _ddd_bcs = []
+    _ddd_bc_links = []
+    _node_id_to_data = {_n["id"]: _n for _n in vis_nodes}
+    for _n in vis_nodes:
+        _label = _n.get("label", "")
+        # Match BC nodes like "BC-01 User Management Bounded Context"
+        if "Bounded Context" in _label or "BC-0" in _label:
+            _cid = _n.get("community", 0)
+            _color = COMMUNITY_COLORS[_cid % len(COMMUNITY_COLORS)] if _cid < len(COMMUNITY_COLORS) else COMMUNITY_COLORS[0]
+            _ddd_bcs.append({"id": _n["id"], "name": _label.replace(" Bounded Context", "").replace(" (Core Domain)", "").replace(" (Supporting Domain)", ""), "color": _color, "nodeId": _n["id"]})
+    # If no explicit BC nodes found, fall back to top Leiden communities with DDD-like names
+    if not _ddd_bcs:
+        for _c in _significant[:5]:
+            _ddd_bcs.append({"id": str(_c["cid"]), "name": _c["label"], "color": _c["color"], "nodeId": None})
+
+    # For each DDD BC, find related nodes via edges
+    _ddd_bc_details = []
+    for _bc in _ddd_bcs:
+        _bc_node_id = _bc.get("nodeId")
+        _related_concepts = []
+        _related_files = []
+        if _bc_node_id:
+            for _u, _v, _d in G.edges(data=True):
+                _other_id = None
+                if _u == _bc_node_id:
+                    _other_id = _v
+                elif _v == _bc_node_id:
+                    _other_id = _u
+                if _other_id and _other_id in _node_id_to_data:
+                    _other = _node_id_to_data[_other_id]
+                    _other_label = _other.get("label", "")
+                    _other_type = _other.get("file_type", "")
+                    _other_file = _other.get("source_file", "")
+                    if _other_type in ("concept", "rationale") and _other_label not in _related_concepts:
+                        _related_concepts.append(_other_label)
+                    if _other_file and _other_file not in _related_files:
+                        _related_files.append(_other_file)
+        _ddd_bc_details.append({
+            "id": _bc["id"], "name": _bc["name"], "color": _bc["color"],
+            "concepts": _related_concepts[:10], "files": _related_files[:8],
+            "fileCount": len(_related_files),
+        })
+
+    # Layout BC bubbles in a circle
+    _n_bc = len(_ddd_bcs)
+    for _i, _bc in enumerate(_ddd_bcs):
+        _angle = 2 * _math.pi * _i / max(1, _n_bc) - _math.pi / 2
+        _r = 110 if _n_bc > 1 else 0
+        _bc["x"] = 180 + _r * _math.cos(_angle)
+        _bc["y"] = 170 + _r * _math.sin(_angle)
+        _bc["r"] = 30 + _i * 2
+
+    # BC links (cross-BC edges in graph)
+    for _bc_a in _ddd_bcs:
+        for _bc_b in _ddd_bcs:
+            if _bc_a["id"] != _bc_b["id"]:
+                _a_id = _bc_a.get("nodeId")
+                _b_id = _bc_b.get("nodeId")
+                if _a_id and _b_id:
+                    _has_edge = G.has_edge(_a_id, _b_id) or G.has_edge(_b_id, _a_id)
+                    if _has_edge:
+                        _ddd_bc_links.append({"from": _bc_a["id"], "to": _bc_b["id"], "x1": _bc_a["x"], "y1": _bc_a["y"], "x2": _bc_b["x"], "y2": _bc_b["y"], "weight": 1})
+
+    _bc_bubbles_json = _js_safe(_ddd_bcs)
+    _bc_links_json = _js_safe(_ddd_bc_links)
+    _bc_details_json = _js_safe(_ddd_bc_details)
+
+    # Language donut data
+    _lang_donut = [{"label": k, "count": v, "color": COMMUNITY_COLORS[i % len(COMMUNITY_COLORS)]} for i, (k, v) in enumerate(sorted(_lang_counts.items(), key=lambda x: -x[1]))]
+    _lang_donut_json = _js_safe(_lang_donut)
+    _lang_total = sum(_lang_counts.values())
+
+    # Pre-compute language bar HTML (avoids nested f-string dict issues)
+    _lang_bar_html = ""
+    if _lang_total > 0:
+        _lang_sorted = sorted(_lang_counts.items(), key=lambda x: -x[1])
+        _lang_parts = []
+        for _i, (_lang_name, _lang_cnt) in enumerate(_lang_sorted):
+            _pct = max(8, _lang_cnt * 100 // _lang_total)
+            _c = COMMUNITY_COLORS[_i % len(COMMUNITY_COLORS)]
+            _lang_parts.append(f'<div style="width:{_pct}%;background:{_c};display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:600;font-family:var(--gf-font-mono)">{_lang_name[:4]} {_lang_cnt}</div>')
+        _lang_bar_html = "".join(_lang_parts)
+
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1088,48 +1485,96 @@ def to_html(
 <!-- Overview tab -->
 <div id="page-overview" class="tab-page">
   <div class="overview-page">
-    <div class="ovw-max">
-      <div class="ovw-hero">
-        <h1>{title}</h1>
-        <p>{G.number_of_nodes()} nodes · {G.number_of_edges()} edges · {len(communities)} communities</p>
-      </div>
-      <p class="ovw-subtitle">知识图谱总体概览-节点统计、代码分布与社区结构。</p>
-      <div class="stat-grid">
-        <div class="stat-card" style="--stat-color:#4E79A7">
-          <div class="stat-value">{G.number_of_nodes()}</div>
-          <div class="stat-label">节点</div>
-          <div class="stat-trend">across {len(communities)} communities</div>
-        </div>
-        <div class="stat-card" style="--stat-color:#F28E2B">
-          <div class="stat-value">{G.number_of_edges()}</div>
-          <div class="stat-label">关系边</div>
-          <div class="stat-trend">calls · imports · uses · similar</div>
-        </div>
-        <div class="stat-card" style="--stat-color:#59A14F">
-          <div class="stat-value">{len(communities)}</div>
-          <div class="stat-label">社区 / 模块</div>
-          <div class="stat-trend">Leiden clustering</div>
-        </div>
-        <div class="stat-card" style="--stat-color:#B07AA1">
-          <div class="stat-value">{len(review_items)}</div>
-          <div class="stat-label">待审核项</div>
-          <div class="stat-trend">low-confidence items</div>
+    <div class="ovw-max" style="max-width:100%;margin:0">
+
+      <!-- Hero: service name + description -->
+      <div class="ovw-hero-card">
+        <div class="ovw-hero-info">
+          <div class="ovw-hero-lang">{_proj_name}</div>
+          <div class="ovw-hero-meta">{_service_desc}</div>
         </div>
       </div>
-      <div class="chart-grid">
-        <div class="chart-card">
-          <div class="chart-title">代码分布</div>
-          {''.join(f'<div class="bar-row"><span class="bar-label">{t["type"]}</span><div class="bar-track"><div class="bar-fill" style="width:{min(100, t["count"] * 100 // max(1, max(tt["count"] for tt in type_index)))}%;background:#4E79A7"><span class="bar-count">{t["count"]}</span></div></div></div>' for t in type_index)}
+
+      <!-- Two-column: left=project overview (1/2), right=BC spheres (1/2) -->
+      <div class="ovw-two-col">
+        <!-- Left: project overview as table -->
+        <div class="ovw-left" style="flex:1;min-width:0">
+          <div class="ovw-info-card">
+            <div style="font-family:var(--gf-font-heading);font-size:0.875rem;font-weight:600;color:var(--gf-text-primary);margin-bottom:12px">项目总览</div>
+
+            <!-- Info table -->
+            <table style="width:100%;border-collapse:collapse;font-size:0.75rem">
+              <tbody>
+                <tr style="border-bottom:1px solid var(--gf-border-subtle)"><td style="padding:6px 0;color:var(--gf-text-muted);width:40%">主语言</td><td style="padding:6px 0;font-weight:600;color:var(--gf-text-primary);font-family:var(--gf-font-mono)">{_primary_lang}</td></tr>
+                <tr style="border-bottom:1px solid var(--gf-border-subtle)"><td style="padding:6px 0;color:var(--gf-text-muted)">代码行</td><td style="padding:6px 0;font-weight:600;color:var(--gf-text-primary);font-family:var(--gf-font-mono)">{_code_lines:,}</td></tr>
+                <tr style="border-bottom:1px solid var(--gf-border-subtle)"><td style="padding:6px 0;color:var(--gf-text-muted)">源文件</td><td style="padding:6px 0;font-weight:600;color:var(--gf-text-primary);font-family:var(--gf-font-mono)">{_num_files}</td></tr>
+                <tr style="border-bottom:1px solid var(--gf-border-subtle)"><td style="padding:6px 0;color:var(--gf-text-muted)">代码节点</td><td style="padding:6px 0;font-weight:600;color:var(--gf-text-primary);font-family:var(--gf-font-mono)">{sum(1 for n in vis_nodes if n.get("file_type") == "code")}</td></tr>
+                <tr style="border-bottom:1px solid var(--gf-border-subtle)"><td style="padding:6px 0;color:var(--gf-text-muted)">领域概念</td><td style="padding:6px 0;font-weight:600;color:var(--gf-text-primary);font-family:var(--gf-font-mono)">{sum(1 for n in vis_nodes if n.get("file_type") in ("concept", "rationale"))}</td></tr>
+                <tr style="border-bottom:1px solid var(--gf-border-subtle)"><td style="padding:6px 0;color:var(--gf-text-muted)">模块数</td><td style="padding:6px 0;font-weight:600;color:var(--gf-text-primary);font-family:var(--gf-font-mono)">{len(_significant)}</td></tr>
+                <tr><td style="padding:6px 0;color:var(--gf-text-muted)">待审核</td><td style="padding:6px 0;font-weight:600;color:var(--gf-status-ambiguous);font-family:var(--gf-font-mono)">{len(review_items)}</td></tr>
+              </tbody>
+            </table>
+
+            <!-- Language bar -->
+            <div style="margin-top:12px">
+              <div style="font-size:0.6875rem;color:var(--gf-text-muted);margin-bottom:4px">语言分布</div>
+              <div style="display:flex;height:20px;border-radius:4px;overflow:hidden">
+                {_lang_bar_html}
+              </div>
+            </div>
+
+            <!-- Tech stack -->
+            <div style="margin-top:10px">
+              <div style="font-size:0.6875rem;color:var(--gf-text-muted);margin-bottom:4px">技术栈</div>
+              <div style="display:flex;flex-wrap:wrap;gap:4px">
+                {''.join(f'<span class="ovw-tech-tag">{_t}</span>' for _t in _tech_stack) if _tech_stack else '<span style="font-size:0.6875rem;color:var(--gf-text-faint)">未检测到依赖</span>'}
+              </div>
+            </div>
+
+            <!-- Module overview table -->
+            <div style="margin-top:12px">
+              <div style="font-size:0.6875rem;color:var(--gf-text-muted);margin-bottom:4px">模块概览</div>
+              <table style="width:100%;border-collapse:collapse;font-size:0.6875rem">
+                <thead><tr style="border-bottom:1px solid var(--gf-border-medium)">
+                  <th style="text-align:left;padding:4px 0;color:var(--gf-text-muted);font-weight:600">模块</th>
+                  <th style="text-align:right;padding:4px 8px;color:var(--gf-text-muted);font-weight:600">节点</th>
+                  <th style="text-align:right;padding:4px 8px;color:var(--gf-text-muted);font-weight:600">文件</th>
+                  <th style="text-align:left;padding:4px 0;color:var(--gf-text-muted);font-weight:600;width:80px">规模</th>
+                </tr></thead>
+                <tbody>
+                  {''.join(f'''<tr style="border-bottom:1px solid var(--gf-border-subtle);cursor:pointer" onclick="document.querySelector('.mode-tab[data-tab=&quot;review&quot;]').click()">
+                    <td style="padding:4px 0"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:{_c["color"]};margin-right:6px"></span><span style="color:var(--gf-text-primary)">{_c["label"]}</span></td>
+                    <td style="padding:4px 8px;text-align:right;font-family:var(--gf-font-mono);color:var(--gf-text-secondary)">{_c["count"]}</td>
+                    <td style="padding:4px 8px;text-align:right;font-family:var(--gf-font-mono);color:var(--gf-text-muted)">{len(_comm_files.get(_c["cid"], set()))}</td>
+                    <td style="padding:4px 0"><div style="height:4px;background:var(--gf-panel);border-radius:2px;overflow:hidden"><div style="height:100%;width:{min(100, _c["count"] * 100 // max(1, max(cc["count"] for cc in legend_data)))}%;background:{_c["color"]};border-radius:2px"></div></div></td>
+                  </tr>''' for _c in _significant[:10])}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-        <div class="chart-card">
-          <div class="chart-title">社区规模</div>
-          {''.join(f'<div class="bar-row"><span class="bar-label"><span class="legend-dot" style="width:8px;height:8px;background:{c["color"]};display:inline-block"></span> {c["label"]}</span><div class="bar-track"><div class="bar-fill" style="width:{min(100, c["count"] * 100 // max(1, max(cc["count"] for cc in legend_data)))}%;background:{c["color"]}"><span class="bar-count">{c["count"]}</span></div></div></div>' for c in legend_data)}
+
+        <!-- Right: BC 3D spheres + detail panel -->
+        <div class="ovw-right" style="flex:1;min-width:0">
+          <div class="ovw-info-card" style="padding:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+              <span style="font-family:var(--gf-font-heading);font-size:0.875rem;font-weight:600;color:var(--gf-text-primary)">限界上下文 (BC)</span>
+              <span id="bc-detail-hint" style="font-size:0.6875rem;color:var(--gf-text-faint)">点击球体查看详情</span>
+            </div>
+            <div style="display:flex;gap:8px">
+              <svg class="bc-bubble-svg" viewBox="0 0 360 340" id="bc-bubbles" style="flex:1"></svg>
+              <div id="bc-detail-panel" style="width:200px;flex-shrink:0;display:none;background:var(--gf-elevated);border-radius:var(--gf-radius-md);padding:10px;max-height:320px;overflow-y:auto">
+                <div id="bc-detail-name" style="font-family:var(--gf-font-heading);font-size:0.8125rem;font-weight:600;margin-bottom:4px"></div>
+                <div id="bc-detail-stats" style="font-size:0.6875rem;color:var(--gf-text-muted);margin-bottom:8px"></div>
+                <div id="bc-detail-concepts" style="margin-bottom:8px"></div>
+                <div id="bc-detail-files"></div>
+                <button id="bc-detail-jump" style="width:100%;margin-top:8px;padding:5px;border:1px solid var(--gf-border-medium);background:var(--gf-surface);color:var(--gf-accent-bright);border-radius:6px;font-size:0.6875rem;font-weight:600;cursor:pointer">审核模式查看 &rarr;</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="chart-card" style="margin-top:16px">
-        <div class="chart-title">社区 / 模块</div>
-        <div class="comm-grid" id="overview-communities"></div>
-      </div>
+
     </div>
   </div>
 </div>
@@ -1228,7 +1673,7 @@ def to_html(
   <div class="bottom-stats" id="stats-bottom">{stats}</div>
 </footer>
 
-{_html_script(nodes_json, edges_json, legend_json, _js_safe(type_index), _js_safe(tag_index), review_json)}
+{_html_script(nodes_json, edges_json, legend_json, _js_safe(type_index), _js_safe(tag_index), review_json, _bc_bubbles_json, _bc_links_json, _lang_donut_json, _lang_total, _bc_details_json)}
 {_hyperedge_script(hyperedges_json)}
 </body>
 </html>"""

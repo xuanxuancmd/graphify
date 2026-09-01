@@ -2089,6 +2089,9 @@ def dispatch_command(cmd: str) -> None:
             f"  Source:    {d.get('source_file', '')} {d.get('source_location', '')}".rstrip()
         )
         print(f"  Type:      {d.get('file_type', '')}")
+        _desc = str(d.get("desc") or "")
+        if _desc:
+            print(f"  Desc:      {_desc}")
         print(f"  Community: {d.get('community_name') or d.get('community', '')}")
         # Work-memory overlay: a derived experiential hint from `graphify reflect`,
         # merged in display-only from the .graphify_learning.json sidecar next to
@@ -2810,14 +2813,14 @@ def dispatch_command(cmd: str) -> None:
                 _check_single_project(proj_graph, detach=False, full=True)
             sys.exit(0)
 
-        graph_path = _default_graph_path()
+        graph_path = Path(_default_graph_path())
         if not graph_path.exists():
             sys.exit(0)
 
         # SessionStart hook: record this project as active (< 1ms).
         _touch_active_project(Path.cwd())
 
-        _check_single_project(Path(graph_path), no_check=_no_check, detach=True)
+        _check_single_project(graph_path, no_check=_no_check, detach=True)
         sys.exit(0)
 
     elif cmd == "schedule":

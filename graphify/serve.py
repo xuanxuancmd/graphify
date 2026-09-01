@@ -14,7 +14,7 @@ import networkx as nx
 from networkx.readwrite import json_graph
 from graphify.security import sanitize_label, check_graph_file_size_cap
 from graphify.build import edge_data, edge_datas
-from graphify.hybrid_scorer import HybridScorer, _vector_tier_weight, _DEFAULT_VECTOR_SIM_TIERS
+from graphify.hybrid_scorer import HybridScorer, _vector_tier_weight
 from graphify.paths import default_graph_json as _default_graph_json
 
 try:
@@ -713,19 +713,12 @@ def _score_query(
         # fresh entry. This is the AC1 rescue path: "login" -> AuthService
         # when cosine sim says they're semantically related.
         if query_embedding_scores:
-            # Get the tier config from the hybrid scorer if available,
-            # otherwise fall back to defaults.
-            tiers = (
-                hybrid_scorer._vector_sim_tiers
-                if hybrid_scorer is not None
-                else _DEFAULT_VECTOR_SIM_TIERS
-            )
             for nid, vec_sim in query_embedding_scores.items():
                 if vec_sim <= 0:
                     continue
                 # Confidence-gated: tier_weight × sim (see
                 # docs/retrieval-overall-design/vector-tier-redesign-spec.md)
-                tier_weight = _vector_tier_weight(vec_sim, tiers)
+                tier_weight = _vector_tier_weight(vec_sim)
                 if tier_weight <= 0:
                     continue  # T5 noise: sim below lowest threshold → skip
                 bonus = tier_weight * vec_sim
@@ -1154,6 +1147,11 @@ def _subgraph_to_text(G: nx.Graph, nodes: set[str], edges: list[tuple], token_bu
             f"community={sanitize_label(str(d.get('community_name') or d.get('community', '')))}"
             f"{learning_suffix}]"
         )
+        # Append desc (if present) so query returns the human-readable
+        # description for doc-anchor / rest_endpoint / rationale nodes.
+        _desc = str(d.get("desc") or "")
+        if _desc:
+            line += f" desc={sanitize_label(_desc)}"
         lines.append(line)
     for u, v in edges:
         if u in nodes and v in nodes:
@@ -1969,7 +1967,7 @@ def _build_server(graph_path: str):
             return f"No node matching '{label}' found."
         nid, d = matches[0]
         # Sanitise every LLM-derived field before concatenation (F-010).
-        return "\n".join([
+        lines = [
             f"Node: {sanitize_label(d.get('label', nid))}",
             f"  ID: {sanitize_label(nid)}",
             f"  Source: {sanitize_label(str(d.get('source_file', '')))} {sanitize_label(str(d.get('source_location', '')))}",
@@ -1982,7 +1980,13 @@ def _build_server(graph_path: str):
             f"  Type: {sanitize_label(str(d.get('file_type', '')))}",
             f"  Community: {sanitize_label(str(d.get('community_name') or d.get('community', '')))}",
             f"  Degree: {G.degree(nid)}",
-        ])
+        ]
+        # Append desc (if present) so explain returns the human-readable
+        # description for doc-anchor / rest_endpoint / rationale nodes.
+        _desc = str(d.get("desc") or "")
+        if _desc:
+            lines.append(f"  Desc: {sanitize_label(_desc)}")
+        return "\n".join(lines)
 
     def _tool_get_neighbors(arguments: dict) -> str:
         label = arguments["label"].lower()

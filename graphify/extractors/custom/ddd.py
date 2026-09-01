@@ -12,7 +12,7 @@ for .md files. Returns None for non-whitelist files (fall back to default).
 
 Node modeling: all fields are generic (no ddd_* prefixed fields). DDD type
 info is encoded into the generic 'tags' list field as:
-    ["ddd", "<ddd_type>", "<doc_category>"]
+    ["ddd", "<ddd_type>"]
 so that graphify's string retrieval can match DDD types via tags.
 """
 from __future__ import annotations
@@ -483,23 +483,14 @@ def _infer_ddd_type(ddd_type_raw: str) -> str:
     return "concept"
 
 
-def _ddd_category_from_path(rel_path: str) -> str:
-    """Infer doc_category from file path keywords."""
-    rl = rel_path.lower()
-    for kw in DDD_DOC_KEYWORDS:
-        if kw in rl:
-            return kw
-    return "unknown"
-
-
 def _make_node(
     *, doc_path: str, concept_id: str, name: str,
-    ddd_type: str, doc_category: str, desc: str = "", line_num: int = 0,
+    ddd_type: str, desc: str = "", line_num: int = 0,
 ) -> dict:
     """Build a doc-anchor node with all-generic fields.
 
     DDD type info is encoded into the generic 'tags' list field:
-        ["ddd", "<ddd_type>", "<doc_category>"]
+        ["ddd", "<ddd_type>"]
     so no ddd_* prefixed fields are needed on the node.
     """
     return {
@@ -512,7 +503,7 @@ def _make_node(
         "desc": desc,
         "concept_id": concept_id,
         # Generic tags list — DDD type info encoded here for retrieval
-        "tags": ["ddd", ddd_type, doc_category],
+        "tags": ["ddd", ddd_type],
     }
 
 
@@ -546,7 +537,6 @@ def _parse_tagged_file(
     doc_path = abs_path.resolve().relative_to(project_root.resolve()).as_posix()
     content = abs_path.read_text(encoding="utf-8", errors="replace")
     scanned = _scan_lines_with_fence(content)
-    doc_category = _ddd_category_from_path(doc_path)
 
     nodes: list[dict] = []
     pending_edges: list[dict] = []
@@ -603,7 +593,7 @@ def _parse_tagged_file(
 
             node = _make_node(
                 doc_path=doc_path, concept_id=concept_id, name=ddd_value,
-                ddd_type=ddd_type, doc_category=doc_category,
+                ddd_type=ddd_type,
                 desc=desc_value, line_num=scanned[block_start]["lineNum"],
             )
             nodes.append(node)
@@ -738,7 +728,7 @@ def _parse_context_map(abs_path: Path, project_root: Path) -> dict:
                     continue
                 nodes.append(_make_node(
                     doc_path=doc_path, concept_id=bc_id, name=bc_name,
-                    ddd_type="bounded_context", doc_category="context-map",
+                    ddd_type="bounded_context",
                     desc=(row[desc_idx] if desc_idx >= 0 and desc_idx < len(row) else "").strip(),
                     line_num=scanned[block_start]["lineNum"],
                 ))
@@ -776,8 +766,8 @@ def _parse_context_map(abs_path: Path, project_root: Path) -> dict:
                     continue
                 nodes.append(_make_node(
                     doc_path=doc_path, concept_id=term, name=term,
-                    ddd_type="glossary_term", doc_category="context-map",
-                    desc=(row[def_idx] if def_idx < len(row) else "").strip(),
+                    ddd_type="glossary_term",
+                    desc=(row[def_idx] if def_idx >= 0 and def_idx < len(row) else "").strip(),
                     line_num=scanned[block_start]["lineNum"],
                 ))
             continue
@@ -817,7 +807,7 @@ def _parse_technical_constraints(
             tc_title = tc_match.group(2).strip()
             current_node = _make_node(
                 doc_path=doc_path, concept_id=tc_id, name=tc_title,
-                ddd_type="tech_constraint", doc_category="technical-constraints",
+                ddd_type="tech_constraint",
                 desc="", line_num=i + 1,
             )
             nodes.append(current_node)

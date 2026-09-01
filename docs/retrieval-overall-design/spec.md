@@ -102,12 +102,22 @@ graphify 的查询检索分为两个阶段：**召回**（从全图 N 个节点�
 
 | # | 通路 | 常量 | 量级 | 作用 |
 |---|---|---|---|---|
-| 6 | VECTOR | 5.0 × cosine_sim | 0~5 | 语义救援：零词法重叠也能召回 |
+| 6 | VECTOR | `tier_weight(sim) × sim`（confidence-gated 分层） | 0~80 | 语义救援：零词法重叠也能召回 |
 | 5' | FUZZY rescue | 同 FUZZY（JaroWinkler × bonus × IDF） | ~0-1 | 拼写容错救援：trigram 未放行的节点 |
+
+**VECTOR 分层权重**（5 级 confidence-gated，详见 `vector-tier-redesign-spec.md`）：
+
+| Tier | sim 范围 | tier_weight | 最大 bonus | 对应词法层 |
+|---|---|---|---|---|
+| T1 | sim ≥ 0.85 | 80 | 80 | PREFIX 级（高置信语义匹配） |
+| T2 | 0.70 ≤ sim < 0.85 | 20 | 17 | SUBSTRING~PREFIX 之间 |
+| T3 | 0.55 ≤ sim < 0.70 | 5 | 3.5 | SUBSTRING 级 |
+| T4 | 0.40 ≤ sim < 0.55 | 1 | 0.55 | FUZZY/SOURCE 级 |
+| T5 | sim < 0.40 | 0 | 0 | 噪声，丢弃 |
 
 **设计要点**：
 
-- **VECTOR 是兜底**：只在词法全零时起决定作用，否则只是微调（5.0 vs 100/1000）。`_VECTOR_SIMILARITY_BONUS = 5.0` 介于 SUBSTRING(1) 和 PREFIX(100) 之间——足以把零分节点拉进候选，但不会压过词法命中的节点
+- **VECTOR 是分层兜底**：高置信（sim≥0.85）拿 PREFIX 级权重（80），能在语义查询时真正主导排序；低置信（sim<0.40）直接丢弃。阈值与权重均硬编码，不暴露为配置项
 - **FUZZY rescue**：与主循环的 FUZZY 同算法，但作用对象不同——主循环 FUZZY 作用于 trigram 放行的节点，rescue FUZZY 作用于 trigram 排除的节点。两者互补，覆盖所有节点的拼写容错
 - **VECTOR 救援的触发条件**：`semantic != false` 且 embedding sidecar 存在且 query embed 成功。无 sidecar 时降级为纯词法，不报错
 
@@ -123,7 +133,7 @@ total = EXACT × IDF × coverage²      (词法精确层)
       + SUBSTRING × IDF              (子串层，不乘 coverage)
       + SOURCE × IDF                 (源文件层，不乘 coverage)
       + FUZZY × IDF                  (模糊层)
-      + VECTOR_SIMILARITY_BONUS × cosine_sim  (向量层)
+      + tier_weight(sim) × sim       (向量层，confidence-gated 分层)
 ```
 
 ### 4.1 为什么是加法而非替换
@@ -136,8 +146,8 @@ total = EXACT × IDF × coverage²      (词法精确层)
 
 **加法的设计效果**：
 
-- 精确查询 `"UserService"` → EXACT × 1000 主导，向量分 5.0 × 0.9 ≈ 4.5 可忽略
-- 模糊查询 `"authentication"` → 词法 0，向量分 5.0 × 0.85 = 4.25 > 0，节点进入候选
+- 精确查询 `"UserService"` → EXACT × 1000 主导，向量分 T1(80) × 0.9 = 72 可忽略（相对 EXACT）
+- 模糊查询 `"authentication"` → 词法 0，向量分 T1(80) × 0.85 = 68 > 0，节点进入候选并主导排序
 - 拼写错误 `"UserServise"` → 词法 0，fuzzy 分 2.0 × 0.93 = 1.86 > 0，节点进入候选
 
 ### 4.2 EXACT/PREFIX 乘 coverage²，SUBSTRING/SOURCE 不乘
@@ -154,18 +164,20 @@ total = EXACT × IDF × coverage²      (词法精确层)
 ```
 EXACT    ~1000   ┐
 PREFIX   ~100    ┤  词法主力（主循环）
+VECTOR_T1 0~80   ┤  高置信语义（sim≥0.85，PREFIX 级）
 SUBSTRING ~1     ┤
+VECTOR_T2 0~17   ┤  中等语义（sim 0.70-0.85）
+FUZZY    ~0-1    ┤
+VECTOR_T3 0~3.5  ┤  弱语义（sim 0.55-0.70，SUBSTRING 级）
 SOURCE   ~0.5    ┤
-FUZZY    ~0-1    ┘
-                 ┼ ─ ─ ─ ─ 量级分界
-VECTOR   0~5     ┐  救援（后循环）
-FUZZY rescue ~0-1┘
+VECTOR_T4 0~0.55 ┤  边缘（sim 0.40-0.55，FUZZY 级）
+VECTOR_T5 = 0    ┘  噪声（sim < 0.40，丢弃）
 ```
 
 **量级设计意图**：
 
 1. **词法是主力**：EXACT(1000) >> PREFIX(100) >> SUBSTRING(1)，层次清晰。词法命中的节点天然排在前面
-2. **向量是兜底**：VECTOR 最大 5.0，介于 SUBSTRING(1) 和 PREFIX(100) 之间。只在词法全零时起决定作用，否则只是微调（5.0 vs 100/1000）
+2. **向量是分层兜底**：高置信（T1, max 80）能在语义查询时真正主导排序，低置信（T4/T5）几乎不贡献。T1(80) < PREFIX(100)，精确查询仍由词法主导
 3. **FUZZY 是容错**：处理拼写错误，量级 ~0-1，与 SUBSTRING 同级，作为"词法全未命中时的最后补救"
 
 ---
@@ -184,10 +196,10 @@ FUZZY rescue ~0-1┘
 **打分分解**：
 
 - **词法**：通过 bigram 分词 `"分域"` 命中 SUBSTRING → 1.0 × IDF=6.48 = 6.48
-- **向量**：通过 cosine_sim=0.6635 → 5.0 × 0.6635 = 3.32
+- **向量**：通过 cosine_sim=0.6635 → T3(5) × 0.6635 = 3.32
 - **结论**：向量在词法为零时是唯一通路，但 3.32 < 6.48，排名仍低于词法命中的节点
 
-> 这个例子完美展示了设计意图：词法命中的节点（Domain）排名高于向量救援的节点（EventDomainMapping），即使后者语义相关。词法是主力，向量是兜底。
+> 这个例子展示了设计意图：词法命中的节点（Domain）排名高于向量救援的节点（EventDomainMapping）。词法是主力，向量是分层兜底——sim=0.66 落在 T3（SUBSTRING 级），不足以压过词法命中。但如果 sim=0.90（T1, PREFIX 级），bonus=80×0.90=72 远 > 6.48，高置信语义匹配能正确主导排序。
 
 ---
 
@@ -196,7 +208,7 @@ FUZZY rescue ~0-1┘
 | # | 意图 | 实现方式 |
 |---|---|---|
 | 1 | **词法是主力** | EXACT(1000) >> PREFIX(100) >> SUBSTRING(1)，层次清晰，词法命中的节点天然排前 |
-| 2 | **向量是兜底** | `_VECTOR_SIMILARITY_BONUS=5.0` 只在词法全零时起决定作用，否则只是微调（5.0 vs 100/1000） |
+| 2 | **向量是分层兜底** | confidence-gated 5 级分层：高置信（sim≥0.85）拿 PREFIX 级权重（80），能在语义查询时主导排序；低置信（sim<0.40）丢弃。T1(80) < PREFIX(100)，精确查询仍由词法主导 |
 | 3 | **FUZZY 是容错** | 处理拼写错误（如 `"UserServise"` → `"UserService"`），量级 ~0-1，不干扰精确匹配 |
 | 4 | **coverage 平方** | `coverage = matched_terms / total_terms`，防止单个高频词精确匹配压过多词部分命中 |
 | 5 | **trigram 预筛选 + 救援** | 主循环只评分可能匹配的节点（性能优化），后循环用向量/模糊把被排除的语义相关节点捞回来 |
@@ -210,14 +222,14 @@ FUZZY rescue ~0-1┘
 | 关注点 | 本 spec | hybrid-semantic-search/spec.md |
 |---|---|---|
 | 双循环架构（主循环 + 救援循环） | ✅ 核心内容 | ❌ 不涉及 |
-| 7 通路量级设计 | ✅ 完整表格 | ✅ 部分提及（VECTOR=5.0, FUZZY=2.0） |
+| 7 通路量级设计 | ✅ 完整表格 | ✅ 部分提及（VECTOR 分层, FUZZY=2.0） |
 | 叠加公式 + coverage² | ✅ 核心内容 | ✅ 公式一致 |
 | trigram 预筛选机制 | ✅ 架构层面 | ❌ 不涉及（已是既有机制） |
 | embedding 生成与存储 | ❌ 不涉及 | ✅ 核心内容（build-time sidecar） |
 | 节点 desc 字段提取 | ❌ 不涉及 | ✅ 核心内容（docstring/首段） |
 | 接口变更（CLI/MCP） | ❌ 不涉及 | ✅ 核心内容（semantic/top_k/top_n 参数） |
 
-**两者关系**：本 spec 是架构层，hybrid-semantic-search spec 是实现层。实施时以 hybrid-semantic-search 的 plan.md 为准（逐步文件级改动清单），本 spec 提供整体设计意图和量级依据。
+**两者关系**：本 spec 是架构层，hybrid-semantic-search spec 是实现层。向量分层的详细设计见 `docs/retrieval-overall-design/vector-tier-redesign-spec.md`。
 
 ---
 
@@ -239,7 +251,7 @@ FUZZY rescue ~0-1┘
 | AC2 | 救援循环对 trigram 排除的节点跑 VECTOR + FUZZY rescue 打分 | 代码审查：后循环作用于 trigram 排除集 |
 | AC3 | 所有通路是加法叠加，最终得分 = Σ(每路贡献) | 代码审查：公式为加法，无替换/取max逻辑 |
 | AC4 | EXACT/PREFIX 乘 coverage²，SUBSTRING/SOURCE 不乘 coverage | 代码审查：coverage² 只作用于 EXACT/PREFIX |
-| AC5 | 量级层级 EXACT(1000) > PREFIX(100) > VECTOR(5) > SUBSTRING(1) > SOURCE(0.5) | 代码审查：常量值符合层级 |
+| AC5 | 量级层级 EXACT(1000) > PREFIX(100) > VECTOR_T1(80) > SUBSTRING(1) > SOURCE(0.5) | 代码审查：常量值符合层级 |
 | AC6 | VECTOR 救援只在 `semantic != false` 且 embedding sidecar 存在时触发 | `graphify query "login" --no-semantic` 不走向量层 |
 | AC7 | 词法命中的节点排名高于向量救援的节点（即使后者语义相关） | 用 Q1 示例验证：Domain(6.48) > EventDomainMapping(3.32) |
 | AC8 | FUZZY 仅当词法 3 层全未命中时触发 | `graphify query "UserService"` 的 FUZZY 分为 0（EXACT 已命中） |
@@ -263,7 +275,7 @@ FUZZY rescue ~0-1┘
 |---|---|
 | trigram 预筛选误杀语义相关节点 | 救援循环用 VECTOR + FUZZY rescue 把排除的节点捞回来 |
 | 救援循环增加全量节点遍历开销 | VECTOR 层用 numpy 矩阵运算（sub-ms for 10k 节点）；FUZZY rescue 仅对 trigram 排除集做，且 rapidfuzz 是 C 加速 |
-| 量级调参困难（VECTOR bonus vs 词法 bonus） | `_VECTOR_SIMILARITY_BONUS=5.0` 介于 SUBSTRING(1) 和 PREFIX(100) 之间，保证精确查询词法主导；用 benchmark fixture 调参 |
+| 量级调参困难（VECTOR bonus vs 词法 bonus） | confidence-gated 分层：T1(80) < PREFIX(100) < EXACT(1000)，保证精确查询词法主导；用 benchmark fixture 调参 |
 | 混合模式延迟（query embedding 需 API 调用） | LRU 缓存 query embedding（同 query 不重复 embed）；可配置本地 embedding 后端（sentence-transformers / ollama）避免远程调用 |
 | Anthropic 无 embedding API（默认 backend 不支持） | `GRAPHIFY_EMBED_BACKEND` 显式指定 OpenAI/Ollama；无配置时降级为纯词法（救援循环跳过 VECTOR，仅保留 FUZZY rescue） |
 
@@ -272,7 +284,8 @@ FUZZY rescue ~0-1┘
 ## 13. 参考文献
 
 - [Issue #2 评论](https://github.com/xuanxuancmd/graphify/issues/2#issuecomment-5488722635) — 双循环架构与 7 通路打分设计的原始描述
+- `docs/retrieval-overall-design/vector-tier-redesign-spec.md` — 向量分层权重的详细设计（5 级 confidence-gated）
 - `docs/hybrid-semantic-search/spec.md` — 向量层 + fuzzy 层的详细设计与 embedding 存储
 - `docs/hybrid-semantic-search/plan.md` — 逐步文件级实施清单（desc 提取、embeddings.py、fuzzy.py、hybrid_scorer.py、serve.py 改动）
-- `serve.py:462-629` — `_score_query` 实现（既有 3 层词法 + 新增加法 tier）
+- `serve.py:462-629` — `_score_query` 实现（既有 3 层词法 + 分层向量 tier）
 - `serve.py:124` — `_trigram_index` 预筛选机制
