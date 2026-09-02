@@ -14,19 +14,6 @@ from graphify.security import sanitize_label
 MAX_NODES_FOR_VIZ = 5_000
 _HTML_STALE_MARKER = ".graph.html.stale"
 
-# Tag normalization — merge duplicate tag variants produced by different
-# DDD fixture sets (e.g. "domain-events" vs "domain_event") into one
-# canonical form for display and filtering.
-_TAG_NORMALIZE: dict[str, str] = {
-    "domain-events": "domain_event",
-    "invariants": "invariant",
-    "technical-constraints": "tech_constraint",
-    "contracts": "contract",
-}
-
-def _normalize_tag(t: str) -> str:
-    return _TAG_NORMALIZE.get(t, t)
-
 def _viz_node_limit() -> int:
     """Return the effective viz node limit, honoring GRAPHIFY_VIZ_NODE_LIMIT env var.
 
@@ -287,6 +274,17 @@ def _html_styles() -> str:
   ::-webkit-scrollbar-thumb { background:rgba(78,121,167,0.15); border-radius:6px; }
   ::-webkit-scrollbar-thumb:hover { background:rgba(78,121,167,0.28); }
   :focus-visible { outline:2px solid var(--gf-accent); outline-offset:2px; }
+
+  /* All-props modal */
+  .props-modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); z-index:9999; display:flex; align-items:center; justify-content:center; }
+  .props-modal-content { background:var(--gf-surface); border-radius:var(--gf-radius-lg); box-shadow:var(--gf-shadow-lg); max-width:600px; width:90%; max-height:80vh; overflow:hidden; display:flex; flex-direction:column; }
+  .props-modal-header { padding:16px 20px; border-bottom:1px solid var(--gf-border-subtle); display:flex; align-items:center; }
+  .props-modal-title { font-family:var(--gf-font-heading); font-size:0.9375rem; font-weight:600; color:var(--gf-text-primary); flex:1; }
+  .props-modal-body { padding:16px 20px; overflow-y:auto; flex:1; }
+  .props-modal-row { padding:6px 0; border-bottom:1px solid var(--gf-border-subtle); }
+  .props-modal-row:last-child { border-bottom:none; }
+  .props-modal-key { font-size:0.6875rem; color:var(--gf-text-muted); text-transform:uppercase; letter-spacing:0.04em; font-weight:600; margin-bottom:2px; }
+  .props-modal-val { font-size:0.75rem; color:var(--gf-text-secondary); font-family:var(--gf-font-mono); word-break:break-all; white-space:pre-wrap; }
 </style>"""
 
 def _hyperedge_script(hyperedges_json: str) -> str:
@@ -389,6 +387,7 @@ const nodesDS = new vis.DataSet(RAW_NODES.map(n => ({{
   _community: n.community, _community_name: n.community_name,
   _source_file: n.source_file, _file_type: n.file_type, _degree: n.degree,
   _tags: n.tags || [], _node_kind: n.node_kind || '',
+  _raw: n,  // keep full raw node data for detail display
 }})));
 
 const edgesDS = new vis.DataSet(RAW_EDGES.map((e, i) => ({{
@@ -494,7 +493,7 @@ function showInfo(nodeId) {{
   }}
 
   const detailBody = document.getElementById('detail-body');
-  const detailHeader = document.getElementById('detail-header');
+  const detailHeader = document.getElementById('detail-header-content');
   const editSection = document.getElementById('edit-section');
 
   detailHeader.innerHTML = `
@@ -502,10 +501,12 @@ function showInfo(nodeId) {{
     <div class="detail-meta">${{confBadge}} ${{kindHtml}} <span>${{esc(n._file_type || 'unknown')}}</span></div>
   `;
   detailBody.innerHTML = `
+    <div class="detail-field"><span class="detail-field-label">来源文件</span><span class="detail-field-value">${{esc(n._source_file || '-')}}</span></div>
+    ${{n._raw && n._raw.desc ? `<div class="detail-field" style="flex-direction:column;align-items:flex-start"><span class="detail-field-label" style="margin-bottom:4px">描述</span><span class="detail-field-value" style="font-family:var(--gf-font-body);white-space:pre-wrap;word-break:break-all;font-size:0.6875rem">${{esc((n._raw.desc || '').slice(0,300))}}${{(n._raw.desc || '').length > 300 ? '...' : ''}}</span></div>` : ''}}
     <div class="detail-field"><span class="detail-field-label">社区</span><span class="detail-field-value">${{esc(n._community_name)}}</span></div>
     <div class="detail-field"><span class="detail-field-label">连接数</span><span class="detail-field-value">${{n._degree}}</span></div>
-    <div class="detail-field"><span class="detail-field-label">来源文件</span><span class="detail-field-value">${{esc(n._source_file || '-')}}</span></div>
     ${{tagsHtml}}
+    <div style="padding:8px 0"><button class="sidebar-toggle" style="width:auto;padding:4px 10px;border:1px solid var(--gf-border-medium);background:var(--gf-surface);font-size:0.6875rem;font-weight:600;color:var(--gf-text-muted);border-radius:6px" onclick="showAllProps('${{esc(nodeId)}}')">全部属性</button></div>
     ${{neighborIds.length ? `<div class="detail-field" style="border-bottom:none;padding-top:8px"><span class="detail-field-label">相邻节点 (${{neighborIds.length}})</span></div><div id="neighbors-list">${{neighborItems}}</div>` : ''}}
   `;
 
@@ -526,6 +527,7 @@ function focusNode(nodeId) {{
   network.focus(nodeId, {{ scale: 1.4, animation: true }});
   network.selectNodes([nodeId]);
   showInfo(nodeId);
+  _setCurrentNode(nodeId);
   // Also select in node list
   document.querySelectorAll('.node-item').forEach(el => el.classList.remove('selected'));
   const listEl = document.querySelector('.node-item[data-nid="' + nodeId + '"]');
@@ -533,6 +535,51 @@ function focusNode(nodeId) {{
     listEl.classList.add('selected');
     listEl.scrollIntoView({{ block: 'nearest' }});
   }}
+  // Update nav buttons with current node context
+  const n = nodesDS.get(nodeId);
+  document.querySelectorAll('.detail-nav-btn').forEach(btn => {{
+    btn.dataset.nodeId = nodeId;
+    btn.dataset.sourceFile = n ? (n._source_file || n._raw?.source_file || '') : '';
+  }});
+}}
+
+// Show all properties in a modal
+function showAllProps(nodeId) {{
+  const n = nodesDS.get(nodeId);
+  if (!n) return;
+  const raw = n._raw || {{}};
+  // Remove existing modal
+  const existing = document.querySelector('.props-modal');
+  if (existing) existing.remove();
+  // Build modal
+  const modal = document.createElement('div');
+  modal.className = 'props-modal';
+  modal.addEventListener('click', (e) => {{ if (e.target === modal) modal.remove(); }});
+  let rowsHtml = '';
+  // Always show label first
+  rowsHtml += '<div class="props-modal-row"><div class="props-modal-key">label</div><div class="props-modal-val">' + esc(raw.label || n.label || '') + '</div></div>';
+  // Then all other fields (sorted, skip vis-internal)
+  const skip = new Set(['id','label','color','size','font','title','community','community_name','degree']);
+  const keys = Object.keys(raw).filter(k => !skip.has(k)).sort();
+  for (const key of keys) {{
+    let val = raw[key];
+    if (val === null || val === undefined || val === '') continue;
+    if (Array.isArray(val)) val = val.join(', ');
+    else if (typeof val === 'object') val = JSON.stringify(val);
+    rowsHtml += '<div class="props-modal-row"><div class="props-modal-key">' + esc(key) + '</div><div class="props-modal-val">' + esc(String(val)) + '</div></div>';
+  }}
+  modal.innerHTML = 
+    '<div class="props-modal-content">' +
+      '<div class="props-modal-header">' +
+        '<span class="props-modal-title">' + esc(raw.label || n.label || nodeId) + '</span>' +
+        '<button class="sidebar-toggle" id="props-modal-close" title="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>' +
+      '</div>' +
+      '<div class="props-modal-body">' + rowsHtml + '</div>' +
+    '</div>';
+  document.body.appendChild(modal);
+  // Attach close handler after DOM insertion
+  const closeBtn = modal.querySelector('#props-modal-close');
+  if (closeBtn) closeBtn.addEventListener('click', () => modal.remove());
 }}
 
 // Neighbor links use a data attribute + one delegated listener rather than an
@@ -599,19 +646,21 @@ document.addEventListener('click', e => {{
 
 // == Unified filter system ==
 const hiddenCommunities = new Set();
-const TYPE_ACTIVE = {{}};
-const TAG_ACTIVE = {{}};
+const TYPE_ACTIVE = {{}};   // file_type -> bool (toggle off = hide)
+const TAG_SELECTED = new Set();  // selected tags (empty = show all)
 let tagOnlyTagged = false;
 
 TYPE_INDEX.forEach(t => {{ TYPE_ACTIVE[t.type] = true; }});
-TAG_INDEX.forEach(t => {{ TAG_ACTIVE[t.tag] = true; }});
 
 function isNodeHidden(n) {{
   if (!TYPE_ACTIVE[n.file_type]) return true;
   if (hiddenCommunities.has(n.community)) return true;
   const tags = n.tags || [];
-  if (tagOnlyTagged && tags.length === 0) return true;
-  if (tags.length > 0 && tags.some(t => !TAG_ACTIVE[t])) return true;
+  // Tag filter: if no tags selected, show all. If tags selected, show nodes that have at least one selected tag (OR logic).
+  if (TAG_SELECTED.size > 0) {{
+    if (tags.length === 0) return true;  // hide tagless nodes when filtering by tag
+    if (!tags.some(t => TAG_SELECTED.has(t))) return true;
+  }}
   return false;
 }}
 
@@ -655,11 +704,16 @@ function renderFilterChips() {{
     }} else {{
       TAG_INDEX.forEach(t => {{
         const chip = document.createElement('span');
-        chip.className = 'filter-chip active';
+        chip.className = 'filter-chip';
         chip.innerHTML = `${{esc(t.tag)}} <span class="filter-chip-count">${{t.count}}</span>`;
         chip.addEventListener('click', () => {{
-          TAG_ACTIVE[t.tag] = !TAG_ACTIVE[t.tag];
-          chip.classList.toggle('active', TAG_ACTIVE[t.tag]);
+          if (TAG_SELECTED.has(t.tag)) {{
+            TAG_SELECTED.delete(t.tag);
+            chip.classList.remove('active');
+          }} else {{
+            TAG_SELECTED.add(t.tag);
+            chip.classList.add('active');
+          }}
           applyFilters();
         }});
         tagContainer.appendChild(chip);
@@ -840,7 +894,7 @@ function showReviewEdit(item) {{
   if (!editSection) return;
   editSection.style.display = 'block';
   // Update detail header to show review item title
-  const detailHeader = document.getElementById('detail-header');
+  const detailHeader = document.getElementById('detail-header-content');
   if (detailHeader) {{
     const type = reviewTypeOf(item);
     const meta = REVIEW_META[type] || REVIEW_META.island;
@@ -998,6 +1052,78 @@ document.addEventListener('click', e => {{
     }};
   }}
 }})();
+
+// Nav button handlers
+let _currentNodeId = null;
+function _setCurrentNode(nodeId) {{ _currentNodeId = nodeId; }}
+function navSourceFile() {{
+  if (!_currentNodeId) return;
+  const n = nodesDS.get(_currentNodeId);
+  if (!n) return;
+  const sf = n._source_file || (n._raw && n._raw.source_file) || '';
+  if (sf) {{
+    // Open source file relative to .graph/ parent
+    window.open('../../' + sf, '_blank');
+  }}
+}}
+function navPath() {{
+  if (!_currentNodeId) return;
+  const n = nodesDS.get(_currentNodeId);
+  if (!n) return;
+  // Find shortest path from this node to nearest god node
+  const godIds = RAW_NODES.filter(rn => rn.degree > 10).map(rn => rn.id);
+  if (!godIds.length) {{ alert('未找到高连接数节点'); return; }}
+  let bestPath = null;
+  for (const gid of godIds) {{
+    if (gid === _currentNodeId) continue;
+    try {{
+      const path = network.getShortestPath(_currentNodeId, gid);
+      if (path && path.length > 1 && (!bestPath || path.length < bestPath.length)) {{
+        bestPath = path;
+      }}
+    }} catch(e) {{}}
+  }}
+  if (bestPath && bestPath.length > 1) {{
+    network.selectNodes(bestPath);
+    network.fit({{ nodes: bestPath, animation: true }});
+    // Show path in detail
+    const pathLabels = bestPath.map(id => {{
+      const node = nodesDS.get(id);
+      return node ? node.label : id;
+    }});
+    const detailBody = document.getElementById('detail-body');
+    if (detailBody) {{
+      detailBody.innerHTML = '<div class="detail-field" style="flex-direction:column;align-items:flex-start"><span class="detail-field-label" style="margin-bottom:4px">最短路径</span><span class="detail-field-value" style="font-family:var(--gf-font-mono);white-space:pre-wrap">' + esc(pathLabels.join(' -> ')) + '</span></div>';
+    }}
+  }} else {{
+    alert('未找到路径');
+  }}
+}}
+function navExplain() {{
+  if (!_currentNodeId) return;
+  const n = nodesDS.get(_currentNodeId);
+  if (!n) return;
+  // Show node info with all neighbors expanded
+  const neighborIds = network.getConnectedNodes(_currentNodeId);
+  const neighborInfo = neighborIds.map(nid => {{
+    const nb = nodesDS.get(nid);
+    const edges = network.getConnectedEdges(nid);
+    return {{ id: nid, label: nb ? nb.label : nid, edgeCount: edges.length }};
+  }}).sort((a, b) => b.edgeCount - a.edgeCount);
+  const detailBody = document.getElementById('detail-body');
+  if (detailBody) {{
+    let html = '<div class="detail-field"><span class="detail-field-label">节点</span><span class="detail-field-value">' + esc(n.label) + '</span></div>';
+    html += '<div class="detail-field"><span class="detail-field-label">连接数</span><span class="detail-field-value">' + n._degree + '</span></div>';
+    html += '<div class="detail-field"><span class="detail-field-label">来源</span><span class="detail-field-value">' + esc(n._source_file || '-') + '</span></div>';
+    if (neighborInfo.length) {{
+      html += '<div class="detail-field" style="border-bottom:none;padding-top:8px"><span class="detail-field-label">相邻节点 (' + neighborInfo.length + ')</span></div>';
+      neighborInfo.forEach(info => {{
+        html += '<div class="detail-field"><span class="detail-field-label">' + esc(info.label) + '</span><span class="detail-field-value">' + info.edgeCount + ' 边</span></div>';
+      }});
+    }}
+    detailBody.innerHTML = html;
+  }}
+}}
 
 // == Sidebar/detail collapse toggles ==
 function toggleSidebar(tab) {{
@@ -1225,7 +1351,7 @@ def to_html(
             "community_name": sanitize_label((community_labels or {}).get(cid, f"Community {cid}")),
             "source_file": sanitize_label(str(data.get("source_file") or "")),
             "file_type": data.get("file_type", ""),
-            "tags": [_normalize_tag(t) for t in (data.get("tags") or [])],
+            "tags": (data.get("tags") or []),
             "node_kind": data.get("node_kind", ""),
             "degree": deg,
         }
@@ -1750,7 +1876,7 @@ def to_html(
     <!-- Right: detail + edit -->
     <aside class="detail-panel" id="review-detail">
       <div class="detail-header" id="detail-header">
-        <div style="flex:1">
+        <div style="flex:1" id="detail-header-content">
           <div class="detail-name">点击节点查看详情</div>
           <div class="detail-meta"></div>
         </div>
@@ -1762,9 +1888,9 @@ def to_html(
         <div style="color:var(--gf-text-muted);font-size:0.75rem;text-align:center;padding:20px 0">选择左侧列表中的节点或点击图谱中的节点</div>
       </div>
       <div class="detail-nav">
-        <button class="detail-nav-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>源文件 ↗</button>
-        <button class="detail-nav-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>路径</button>
-        <button class="detail-nav-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>解释</button>
+        <button class="detail-nav-btn" onclick="navSourceFile()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>源文件 ↗</button>
+        <button class="detail-nav-btn" onclick="navPath()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>路径</button>
+        <button class="detail-nav-btn" onclick="navExplain()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>解释</button>
       </div>
       <div class="edit-section" id="edit-section" style="display:none">
         <div class="edit-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>审核修正</div>
@@ -1824,9 +1950,9 @@ def to_html(
         <div style="color:var(--gf-text-muted);font-size:0.75rem;text-align:center;padding:20px 0">选择图谱中的节点查看信息</div>
       </div>
       <div class="detail-nav">
-        <button class="detail-nav-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>源文件 ↗</button>
-        <button class="detail-nav-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>路径</button>
-        <button class="detail-nav-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>解释</button>
+        <button class="detail-nav-btn" onclick="navSourceFile()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>源文件 ↗</button>
+        <button class="detail-nav-btn" onclick="navPath()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>路径</button>
+        <button class="detail-nav-btn" onclick="navExplain()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>解释</button>
       </div>
     </aside>
     <!-- Right rail -->
