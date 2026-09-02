@@ -7328,7 +7328,10 @@ def extract(
         # removes these from the LLM Tier 2 (semantic) extraction batch.
         # Empty when no external extractor ran (nodes is None) or none
         # suppressed LLM; callers that ignore this key are unaffected.
-        "suppress_llm_files": suppress_llm_files,
+        # Returned as a list (not the internal set) so callers that
+        # json.dumps the extract() result don't hit "Object of type set is
+        # not JSON serializable" — JSON has no set type.
+        "suppress_llm_files": list(suppress_llm_files),
     }
 
 

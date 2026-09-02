@@ -208,10 +208,18 @@ class HybridScorer:
         self._id_to_row: dict[str, int] | None = None
         self._model: str = ""
         self._query_cache: dict[str, np.ndarray] = {}
+        # Store graph_dir so vector_scores can trigger an async rebuild
+        # when it detects a stale/dimension-mismatched sidecar at query time.
+        self._graph_dir: Path | None = Path(graph_dir) if graph_dir else None
+        # Graph node id set — set by serve.py._load_entry after graph load so
+        # vector_scores can filter out sidecar entries for nodes that were
+        # deleted from graph.json after the sidecar was built (G6 source-side
+        # defense). None when no graph is attached (tests, standalone use).
+        self._graph_node_ids: set[str] | None = None
         # Load .graph/graphifyrc config (merged over .default-graphifyrc).
         # The embed_base_url / embed_api_key from the config file are stored
         # on the instance so _resolve_embed_backend_config can read them via
-        # the rc_cfg getter — no env vars needed, avoiding "works on my
+        # the rc_cfg getter — no env vars needed, avoiding "works on
         # machine" issues where env vars are set in one shell but not visible
         # to a subprocess.
         self._rc_cfg = _load_embed_config_from_graphifyrc(graph_dir)
@@ -234,6 +242,17 @@ class HybridScorer:
         result = load_embedding_sidecar(graph_dir)
         if result is not None:
             self._matrix, self._id_to_row, self._model = result
+
+    def set_graph_nodes(self, node_ids: "set[str] | dict") -> None:
+        """Tell the scorer which node ids currently exist in the graph.
+
+        Called by serve.py._load_entry after loading graph.json. When set,
+        vector_scores filters out sidecar entries whose node_id is no longer
+        in the graph (deleted nodes from a stale sidecar). This is the G6
+        source-side defense; serve.py Pass 2 has a belt-and-braces
+        ``nid not in G.nodes`` guard as the immediate defense.
+        """
+        self._graph_node_ids = set(node_ids)
 
     @property
     def available(self) -> bool:
@@ -269,11 +288,28 @@ class HybridScorer:
         )
         if q_vec is None:
             return None
+        # Dimension guard: sidecar matrix dim must match query vector dim.
+        # A mismatch means the sidecar is stale (model changed) or corrupt —
+        # the data is wrong, not the query. Trigger an async full rebuild so
+        # the next query picks up a fresh sidecar, and degrade this query to
+        # pure lexical (return None → _score_query skips the vector tier).
+        # This is the detect-and-self-heal path: the user does not need to
+        # manually run ``graphify .`` — the rebuild fires automatically.
+        assert self._matrix is not None  # available() checked this
+        if self._matrix.shape[0] == 0 or self._matrix.shape[1] != q_vec.shape[0]:
+            if self._graph_dir is not None:
+                from graphify.embeddings import _trigger_async_rebuild
+                _trigger_async_rebuild(self._graph_dir)
+            return None
         sims = cosine_similarity(q_vec, self._matrix)
         return {
             nid: float(sims[row])
             for nid, row in self._id_to_row.items()
             if 0 <= row < len(sims)
+            # G6 source-side defense: skip sidecar entries for nodes deleted
+            # from graph.json. When _graph_node_ids is None (tests/standalone),
+            # no filtering — backward compatible.
+            and (self._graph_node_ids is None or nid in self._graph_node_ids)
         }
 
     def fuzzy_score_for_node(self, query_token: str, node_label: str) -> float:

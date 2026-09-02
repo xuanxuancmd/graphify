@@ -1151,13 +1151,12 @@ updateStats();
 
 
 def _html_document_title(output_path: str) -> str:
-    """Return a portable label for the graph.html <title>.
+    """Return the project name for the graph.html <title>.
 
-    Tracked artifacts must not embed the generator host absolute path
-    (regression of #433; reported again as #2598 on Windows). Keep from the
-    configured output-dir bare name (``.graph`` / ``GRAPHIFY_OUT``
-    basename) onward — portable in every case; otherwise fall back to a
-    cwd-relative label, and finally the filename only.
+    The label reflects the working directory / project name (typically a
+    microservice name), NOT the tool name "graphify" and NOT the raw ".graph"
+    output-dir name. Tracked artifacts must not embed the generator host
+    absolute path (regression of #433; reported again as #2598 on Windows).
     """
     from graphify.paths import GRAPHIFY_OUT_NAME
 
@@ -1165,33 +1164,29 @@ def _html_document_title(output_path: str) -> str:
     # Drop Windows drive prefix so Path parts are comparable on any OS.
     if len(raw) >= 3 and raw[1] == ":" and raw[0].isalpha() and raw[2] == "/":
         raw = raw[2:]  # "/Users/..." style after drive strip
-    p = Path(raw)
 
     parts = list(Path(raw).parts)
     # Path("C:/Users/..") on POSIX may keep "C:" as first part — strip it.
     if parts and len(parts[0]) == 2 and parts[0][1] == ":" and parts[0][0].isalpha():
         parts = parts[1:]
-    # Prefer keeping from the output-dir marker onward: portable in every
-    # case, whereas a cwd-relative path still leaks host/user segments when
-    # the graph is built from a directory ABOVE the project (#2598 follow-up).
+    # Prefer the project name = the parent directory of the output dir.
+    # E.g. "/path/to/myproject/.graph/graph.html" -> "myproject".
+    # This avoids leaking host paths and avoids the ".graph" name itself.
     marker = GRAPHIFY_OUT_NAME
     for i, part in enumerate(parts):
-        if part == marker or part.startswith(".graph"):
-            return "/".join(parts[i:])
+        if (part == marker or part.startswith(".graph")) and i > 0:
+            return parts[i - 1]
 
-    # No standard out-dir marker (fully custom output path): fall back to a
-    # cwd-relative label when the target is under cwd, else the bare filename.
+    # No standard out-dir marker (or marker is the first segment with no
+    # parent): fall back to the cwd basename — the working directory name.
     try:
-        resolved = p if p.is_absolute() else (Path.cwd() / p)
-        rel = resolved.resolve().relative_to(Path.cwd().resolve())
-        label = rel.as_posix()
-        if label and label != ".":
-            return label
+        cwd_name = Path.cwd().name
+        if cwd_name:
+            return cwd_name
     except (ValueError, OSError, RuntimeError):
         pass
 
-    name = p.name
-    return name if name else "graph.html"
+    return "graph.html"
 
 def to_html(
     G: nx.Graph,
@@ -1463,7 +1458,9 @@ def to_html(
     legend_json = _js_safe(legend_data)
     review_json = _js_safe(review_items)
     hyperedges_json = _js_safe(getattr(G, "graph", {}).get("hyperedges", []))
-    title = _html.escape(sanitize_label(_html_document_title(output_path)))
+    _raw_title = sanitize_label(_html_document_title(output_path))
+    title = _html.escape(_raw_title)
+    title_mark = _html.escape((_raw_title[:1].upper() or "G"))
     stats = f"{G.number_of_nodes()} 节点 &middot; {G.number_of_edges()} 条边 &middot; {len(communities)} 个社区"
 
     # Compute project overview data for the overview tab
@@ -1717,7 +1714,7 @@ def to_html(
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>graphify - {title}</title>
+<title>{title}</title>
 <script src="https://unpkg.com/vis-network@9.1.6/standalone/umd/vis-network.min.js"
         integrity="sha384-Ux6phic9PEHJ38YtrijhkzyJ8yQlH8i/+buBR8s3mAZOJrP1gwyvAcIYl3GWtpX1"
         crossorigin="anonymous"></script>
@@ -1726,7 +1723,7 @@ def to_html(
 <body>
 <!-- Topbar -->
 <header class="topbar">
-  <div class="brand"><div class="brand-mark">G</div><span>graphify</span><span class="brand-sub">{title}</span></div>
+  <div class="brand"><div class="brand-mark">{title_mark}</div><span>{title}</span></div>
   <div class="divider-v"></div>
   <nav class="mode-tabs">
     <button class="mode-tab" data-tab="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>概览</button>

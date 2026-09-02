@@ -263,6 +263,23 @@ detect = json.loads(Path('.graph/.graphify_detect.json').read_text(encoding=\"ut
 # every source file (#1392). Video is transcribed to a document in Step 2.5 first.
 all_files = [f for cat in ('document', 'paper', 'image') for f in detect['files'].get(cat, [])]
 
+# Exclude files that external extractors (Part A2) marked suppress_llm=True.
+# These are fully deterministic (Tier 1 only, e.g. Swagger YAML) — sending them
+# to LLM Tier 2 wastes tokens and risks duplicate/conflicting nodes. The CLI
+# flow (cli.py:4337-4354) excludes these the same way; this mirrors that logic
+# so the skill path stays consistent with the CLI path (#3).
+_suppress = set()
+_doc_json = Path('.graph/.graphify_doc.json')
+if _doc_json.exists():
+    try:
+        _doc = json.loads(_doc_json.read_text(encoding=\"utf-8\"))
+        _suppress = set(_doc.get('suppress_llm_files', []))
+    except Exception:
+        pass
+if _suppress:
+    all_files = [f for f in all_files if str(Path(f)) not in _suppress]
+    print(f'Suppressed {len(_suppress)} file(s) from semantic extraction (external extractor requested suppress_llm)')
+
 cached_nodes, cached_edges, cached_hyperedges, uncached = check_semantic_cache(all_files, root='INPUT_PATH', prompt_file='SPEC_PATH')
 
 # Always (re)write the cache file: write hits, else DELETE any leftover from a prior
@@ -651,7 +668,7 @@ cost_path.write_text(json.dumps(cost, indent=2, ensure_ascii=False), encoding=\"
 print(f'This run: {input_tok:,} input tokens, {output_tok:,} output tokens')
 print(f'All time: {cost[\"total_input_tokens\"]:,} input, {cost[\"total_output_tokens\"]:,} output ({len(cost[\"runs\"])} runs)')
 "
-rm -f .graph/.graphify_detect.json .graph/.graphify_extract.json .graph/.graphify_ast.json .graph/.graphify_semantic.json .graph/.graphify_analysis.json
+rm -f .graph/.graphify_detect.json .graph/.graphify_extract.json .graph/.graphify_ast.json .graph/.graphify_doc.json .graph/.graphify_semantic.json .graph/.graphify_analysis.json
 find .graph -maxdepth 1 -name '.graphify_chunk_*.json' -delete 2>/dev/null
 rm -f .graph/.needs_update 2>/dev/null || true
 ```

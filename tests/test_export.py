@@ -308,7 +308,12 @@ def test_to_html_contains_visjs():
 
 
 def test_to_html_title_uses_portable_path_not_host_absolute():
-    """#2598 / #433: <title> must not embed the generator host absolute path."""
+    """#2598 / #433: <title> must not embed the generator host absolute path.
+
+    The title now reflects the project name (parent dir of the .graph output
+    dir, i.e. the working directory / microservice name), NOT the tool name
+    "graphify" and NOT the raw ".graph" output-dir name.
+    """
     import re
 
     G = make_graph()
@@ -321,21 +326,25 @@ def test_to_html_title_uses_portable_path_not_host_absolute():
     m = re.search(r"<title>(.*?)</title>", html)
     assert m, "expected a <title> tag"
     title = m.group(1)
-    assert title.startswith("graphify - ")
-    label = title[len("graphify - "):]
-    assert "mike" not in label
-    assert "Users" not in label
-    assert not label.startswith("/")
-    assert ".graph/graph.html" in label or label == "graph.html"
+    # Title is the project name (parent of .graph), not the tool name or host path.
+    assert title == "proj"
+    assert "mike" not in title
+    assert "Users" not in title
+    assert "graphify" not in title
+    assert ".graph" not in title
+    assert not title.startswith("/")
 
 
 def test_html_document_title_helper_windows_and_relative():
     from graphify.exporters.html import _html_document_title
 
-    assert _html_document_title(r"C:\Users\mike\proj\.graph\graph.html") == ".graph/graph.html"
-    assert _html_document_title("/home/u/proj/.graph/graph.html") == ".graph/graph.html"
-    assert _html_document_title(".graph/graph.html") == ".graph/graph.html"
-    assert _html_document_title("/tmp/only/graph.html") == "graph.html"
+    # Project name = parent dir of the .graph output dir.
+    assert _html_document_title(r"C:\Users\mike\proj\.graph\graph.html") == "proj"
+    assert _html_document_title("/home/u/proj/.graph/graph.html") == "proj"
+    # When .graph is the first segment (no parent), fall back to cwd basename.
+    assert _html_document_title(".graph/graph.html") == Path.cwd().name
+    # No .graph marker at all: fall back to cwd basename.
+    assert _html_document_title("/tmp/only/graph.html") == Path.cwd().name
 
 def test_to_html_neighbor_links_have_no_inline_onclick_xss():
     """#1838: neighbor links dropped an unescaped JSON.stringify(nid) into a

@@ -192,9 +192,9 @@ This step has two parts: **structural extraction** (deterministic, free) and **s
 
 > **graphify needs no API key. Never ask the user for one, and never block on one.** Code is extracted structurally (AST) with no LLM and no key at all — a code-only corpus (the common `/graphify .` on a repo) skips semantic extraction entirely, so go straight to Part A and skip Part B. Semantic extraction (only for docs, papers, and images) is done by your own model. graphify does **not** read `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or any other provider key. If you cannot dispatch subagents, do not stall: a code-only corpus has no semantic work (write the empty semantic file and continue to Part C); for docs/papers/images, extract them inline yourself. If you catch yourself about to prompt for or block on a missing API key, that is a misread of this skill — proceed without one.
 
-**Run Part A (AST) and Part B (semantic) in parallel. Dispatch all semantic subagents AND start AST extraction in the same message. Both can run simultaneously since they operate on different file types. Merge results in Part C as before.**
+**Run Part A (AST) and Part B (semantic) in parallel. Dispatch all semantic subagents AND start AST extraction in the same message. Both can run simultaneously since they operate on different file types. Part A2 (doc extraction) runs after Part A completes — it needs AST nodes for anchor matching. Merge all three in Part C.**
 
-Note: Parallelizing AST + semantic saves 5-15s on large corpora. AST is deterministic and fast; start it while subagents are processing docs/papers.
+Note: Parallelizing AST + semantic saves 5-15s on large corpora. AST is deterministic and fast; start it while subagents are processing docs/papers. Part A2 is also fast (deterministic, no LLM) and runs as soon as Part A finishes.
 
 #### Part A - Structural extraction for code files
 
@@ -219,6 +219,38 @@ if code_files:
 else:
     Path('.graph/.graphify_ast.json').write_text(json.dumps({'nodes':[],'edges':[],'input_tokens':0,'output_tokens':0}))
     print('No code files - skipping AST extraction')
+"
+```
+
+#### Part A2 - Document extraction (DDD / Swagger)
+
+Run external doc extractors (DDD, Swagger YAML) with the AST nodes as
+matching context. This must run AFTER Part A (needs code nodes for anchor
+matching) and BEFORE Part C (doc nodes merge into the final extraction).
+
+```bash
+"$(cat .graph/.graphify_python)" -c "
+import json
+from pathlib import Path
+from graphify.extract import extract
+
+detect = json.loads(Path('.graph/.graphify_detect.json').read_text(encoding='utf-8'))
+doc_files = [Path(f) for f in detect.get('files', {}).get('document', [])]
+
+if doc_files:
+    ast = json.loads(Path('.graph/.graphify_ast.json').read_text(encoding='utf-8'))
+    # extract() internally loads graph.json persisted nodes when root is set,
+    # so incremental runs still match unchanged code/endpoint nodes.
+    result = extract(doc_files, cache_root=Path('INPUT_PATH'), root=Path('INPUT_PATH'),
+                     nodes=list(ast.get('nodes', [])))
+    Path('.graph/.graphify_doc.json').write_text(
+        json.dumps(result, indent=2, ensure_ascii=False), encoding='utf-8')
+    print(f'Doc: {len(result[\"nodes\"])} nodes, {len(result[\"edges\"])} edges')
+else:
+    Path('.graph/.graphify_doc.json').write_text(
+        json.dumps({'nodes':[],'edges':[],'input_tokens':0,'output_tokens':0},
+                   ensure_ascii=False), encoding='utf-8')
+    print('No doc files - skipping doc extraction')
 "
 ```
 
@@ -249,6 +281,23 @@ detect = json.loads(Path('.graph/.graphify_detect.json').read_text())
 # structurally by the AST pass; flattening every category here makes the
 # extraction step re-read every source file (#1392).
 all_files = [f for cat in ('document', 'paper', 'image') for f in detect['files'].get(cat, [])]
+
+# Exclude files that external extractors (Part A2) marked suppress_llm=True.
+# These are fully deterministic (Tier 1 only, e.g. Swagger YAML) — sending them
+# to LLM Tier 2 wastes tokens and risks duplicate/conflicting nodes. The CLI
+# flow (cli.py:4337-4354) excludes these the same way; this mirrors that logic
+# so the skill path stays consistent with the CLI path (#3).
+_suppress = set()
+_doc_json = Path('.graph/.graphify_doc.json')
+if _doc_json.exists():
+    try:
+        _doc = json.loads(_doc_json.read_text(encoding='utf-8'))
+        _suppress = set(_doc.get('suppress_llm_files', []))
+    except Exception:
+        pass
+if _suppress:
+    all_files = [f for f in all_files if str(Path(f)) not in _suppress]
+    print(f'Suppressed {len(_suppress)} file(s) from semantic extraction (external extractor requested suppress_llm)')
 
 cached_nodes, cached_edges, cached_hyperedges, uncached = check_semantic_cache(all_files)
 
@@ -423,17 +472,22 @@ from pathlib import Path
 from graphify.semantic_cleanup import sanitize_semantic_fragment
 
 ast = json.loads(Path('.graph/.graphify_ast.json').read_text())
+doc = json.loads(Path('.graph/.graphify_doc.json').read_text(encoding='utf-8'))
 sem = json.loads(Path('.graph/.graphify_semantic.json').read_text())
 
-# Merge: AST nodes first, semantic nodes deduplicated by id
+# Merge: AST nodes first, doc nodes deduplicated by id, then semantic
 seen = {n['id'] for n in ast['nodes']}
 merged_nodes = list(ast['nodes'])
+for n in doc.get('nodes', []):
+    if n['id'] not in seen:
+        merged_nodes.append(n)
+        seen.add(n['id'])
 for n in sem['nodes']:
     if n['id'] not in seen:
         merged_nodes.append(n)
         seen.add(n['id'])
 
-merged_edges = ast['edges'] + sem['edges']
+merged_edges = ast['edges'] + doc.get('edges', []) + sem['edges']
 merged_hyperedges = sem.get('hyperedges', [])
 merged = {
     'nodes': merged_nodes,
@@ -446,7 +500,7 @@ merged = sanitize_semantic_fragment(merged)
 Path('.graph/.graphify_extract.json').write_text(json.dumps(merged, indent=2))
 total = len(merged_nodes)
 edges = len(merged_edges)
-print(f'Merged: {total} nodes, {edges} edges ({len(ast[\"nodes\"])} AST + {len(sem[\"nodes\"])} semantic)')
+print(f'Merged: {total} nodes, {edges} edges ({len(ast[\"nodes\"])} AST + {len(doc.get(\"nodes\",[]))} doc + {len(sem[\"nodes\"])} semantic)')
 "
 ```
 
@@ -837,7 +891,7 @@ cost_path.write_text(json.dumps(cost, indent=2))
 print(f'This run: {input_tok:,} input tokens, {output_tok:,} output tokens')
 print(f'All time: {cost[\"total_input_tokens\"]:,} input, {cost[\"total_output_tokens\"]:,} output ({len(cost[\"runs\"])} runs)')
 "
-rm -f .graph/.graphify_detect.json .graph/.graphify_extract.json .graph/.graphify_ast.json .graph/.graphify_semantic.json .graph/.graphify_analysis.json .graph/.graphify_labels.json .graph/.graphify_incremental.json .graph/.graphify_transcripts.json .graph/.graphify_old.json; find .graph -maxdepth 1 -name '.graphify_chunk_*.json' -delete 2>/dev/null
+rm -f .graph/.graphify_detect.json .graph/.graphify_extract.json .graph/.graphify_ast.json .graph/.graphify_doc.json .graph/.graphify_semantic.json .graph/.graphify_analysis.json .graph/.graphify_labels.json .graph/.graphify_incremental.json .graph/.graphify_transcripts.json .graph/.graphify_old.json; find .graph -maxdepth 1 -name '.graphify_chunk_*.json' -delete 2>/dev/null
 rm -f .graph/.needs_update 2>/dev/null || true
 ```
 

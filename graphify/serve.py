@@ -128,6 +128,11 @@ class _GraphContextCache:
         # configured — HybridScorer.available stays False and every method
         # returns None, so _score_query runs in pure-lexical mode (AC2/AC3).
         graph.graph["_hybrid_scorer"] = HybridScorer(Path(resolved_path).parent)
+        # G6 source-side defense: tell the scorer which node ids exist in the
+        # graph so vector_scores can filter out sidecar entries for deleted
+        # nodes (stale sidecar). Set after sidecar load; graph.nodes is a
+        # NodeView whose keys are the node id strings.
+        graph.graph["_hybrid_scorer"].set_graph_nodes(set(graph.nodes))
         communities = _communities_from_graph(graph)
         entry = {
             "key": key,
@@ -715,6 +720,14 @@ def _score_query(
         if query_embedding_scores:
             for nid, vec_sim in query_embedding_scores.items():
                 if vec_sim <= 0:
+                    continue
+                # G6 defense: skip node ids that no longer exist in the graph.
+                # A stale sidecar may carry node_ids for nodes that were
+                # deleted from graph.json after the sidecar was built. Adding
+                # them to score_by_nid would cause a KeyError at the sort
+                # below (G.nodes[deleted_nid]) — crashing the query. Skip
+                # them here so the vector tier only scores live nodes.
+                if nid not in G.nodes:
                     continue
                 # Confidence-gated: tier_weight × sim (see
                 # docs/retrieval-overall-design/vector-tier-redesign-spec.md)

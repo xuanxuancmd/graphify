@@ -93,6 +93,58 @@ def _sidecar_paths(graph_dir: Path, model: str) -> dict[str, Path]:
 
 
 # ---------------------------------------------------------------------------
+# Atomic write helpers (G9: prevent half-written sidecar files on crash)
+# ---------------------------------------------------------------------------
+
+
+def _atomic_np_save(path: Path, array: np.ndarray) -> None:
+    """Save a numpy array atomically: write to temp, then os.replace.
+
+    ``os.replace`` is atomic on both POSIX (rename(2)) and Windows
+    (MoveFileExW + MOVEFILE_REPLACE_EXISTING). The temp file MUST be in
+    the same directory (same volume) as the target — a cross-volume
+    replace degrades to copy+delete, losing atomicity.
+
+    The temp filename keeps the ``.npy`` suffix (e.g. ``embedding.tmp.npy``)
+    so numpy's ``np.save`` does not append an extra ``.npy`` — it only
+    auto-appends when the suffix is not already ``.npy``.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    # Insert ".tmp" before the final suffix so the temp file still ends in
+    # .npy (numpy auto-appends .npy otherwise, creating a mismatched filename).
+    tmp = path.with_name(path.stem + ".tmp" + path.suffix)
+    try:
+        np.save(tmp, array)
+        os.replace(str(tmp), str(path))
+    except Exception:
+        # Clean up the temp file on any failure so it doesn't linger.
+        try:
+            tmp.unlink()
+        except OSError:
+            pass
+        raise
+
+
+def _atomic_write_text(path: Path, text: str, *, encoding: str = "utf-8") -> None:
+    """Write text atomically: write to temp, then os.replace.
+
+    Same atomicity guarantees as ``_atomic_np_save``; the temp file is
+    created in the same directory as the target.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.stem + ".tmp" + path.suffix)
+    try:
+        tmp.write_text(text, encoding=encoding)
+        os.replace(str(tmp), str(path))
+    except Exception:
+        try:
+            tmp.unlink()
+        except OSError:
+            pass
+        raise
+
+
+# ---------------------------------------------------------------------------
 # Backend config (mirrors llm.py BACKENDS for embedding-capable providers)
 # ---------------------------------------------------------------------------
 
@@ -423,13 +475,17 @@ def generate_embeddings_for_graph(
         embeddable.append((nid, text))
 
     if not embeddable:
-        # No node has desc/rationale — nothing to embed. Write an empty
-        # sidecar so check knows a build was attempted.
+        # No node has desc/rationale — nothing to embed. Write a meta file
+        # (so staleness check knows a build was attempted) but do NOT write a
+        # .npy / .index.json. A degenerate (0,1) placeholder matrix would be
+        # loaded by load_embedding_sidecar and set HybridScorer.available=True,
+        # then crash cosine_similarity on the dimension mismatch against a real
+        # query vector. Leaving the .npy absent makes the loader return None,
+        # so the scorer stays unavailable and queries degrade to pure lexical.
         paths = _sidecar_paths(graph_dir, model or "unknown")
         paths["npy"].parent.mkdir(parents=True, exist_ok=True)
-        np.save(paths["npy"], np.zeros((0, 1), dtype=np.float32))
         _write_sidecar_meta(paths, graph_json_path, data, [], model or "unknown",
-                            backend, dim=1)
+                            backend, dim=0)
         return paths["npy"]
 
     texts = [text for _, text in embeddable]
@@ -439,12 +495,13 @@ def generate_embeddings_for_graph(
     paths = _sidecar_paths(graph_dir, actual_model)
     paths["npy"].parent.mkdir(parents=True, exist_ok=True)
 
-    # Save .npy (float32, shape (N, D))
-    np.save(paths["npy"], embeddings)
+    # Save .npy (float32, shape (N, D)) — atomic (G9)
+    _atomic_np_save(paths["npy"], embeddings)
 
-    # Save .index.json (node_ids in row order)
+    # Save .index.json (node_ids in row order) — atomic (G9)
     node_ids = [nid for nid, _ in embeddable]
-    paths["index"].write_text(
+    _atomic_write_text(
+        paths["index"],
         json.dumps(
             {
                 "node_ids": node_ids,
@@ -453,7 +510,6 @@ def generate_embeddings_for_graph(
             },
             ensure_ascii=False,
         ),
-        encoding="utf-8",
     )
 
     _write_sidecar_meta(paths, graph_json_path, data, node_ids, actual_model, backend,
@@ -478,7 +534,8 @@ def _write_sidecar_meta(
     """
     from graphify.export import _git_head
     graph_commit = graph_data.get("built_at_commit") or _git_head(graph_json_path.parent) or ""
-    paths["meta"].write_text(
+    _atomic_write_text(
+        paths["meta"],
         json.dumps(
             {
                 "generated_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
@@ -490,7 +547,6 @@ def _write_sidecar_meta(
             },
             ensure_ascii=False,
         ),
-        encoding="utf-8",
     )
 
 
@@ -582,9 +638,17 @@ def generate_embeddings_incremental(
     Falls back to a full rebuild when:
       - no sidecar exists, or it is corrupt / unreadable
       - the model changed (dimensions may differ)
-      - graph.json is not tracked by git (no history to diff)
-      - the git diff touches more than 50% of nodes
+      - the matrix dimension does not match the index dim
+      - the git diff touches more than 50% of nodes (re-embed list)
       - ``full=True`` was passed
+
+    When graph.json is NOT tracked by git (``old_commit`` is empty):
+      Falls back to a **degraded incremental** — set comparison only:
+      re-embeds new nodes (in graph but not in sidecar index) and drops
+      deleted nodes (in sidecar index but not in graph). ``desc`` changes
+      on existing nodes are **not detected** (sidecar stores vectors, not
+      original text). This is a known blind spot (spec §7.3); the scheduled
+      nightly ``--all`` full rebuild compensates.
     """
     if full:
         return generate_embeddings_for_graph(graph_json_path, backend=backend, model=model)
@@ -690,12 +754,11 @@ def generate_embeddings_incremental(
         else:
             new_matrix = np.zeros((0, existing_dim), dtype=np.float32)
         paths = _sidecar_paths(graph_dir, actual_model)
-        paths["npy"].parent.mkdir(parents=True, exist_ok=True)
-        np.save(paths["npy"], new_matrix)
-        paths["index"].write_text(
+        _atomic_np_save(paths["npy"], new_matrix)
+        _atomic_write_text(
+            paths["index"],
             json.dumps({"node_ids": new_node_ids, "model": actual_model, "dim": int(existing_dim)},
                        ensure_ascii=False),
-            encoding="utf-8",
         )
         _write_sidecar_meta(paths, graph_json_path, data, new_node_ids, actual_model,
                             backend, int(existing_dim))
@@ -734,10 +797,10 @@ def generate_embeddings_incremental(
 
     new_matrix = np.vstack(new_rows).astype(np.float32, copy=False)
     paths = _sidecar_paths(graph_dir, actual_model)
-    paths["npy"].parent.mkdir(parents=True, exist_ok=True)
-    np.save(paths["npy"], new_matrix)
+    _atomic_np_save(paths["npy"], new_matrix)
 
-    paths["index"].write_text(
+    _atomic_write_text(
+        paths["index"],
         json.dumps(
             {
                 "node_ids": new_node_ids,
@@ -746,7 +809,6 @@ def generate_embeddings_incremental(
             },
             ensure_ascii=False,
         ),
-        encoding="utf-8",
     )
 
     _write_sidecar_meta(paths, graph_json_path, data, new_node_ids, actual_model,
@@ -890,8 +952,26 @@ def load_embedding_sidecar(
     if matrix.ndim != 2:
         # Defensive: a malformed sidecar should not crash query path
         return None
+    # An empty (0 rows) or degenerate (dim <= 1) sidecar is not a usable
+    # embedding index. The empty case arises when generate_embeddings_for_graph
+    # wrote a placeholder because no node had desc/rationale; the degenerate
+    # dim=1 shape comes from that same placeholder's np.zeros((0, 1)). Loading
+    # it would set HybridScorer.available=True, and the subsequent matmul
+    # against a real query vector (dim D) would crash. Treat as absent so the
+    # caller degrades to pure-lexical scoring.
+    if matrix.shape[0] == 0 or matrix.shape[1] <= 1:
+        return None
     index_data = json.loads(index_path.read_text(encoding="utf-8"))
     node_ids = index_data.get("node_ids", [])
+    # Cross-file consistency: npy row count must match index node_id count.
+    # A mismatch means npy and index.json are from different builds (e.g.
+    # write interrupted between npy and index). Loading would give id_to_row
+    # wrong row indices — vector scores assigned to wrong nodes. Reject so
+    # the caller degrades to pure lexical. This is the cross-file safety net
+    # for G9 (atomic write prevents single-file half-writes, but not the
+    # 3-file set — this check catches npy-new + index-old inconsistency).
+    if matrix.shape[0] != len(node_ids):
+        return None
     id_to_row = {nid: i for i, nid in enumerate(node_ids)}
     return matrix, id_to_row, index_data.get("model", "")
 
@@ -934,7 +1014,112 @@ def cosine_similarity(query_vec: np.ndarray, matrix: np.ndarray) -> np.ndarray:
     a small epsilon guards against zero-vector division. Brute-force dot
     product is sub-millisecond for 10k-100k nodes — faiss is unnecessary at
     graphify's scale (the spec caps the non-goal at 500k nodes).
+
+    Dimension-guarded: when the matrix is empty or its column count does not
+    match the query vector's length, returns an all-zeros array instead of
+    letting the matmul raise ``ValueError``. A zero similarity contributes
+    nothing to the additive score, so ``_score_query`` silently degrades to
+    pure-lexical mode rather than crashing the whole ``graphify query`` call.
+    This covers the stale/degenerate-sidecar case (e.g. a ``dim=1`` empty
+    placeholder written when no node had desc) hit by a query embedding of a
+    different dimension.
     """
+    # Guard: empty matrix or dimension mismatch → degrade, don't crash.
+    # A (0, D) matrix (no embedded nodes) or a D != D' mismatch (stale sidecar
+    # vs current query model) would raise ValueError in the matmul below.
+    # Returning zeros lets the vector tier contribute 0 and the lexical tiers
+    # carry the query — the intended "sidecar unavailable" fallback.
+    if matrix.shape[0] == 0 or matrix.shape[1] != query_vec.shape[0]:
+        return np.zeros(matrix.shape[0], dtype=np.float32)
     q_norm = query_vec / (np.linalg.norm(query_vec) + 1e-8)
     m_norm = matrix / (np.linalg.norm(matrix, axis=1, keepdims=True) + 1e-8)
     return (m_norm @ q_norm).astype(np.float32, copy=False)
+
+
+# ---------------------------------------------------------------------------
+# Detect-and-self-heal: trigger async rebuild when sidecar data is wrong
+# ---------------------------------------------------------------------------
+
+# Process-level dedup: each graph_dir triggers at most one async rebuild
+# per process lifetime. Prevents repeated detach when multiple queries hit
+# the same stale sidecar before the rebuild finishes. Bounded by the number
+# of distinct projects a process serves — negligible memory.
+_TRIGGERED_REBUILDS: set[str] = set()
+
+
+def _trigger_async_rebuild(graph_dir: Path) -> None:
+    """Detect-and-self-heal: when query-time finds the sidecar is stale,
+    dimension-mismatched, or corrupt, detach a background
+    ``graphify check --no-check`` to regenerate it.
+
+    The current query degrades to pure lexical (the caller returns None);
+    the next query after the rebuild finishes picks up the fresh sidecar.
+
+    Process-level dedup via ``_TRIGGERED_REBUILDS``: the same graph_dir
+    triggers at most one detached rebuild per process, so a rapid sequence
+    of failing queries does not spawn a swarm of rebuild children. The
+    set is process-scoped (cleared on restart).
+
+    Mirrors ``cli._launch_embedding_refresh`` but lives in ``embeddings.py``
+    to avoid a circular import (``hybrid_scorer`` imports ``embeddings``;
+    ``cli`` imports ``hybrid_scorer`` — ``hybrid_scorer`` cannot import ``cli``).
+    """
+    import os as _os
+    import subprocess as _sp
+    import sys as _sys
+
+    try:
+        key = str(Path(graph_dir).resolve())
+    except (OSError, RuntimeError):
+        return
+    if key in _TRIGGERED_REBUILDS:
+        return
+    _TRIGGERED_REBUILDS.add(key)
+
+    # Resolve the graphify exe (same fallback chain as
+    # cli._launch_embedding_refresh).
+    try:
+        from graphify.install import _resolve_graphify_exe
+        exe = _resolve_graphify_exe() or "graphify"
+    except ImportError:
+        exe = "graphify"
+
+    log_path = Path.home() / ".cache" / "graphify-embedding-refresh.log"
+    try:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        log_fd = open(log_path, "a", buffering=1, encoding="utf-8", errors="replace")
+    except OSError:
+        log_fd = _sp.DEVNULL  # type: ignore[assignment]
+
+    env = dict(_os.environ)
+    try:
+        from graphify.paths import GRAPHIFY_OUT as _DEFAULT_OUT
+        env["GRAPHIFY_OUT"] = _os.environ.get("GRAPHIFY_OUT", _DEFAULT_OUT)
+    except ImportError:
+        pass
+
+    cmd_list = [exe, "check", "--no-check"]
+    print(
+        "[graphify] embedding sidecar 与当前 query 模型维度不匹配——"
+        "已触发后台全量重建，本次查询降级为纯词法检索。",
+        file=_sys.stderr,
+    )
+    try:
+        if _os.name == "nt":
+            _flags = 0x08000000 | 0x00000200  # CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP
+            try:
+                _sp.Popen(cmd_list, creationflags=_flags | 0x01000000,
+                           stdout=log_fd, stderr=_sp.STDOUT, stdin=_sp.DEVNULL,
+                           cwd=str(graph_dir.parent), env=env, close_fds=True)
+            except OSError:
+                _sp.Popen(cmd_list, creationflags=_flags,
+                           stdout=log_fd, stderr=_sp.STDOUT, stdin=_sp.DEVNULL,
+                           cwd=str(graph_dir.parent), env=env, close_fds=True)
+        else:
+            _sp.Popen(cmd_list, start_new_session=True,
+                       stdout=log_fd, stderr=_sp.STDOUT, stdin=_sp.DEVNULL,
+                       cwd=str(graph_dir.parent), env=env, close_fds=True)
+    except Exception:
+        # Detached launch failed — the session continues; the next check
+        # or manual ``graphify .`` will retry. Do not crash the query.
+        pass
