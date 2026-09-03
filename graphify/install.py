@@ -169,6 +169,30 @@ def _install_skill_references(skill_dst: Path, refs_src: Path) -> None:
         if refs_staged.exists():
             shutil.rmtree(refs_staged, ignore_errors=True)
         raise
+def _resolve_skill_file(platform_name: str) -> str:
+    """Return the skill file basename for this platform, OS-adapted.
+
+    On Windows, if a PowerShell variant of the base skill file exists in the
+    package (``skill-X.md`` → ``skill-X-windows.md``), use it; otherwise fall
+    back to the base. On other OSes, always use the base skill file.
+
+    This replaces the old ``install()`` special case that remapped
+    ``antigravity`` → ``antigravity-windows`` on Windows: every tool now gets
+    the same treatment generically. For claude/codeagent/codebuddy/etc the base
+    ``skill.md`` resolves to the PowerShell ``skill-windows.md``; for tools
+    without a Windows variant (opencode, codex, ...) the base is used as-is.
+    """
+    if platform_name == "gemini":
+        base = "skill.md"
+    else:
+        base = _PLATFORM_CONFIG[platform_name]["skill_file"]
+    if sys.platform == "win32" and base.endswith(".md"):
+        windows_variant = base[:-3] + "-windows.md"
+        windows_src = Path(__file__).parent / windows_variant
+        if windows_src.exists():
+            return windows_variant
+    return base
+
 def _copy_skill_file(platform_name: str, *, project: bool = False, project_dir: Path | None = None) -> Path:
     """Copy a packaged skill file and write its version stamp.
 
@@ -178,7 +202,7 @@ def _copy_skill_file(platform_name: str, *, project: bool = False, project_dir: 
     ``skill_refs``), any orphan ``references/`` left by a prior progressive
     install is removed so the on-disk layout matches the package.
     """
-    skill_file = "skill.md" if platform_name == "gemini" else _PLATFORM_CONFIG[platform_name]["skill_file"]
+    skill_file = _resolve_skill_file(platform_name)
     skill_src = Path(__file__).parent / skill_file
     if not skill_src.exists():
         print(f"error: {skill_file} not found in package - reinstall graphify", file=sys.stderr)
@@ -476,6 +500,7 @@ _PLATFORM_ALIASES: dict[str, str] = {"skills": "agents"}
 def _canonical_platform(platform_name: str) -> str:
     """Resolve a CLI platform alias to its real _PLATFORM_CONFIG key."""
     return _PLATFORM_ALIASES.get(platform_name, platform_name)
+
 def _replace_or_append_section(content: str, marker: str, new_section: str) -> str:
     """Idempotently update or append a graphify-owned section in shared files.
 
@@ -618,9 +643,6 @@ def install(platform: str = "codeagent", *, project: bool = False, project_dir: 
     if platform == "cursor":
         _cursor_install(Path("."))
         return
-    # On Windows, antigravity needs the PowerShell skill, not the bash one
-    if platform == "antigravity" and sys.platform == "win32":
-        platform = "antigravity-windows"
     if platform not in _PLATFORM_CONFIG:
         print(
             f"error: unknown platform '{platform}'. Choose from: {', '.join(_PLATFORM_CONFIG)}, gemini, cursor",
