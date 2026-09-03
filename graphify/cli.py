@@ -3587,6 +3587,7 @@ def dispatch_command(cmd: str) -> None:
         cli_postgres_dsn: str | None = None
         cli_cargo: bool = False
         cli_allow_partial: bool = False
+        cli_skip_evaluate: bool = False
         no_cluster = False
         dedup_llm = False
         # --no-dedup: skip entity deduplication entirely. On an incremental
@@ -3739,6 +3740,8 @@ def dispatch_command(cmd: str) -> None:
                 force = True; i += 1
             elif a == "--allow-partial":
                 cli_allow_partial = True; i += 1
+            elif a == "--skip-evaluate":
+                cli_skip_evaluate = True; i += 1
             elif a == "--timing":
                 cli_timing = True; i += 1
             else:
@@ -4946,6 +4949,23 @@ def dispatch_command(cmd: str) -> None:
                 file=sys.stderr,
             )
             sys.exit(1)
+
+        # Evaluate INFERRED edges/nodes via LLM Agent (discrete 0.95/0.50/0.05
+        # scores). Skipped silently when no LLM backend is configured or when
+        # --skip-evaluate is passed. stamp_node_confidence already ran inside
+        # build(), so nodes carry confidence fields for the Agent to see.
+        from graphify.evaluate import evaluate_graph as _evaluate_graph
+        _eval_stats = _evaluate_graph(G, skip=cli_skip_evaluate)
+        if _eval_stats.get("llm_calls", 0) > 0:
+            print(
+                f"[graphify] Evaluation Agent: {_eval_stats.get('edges_evaluated', 0)} "
+                f"edges + {_eval_stats.get('nodes_evaluated', 0)} nodes evaluated "
+                f"({_eval_stats.get('high', 0)} high, {_eval_stats.get('uncertain', 0)} "
+                f"uncertain, {_eval_stats.get('low', 0)} low) in "
+                f"{_eval_stats['llm_calls']} LLM call(s).",
+                file=sys.stderr,
+            )
+        stages.mark("evaluate")
 
         communities = _cluster(G, resolution=cli_resolution, exclude_hubs_percentile=cli_exclude_hubs)
         stages.mark("cluster")

@@ -464,6 +464,27 @@ tabs.forEach(tab => {{
   }});
 }});
 
+// == Review queue threshold filter ==
+function filterReviewQueue(threshold) {{
+  document.getElementById('threshold-value').textContent = parseFloat(threshold).toFixed(2);
+  const items = document.querySelectorAll('.node-item[data-score]');
+  let visible = 0;
+  items.forEach(item => {{
+    const score = parseFloat(item.dataset.score);
+    if (score < threshold) {{
+      item.style.display = '';
+      visible++;
+    }} else {{
+      item.style.display = 'none';
+    }}
+  }});
+  // Update the count in the sidebar header
+  const meta = document.querySelector('#review-sidebar .sidebar-meta');
+  if (meta) meta.textContent = visible + ' 项待审核';
+  const badge = document.getElementById('review-badge');
+  if (badge) badge.textContent = visible;
+}}
+
 // == Node detail panel ==
 function showInfo(nodeId) {{
   const n = nodesDS.get(nodeId);
@@ -750,8 +771,9 @@ function renderFilterChips() {{
 const REVIEW_NODE_IDS = new Set(REVIEW.map(r => r.node_id || r.endpointId).filter(Boolean));
 const REVIEW_META = {{
   island: {{ label: '孤岛', dot: '#dc4444', badge: 'nb-island', desc: '未匹配的文档锚点' }},
-  ambiguous_edge: {{ label: '多匹配', dot: '#d97706', badge: 'nb-ambiguous', desc: '解析器产生多候选的边' }},
-  inferred_edge: {{ label: '推断边', dot: '#2563eb', badge: 'nb-inferred', desc: '框架推断的非结构化边' }},
+  ambiguous_edge: {{ label: '多匹配', dot: '#d97706', badge: 'nb-ambiguous', desc: '工具多候选，需人工确认' }},
+  inferred_edge: {{ label: '推断边', dot: '#2563eb', badge: 'nb-inferred', desc: 'Agent评估为低置信度' }},
+  node_review: {{ label: '可疑节点', dot: '#76b7b2', badge: 'nb-gap', desc: '低置信度节点（疑似幻觉）' }},
   semantic_gap: {{ label: 'LLM缺失', dot: '#6b7280', badge: 'nb-gap', desc: 'LLM 语义提取失败' }},
 }};
 // Temporary "已查看" tracking (session only, not persisted)
@@ -788,7 +810,10 @@ function findReviewNode(item) {{
 function renderNodeList() {{
   const container = document.getElementById('node-list');
   if (!container) return;
+  // Preserve the confidence slider (first child), remove the rest
+  const slider = container.querySelector('.confidence-bar');
   container.innerHTML = '';
+  if (slider) container.appendChild(slider);
   
   // Group review items by type
   const byType = {{}};
@@ -837,17 +862,26 @@ function renderNodeList() {{
       const el = document.createElement('div');
       el.className = 'node-item';
       if (nodeId) el.dataset.nid = nodeId;
+      // Store score for threshold slider filtering
+      const itemScore = item.confidence_score !== undefined ? item.confidence_score : 0.0;
+      el.dataset.score = itemScore;
       el.style.opacity = isSeen ? '0.4' : '1';
       const title = esc(item.title || item.anchor || item.endpointLabel || '(unnamed)');
       const detail = esc(item.detail || item.reason || '');
       const file = esc(item.source_file || item.file || '');
+      const reason = item.evaluation_reason ? esc(item.evaluation_reason) : '';
+      const scoreBadge = item.confidence_score !== undefined
+        ? '<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;font-family:var(--gf-font-mono);margin-left:auto;background:' + (itemScore < 0.1 ? 'var(--gf-status-island-bg)' : (itemScore < 0.6 ? 'var(--gf-status-ambiguous-bg)' : 'var(--gf-status-gap-bg)')) + ';color:' + (itemScore < 0.1 ? 'var(--gf-status-island)' : (itemScore < 0.6 ? 'var(--gf-status-ambiguous)' : 'var(--gf-status-gap)')) + '">' + itemScore.toFixed(2) + '</span>'
+        : '';
       el.innerHTML = 
         '<div class="node-item-head">' +
           '<span class="node-status-dot" style="background:' + meta.dot + (isSeen ? ';opacity:0.3' : '') + '"></span>' +
           '<span class="node-title" style="' + (isSeen ? 'text-decoration:line-through;' : '') + '">' + title + '</span>' +
-          (isSeen ? '' : '<span style="margin-left:auto;font-size:0.6875rem;color:var(--gf-text-faint);cursor:pointer" data-action="seen">标记已查看</span>') +
+          scoreBadge +
+          (isSeen ? '' : '<span style="font-size:0.6875rem;color:var(--gf-text-faint);cursor:pointer" data-action="seen">标记已查看</span>') +
         '</div>' +
         (detail ? '<div class="node-detail">' + detail + '</div>' : '') +
+        (reason ? '<div class="node-detail" style="font-style:italic;color:var(--gf-text-faint)">→ ' + reason + '</div>' : '') +
         (file ? '<div class="node-file">' + file + '</div>' : '');
       // Click on "标记已查看" button
       const seenBtn = el.querySelector('[data-action="seen"]');
@@ -927,15 +961,15 @@ document.addEventListener('click', e => {{
   }}
 }});
 
-// == Render BC bubble diagram with 3D-style spheres ==
+// == Render BC bubble diagram with 3D-style spheres + pan/zoom/drag ==
 (function() {{
   const svg = document.getElementById('bc-bubbles');
   if (!svg || !BC_BUBBLES.length) return;
   const ns = 'http://www.w3.org/2000/svg';
+  svg.style.cursor = 'grab';
   // Define radial gradients for 3D sphere effect
   const defs = document.createElementNS(ns, 'defs');
   BC_BUBBLES.forEach((b, i) => {{
-    // Lighten color for highlight
     const grad = document.createElementNS(ns, 'radialGradient');
     grad.setAttribute('id', 'bc-grad-' + i);
     grad.setAttribute('cx', '38%');
@@ -959,22 +993,43 @@ document.addEventListener('click', e => {{
     defs.appendChild(grad);
   }});
   svg.appendChild(defs);
-  // Draw links
-  BC_LINKS.forEach(link => {{
+  // Create a group to hold all pan/zoom-able content
+  const bubbleGroup = document.createElementNS(ns, 'g');
+  bubbleGroup.setAttribute('id', 'bc-bubble-group');
+  svg.appendChild(bubbleGroup);
+
+  // Draw links with relationship labels
+  const linkEls = [];
+  const linkLabelEls = [];
+  BC_LINKS.forEach((link) => {{
     const line = document.createElementNS(ns, 'line');
     line.setAttribute('x1', link.x1); line.setAttribute('y1', link.y1);
     line.setAttribute('x2', link.x2); line.setAttribute('y2', link.y2);
     line.setAttribute('class', 'bc-bubble-line' + (link.weight > 5 ? ' bc-bubble-line-thick' : ''));
-    svg.appendChild(line);
+    bubbleGroup.appendChild(line);
+    linkEls.push({{el: line, link: link}});
+    // Relationship label on line
     const mx = (link.x1 + link.x2) / 2; const my = (link.y1 + link.y2) / 2;
+    const labelBg = document.createElementNS(ns, 'rect');
+    labelBg.setAttribute('x', mx - 30); labelBg.setAttribute('y', my - 6);
+    labelBg.setAttribute('width', 60); labelBg.setAttribute('height', 12);
+    labelBg.setAttribute('fill', 'rgba(255,255,255,0.85)');
+    labelBg.setAttribute('rx', 3);
+    labelBg.style.pointerEvents = 'none';
+    bubbleGroup.appendChild(labelBg);
     const t = document.createElementNS(ns, 'text');
-    t.setAttribute('x', mx); t.setAttribute('y', my); t.setAttribute('class', 'bc-edge-label');
-    t.textContent = link.weight;
-    svg.appendChild(t);
+    t.setAttribute('x', mx); t.setAttribute('y', my + 3); t.setAttribute('class', 'bc-edge-label');
+    t.setAttribute('text-anchor', 'middle');
+    // Shorten relation name for display
+    const relLabel = (link.label || '').replace('conceptually_related_to', '关联').replace('cites', '引用').replace('references', '引用');
+    t.textContent = relLabel;
+    bubbleGroup.appendChild(t);
+    linkLabelEls.push({{bgEl: labelBg, textEl: t, link: link}});
   }});
-  // Draw 3D-style sphere bubbles
+  // Draw 3D-style sphere bubbles (store refs for dragging)
+  const bubbleEls = [];
   BC_BUBBLES.forEach((b, i) => {{
-    // Shadow (drop shadow for 3D depth)
+    // Shadow
     const shadow = document.createElementNS(ns, 'ellipse');
     shadow.setAttribute('cx', b.x + 2);
     shadow.setAttribute('cy', b.y + b.r * 0.15);
@@ -982,7 +1037,7 @@ document.addEventListener('click', e => {{
     shadow.setAttribute('ry', b.r * 0.3);
     shadow.setAttribute('fill', 'rgba(0,0,0,0.08)');
     shadow.style.pointerEvents = 'none';
-    svg.appendChild(shadow);
+    bubbleGroup.appendChild(shadow);
     // Main sphere with radial gradient
     const c = document.createElementNS(ns, 'circle');
     c.setAttribute('cx', b.x); c.setAttribute('cy', b.y); c.setAttribute('r', b.r);
@@ -992,9 +1047,10 @@ document.addEventListener('click', e => {{
     c.setAttribute('stroke-opacity', '0.6');
     c.setAttribute('class', 'bc-bubble-circle');
     c.dataset.bcId = b.id;
-    c.addEventListener('click', () => showBcDetail(b.id));
-    svg.appendChild(c);
-    // Specular highlight (glossy dot)
+    c.style.cursor = 'grab';
+    c.addEventListener('click', (e) => {{ e.stopPropagation(); showBcDetail(b.id); }});
+    bubbleGroup.appendChild(c);
+    // Specular highlight
     const gloss = document.createElementNS(ns, 'ellipse');
     gloss.setAttribute('cx', b.x - b.r * 0.3);
     gloss.setAttribute('cy', b.y - b.r * 0.4);
@@ -1003,23 +1059,112 @@ document.addEventListener('click', e => {{
     gloss.setAttribute('fill', '#ffffff');
     gloss.setAttribute('opacity', '0.45');
     gloss.style.pointerEvents = 'none';
-    svg.appendChild(gloss);
+    bubbleGroup.appendChild(gloss);
     // Label
     const label = document.createElementNS(ns, 'text');
     label.setAttribute('x', b.x); label.setAttribute('y', b.y + 2);
     label.setAttribute('class', 'bc-bubble-label');
     label.textContent = b.name.length > 22 ? b.name.slice(0, 20) + '..' : b.name;
-    svg.appendChild(label);
-    // Node count
-    const count = document.createElementNS(ns, 'text');
-    count.setAttribute('x', b.x); count.setAttribute('y', b.y + 14);
-    count.setAttribute('class', 'bc-bubble-count');
-    count.textContent = b.size + ' nodes';
-    svg.appendChild(count);
+    bubbleGroup.appendChild(label);
+    // Subdomain tag
+    const subTag = document.createElementNS(ns, 'text');
+    subTag.setAttribute('x', b.x); subTag.setAttribute('y', b.y + 14);
+    subTag.setAttribute('class', 'bc-bubble-count');
+    const sdMap = {{core: '核心域', supporting: '支撑域', generic: '通用域', unknown: ''}};
+    subTag.textContent = sdMap[b.subdomain] || (b.size ? b.size + ' nodes' : '');
+    bubbleGroup.appendChild(subTag);
+    // Store refs for drag
+    bubbleEls.push({{circle: c, shadow: shadow, gloss: gloss, label: label, subTag: subTag, data: b}});
+
+    // Node drag handler
+    c.addEventListener('mousedown', (e) => {{
+      e.stopPropagation();
+      e.preventDefault();
+      c.style.cursor = 'grabbing';
+      const startX = e.clientX, startY = e.clientY;
+      const origX = b.x, origY = b.y;
+      const onMove = (ev) => {{
+        const dx = (ev.clientX - startX) / _bcScale;
+        const dy = (ev.clientY - startY) / _bcScale;
+        const newX = origX + dx, newY = origY + dy;
+        // Update sphere elements
+        c.setAttribute('cx', newX); c.setAttribute('cy', newY);
+        shadow.setAttribute('cx', newX + 2); shadow.setAttribute('cy', newY + b.r * 0.15);
+        gloss.setAttribute('cx', newX - b.r * 0.3); gloss.setAttribute('cy', newY - b.r * 0.4);
+        label.setAttribute('x', newX); label.setAttribute('y', newY + 2);
+        subTag.setAttribute('x', newX); subTag.setAttribute('y', newY + 14);
+        // Update connected links
+        linkEls.forEach((le) => {{
+          const lk = le.link;
+          let changed = false;
+          if (lk.from === b.id) {{ lk.x1 = newX; lk.y1 = newY; changed = true; }}
+          if (lk.to === b.id) {{ lk.x2 = newX; lk.y2 = newY; changed = true; }}
+          if (changed) {{
+            le.el.setAttribute('x1', lk.x1); le.el.setAttribute('y1', lk.y1);
+            le.el.setAttribute('x2', lk.x2); le.el.setAttribute('y2', lk.y2);
+          }}
+        }});
+        // Update link label positions
+        linkLabelEls.forEach((lle) => {{
+          const lk = lle.link;
+          const mx = (lk.x1 + lk.x2) / 2; const my = (lk.y1 + lk.y2) / 2;
+          lle.bgEl.setAttribute('x', mx - 30); lle.bgEl.setAttribute('y', my - 6);
+          lle.textEl.setAttribute('x', mx); lle.textEl.setAttribute('y', my + 3);
+        }});
+        b.x = newX; b.y = newY;
+      }};
+      const onUp = () => {{
+        c.style.cursor = 'grab';
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+      }};
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    }});
+  }});
+
+  // == SVG Pan / Zoom ==
+  let _bcScale = 1, _bcX = 0, _bcY = 0;
+  let _bcDragging = false, _bcDragStart = null;
+  function _bcUpdateTransform() {{
+    bubbleGroup.setAttribute('transform',
+      'translate(' + _bcX + ',' + _bcY + ') scale(' + _bcScale + ')');
+  }}
+  svg.addEventListener('wheel', (e) => {{
+    e.preventDefault();
+    const rect = svg.getBoundingClientRect();
+    const mx = ((e.clientX - rect.left) / rect.width) * 360;
+    const my = ((e.clientY - rect.top) / rect.height) * 340;
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    const newScale = Math.max(0.3, Math.min(4, _bcScale * delta));
+    _bcX = mx - (mx - _bcX) * (newScale / _bcScale);
+    _bcY = my - (my - _bcY) * (newScale / _bcScale);
+    _bcScale = newScale;
+    _bcUpdateTransform();
+  }}, {{passive: false}});
+  svg.addEventListener('mousedown', (e) => {{
+    if (e.target.tagName === 'circle' && e.target.dataset.bcId) return;
+    _bcDragging = true;
+    _bcDragStart = {{x: e.clientX - _bcX, y: e.clientY - _bcY}};
+    svg.style.cursor = 'grabbing';
+  }});
+  window.addEventListener('mousemove', (e) => {{
+    if (!_bcDragging) return;
+    _bcX = e.clientX - _bcDragStart.x;
+    _bcY = e.clientY - _bcDragStart.y;
+    _bcUpdateTransform();
+  }});
+  window.addEventListener('mouseup', () => {{
+    if (_bcDragging) {{ _bcDragging = false; svg.style.cursor = 'grab'; }}
+  }});
+  svg.addEventListener('dblclick', (e) => {{
+    e.preventDefault();
+    _bcScale = 1; _bcX = 0; _bcY = 0;
+    _bcUpdateTransform();
   }});
 
   function showBcDetail(bcId) {{
-    const detail = BC_DETAILS.find(d => d.id === bcId) || BC_DETAILS.find(d => d.name === bcId);
+    const detail = BC_DETAILS.find(d => d.id === bcId || d.name === bcId);
     if (!detail) return;
     const panel = document.getElementById('bc-detail-panel');
     const hint = document.getElementById('bc-detail-hint');
@@ -1027,22 +1172,55 @@ document.addEventListener('click', e => {{
     hint.style.display = 'none';
     document.getElementById('bc-detail-name').textContent = detail.name;
     document.getElementById('bc-detail-name').style.color = detail.color;
-    document.getElementById('bc-detail-stats').textContent = detail.nodeCount + ' nodes | ' + detail.fileCount + ' files';
+    // Subdomain + description
+    let statsText = '';
+    const sdMap = {{core: '核心域', supporting: '支撑域', generic: '通用域', unknown: ''}};
+    if (detail.subdomain && detail.subdomain !== 'unknown') statsText += sdMap[detail.subdomain] || '';
+    if (detail.fileCount) statsText += (statsText ? ' · ' : '') + detail.fileCount + ' 个文件';
+    document.getElementById('bc-detail-stats').textContent = statsText;
+
+    // DDD tactical concepts grouped by type
     const conceptsDiv = document.getElementById('bc-detail-concepts');
-    if (detail.concepts && detail.concepts.length) {{
-      conceptsDiv.innerHTML = '<div style="font-size:0.6875rem;color:var(--gf-text-muted);text-transform:uppercase;letter-spacing:0.04em;font-weight:600;margin-bottom:4px">DDD Concepts</div><div style="display:flex;flex-wrap:wrap;gap:3px">' + detail.concepts.map(c => '<span class="detail-tag">' + esc(c) + '</span>').join('') + '</div>';
-    }} else {{
-      conceptsDiv.innerHTML = '';
+    let cHtml = '';
+    if (detail.desc) {{
+      cHtml += '<div style="font-size:0.6875rem;color:var(--gf-text-secondary);line-height:1.5;margin-bottom:8px">' + esc(detail.desc.slice(0, 150)) + '</div>';
     }}
+    // Group concepts by type
+    const typeLabels = {{
+      aggregate_root: '聚合根', domain_event: '领域事件', invariant: '不变式',
+      value_object: '值对象', domain_service: '领域服务', contract: '契约',
+      glossary_term: '统一语言', concept: '概念',
+    }};
+    const grouped = {{}};
+    if (detail.concepts && detail.concepts.length) {{
+      detail.concepts.forEach(c => {{
+        const tl = typeLabels[c.type] || c.type || '概念';
+        if (!grouped[tl]) grouped[tl] = [];
+        grouped[tl].push(c.label);
+      }});
+    }}
+    Object.keys(grouped).forEach(tl => {{
+      cHtml += '<div style="font-size:0.6875rem;color:var(--gf-text-muted);text-transform:uppercase;letter-spacing:0.04em;font-weight:600;margin-bottom:4px">' + esc(tl) + '</div>';
+      cHtml += '<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px">';
+      grouped[tl].forEach(c => {{ cHtml += '<span class="detail-tag">' + esc(c) + '</span>'; }});
+      cHtml += '</div>';
+    }});
+    // Related BCs
+    if (detail.relatedBCs && detail.relatedBCs.length) {{
+      cHtml += '<div style="font-size:0.6875rem;color:var(--gf-text-muted);text-transform:uppercase;letter-spacing:0.04em;font-weight:600;margin-bottom:4px">关联 BC</div>';
+      detail.relatedBCs.forEach(r => {{
+        const arrow = r.direction === 'out' ? '\u2192' : '\u2190';
+        cHtml += '<div style="font-size:0.6875rem;color:var(--gf-text-secondary);padding:1px 0">' + arrow + ' ' + esc(r.label) + '</div>';
+      }});
+    }}
+    conceptsDiv.innerHTML = cHtml;
+
+    // Code files
     const filesDiv = document.getElementById('bc-detail-files');
     let filesHtml = '';
     if (detail.codeFiles && detail.codeFiles.length) {{
-      filesHtml += '<div style="font-size:0.6875rem;color:var(--gf-text-muted);text-transform:uppercase;letter-spacing:0.04em;font-weight:600;margin:8px 0 4px">Code Files</div>';
+      filesHtml += '<div style="font-size:0.6875rem;color:var(--gf-text-muted);text-transform:uppercase;letter-spacing:0.04em;font-weight:600;margin:8px 0 4px">代码文件</div>';
       filesHtml += detail.codeFiles.map(f => '<div style="font-family:var(--gf-font-mono);font-size:0.6875rem;color:var(--gf-text-secondary);padding:1px 0">' + esc(f) + '</div>').join('');
-    }}
-    if (detail.docFiles && detail.docFiles.length) {{
-      filesHtml += '<div style="font-size:0.6875rem;color:var(--gf-text-muted);text-transform:uppercase;letter-spacing:0.04em;font-weight:600;margin:8px 0 4px">Doc Files</div>';
-      filesHtml += detail.docFiles.map(f => '<div style="font-family:var(--gf-font-mono);font-size:0.6875rem;color:var(--gf-text-secondary);padding:1px 0">' + esc(f) + '</div>').join('');
     }}
     filesDiv.innerHTML = filesHtml;
     const jumpBtn = document.getElementById('bc-detail-jump');
@@ -1403,6 +1581,7 @@ def to_html(
     vis_edges = []
     for u, v, data in G.edges(data=True):
         confidence = data.get("confidence", "EXTRACTED")
+        confidence_score = float(data.get("confidence_score", 1.0 if confidence == "EXTRACTED" else 0.55))
         relation = data.get("relation", "")
         true_src = data.get("_src", u)
         true_tgt = data.get("_tgt", v)
@@ -1410,11 +1589,13 @@ def to_html(
             "from": true_src,
             "to": true_tgt,
             "label": relation,
-            "title": _html.escape(f"{relation} [{confidence}]"),
+            "title": _html.escape(f"{relation} [{confidence} {confidence_score:.2f}]"),
             "dashes": confidence != "EXTRACTED",
             "width": 2 if confidence == "EXTRACTED" else 1,
             "color": {"opacity": 0.7 if confidence == "EXTRACTED" else 0.35},
             "confidence": confidence,
+            "confidence_score": confidence_score,
+            "evaluated": bool(data.get("evaluated", False)),
         })
 
     # Build community legend data
@@ -1425,29 +1606,60 @@ def to_html(
         n = member_counts.get(cid, len(communities.get(cid, []))) if member_counts else len(communities.get(cid, []))
         legend_data.append({"cid": cid, "color": color, "label": lbl, "count": n})
 
-    # Build review queue items from the graph's low-confidence edges + the
-    # externally-supplied islands/gaps. The graph edges are the source of
-    # AMBIGUOUS (multi-match) and INFERRED items; islands (unmatched anchors)
-    # and semantic gaps (LLM failures) come from the review_queue argument.
+    # Build review queue items. Filtering is score-based: any edge or node
+    # with confidence_score below the default threshold (0.8) enters the
+    # queue. This replaces the old enum-based filter (AMBIGUOUS + INFERRED)
+    # which put ALL INFERRED edges in the queue regardless of how confident
+    # the Evaluation Agent was. EXTRACTED items (score=1.0) never enter.
+    # The threshold is adjustable via a slider in the UI.
+    DEFAULT_REVIEW_THRESHOLD = 0.8
     review_items: list[dict] = []
     if review_queue:
         for r in review_queue:
             review_items.append(dict(r))
-    # Extract AMBIGUOUS and INFERRED edges from the graph itself.
+    # Low-confidence edges from the graph.
     for u, v, data in G.edges(data=True):
-        confidence = data.get("confidence", "EXTRACTED")
-        if confidence in ("AMBIGUOUS", "INFERRED"):
+        score = float(data.get("confidence_score", 1.0 if data.get("confidence") == "EXTRACTED" else 0.55))
+        if score < DEFAULT_REVIEW_THRESHOLD:
+            confidence = data.get("confidence", "EXTRACTED")
             src_label = sanitize_label(G.nodes[u].get("label", u))
             tgt_label = sanitize_label(G.nodes[v].get("label", v))
             relation = data.get("relation", "")
+            evaluated = bool(data.get("evaluated", False))
+            reason = sanitize_label(str(data.get("evaluation_reason") or ""))
             review_items.append({
                 "type": "ambiguous_edge" if confidence == "AMBIGUOUS" else "inferred_edge",
                 "title": f"{src_label} → {tgt_label}",
-                "detail": f"{relation} [{confidence}]",
+                "detail": f"{relation} [{confidence} {score:.2f}]",
+                "confidence_score": score,
+                "evaluated": evaluated,
+                "evaluation_reason": reason,
                 "source_file": sanitize_label(str(data.get("source_file") or "")),
                 "source_location": sanitize_label(str(data.get("source_location") or "")),
-                "node_id": u,  # focus the source node on click
+                "node_id": u,
             })
+    # Low-confidence nodes from the graph (LLM-generated nodes that the
+    # Evaluation Agent scored low, or unverified nodes).
+    for nid, data in G.nodes(data=True):
+        if not isinstance(data, dict):
+            continue
+        score = float(data.get("confidence_score", 1.0))
+        if score < DEFAULT_REVIEW_THRESHOLD:
+            label = sanitize_label(data.get("label", nid))
+            review_items.append({
+                "type": "node_review",
+                "title": label,
+                "detail": f"[{data.get('confidence', 'INFERRED')} {score:.2f}]",
+                "confidence_score": score,
+                "evaluated": bool(data.get("evaluated", False)),
+                "evaluation_reason": sanitize_label(str(data.get("evaluation_reason") or "")),
+                "source_file": sanitize_label(str(data.get("source_file") or "")),
+                "source_location": sanitize_label(str(data.get("source_location") or "")),
+                "node_id": nid,
+            })
+
+    # Sort review items by score ascending (lowest confidence first).
+    review_items.sort(key=lambda r: r.get("confidence_score", 1.0))
 
     # Escape </script> sequences so embedded JSON cannot break out of the script tag
     def _js_safe(obj) -> str:
@@ -1564,6 +1776,34 @@ def to_html(
                     break
     except Exception:
         pass
+    # If no README description, try AI-generated description from graph metadata
+    if not _service_desc:
+        try:
+            from graphify.llm import _call_llm, detect_backend
+            _backend = detect_backend()
+            if _backend:
+                # Build clues from graph data
+                _top_labels = sorted({_n.get("label", "") for _n in vis_nodes
+                                      if _n.get("file_type") == "code" and _n.get("label", "")
+                                      }, key=lambda x: len(x))[:10]
+                _bc_names = [b["name"] for b in _ddd_bcs if b.get("name")]
+                _clues = f"Project: {_proj_name}\nLanguage: {_primary_lang}\nFiles: {len(vis_nodes)} nodes\n"
+                if _bc_names:
+                    _clues += f"Bounded Contexts: {', '.join(_bc_names[:8])}\n"
+                if _top_labels:
+                    _clues += f"Key components: {', '.join(_top_labels)}\n"
+                _prompt = (
+                    f"Based on these clues about a software project, write a single sentence "
+                    f"(max 150 chars) describing what this project does. Reply with ONLY the "
+                    f"description, no explanation.\n\n{_clues}"
+                )
+                _ai_desc = _call_llm(_prompt, backend=_backend, max_tokens=80)
+                if _ai_desc:
+                    _ai_desc = _ai_desc.strip().strip('"').strip("'")
+                    if len(_ai_desc) > 5 and len(_ai_desc) < 200:
+                        _service_desc = sanitize_label(_ai_desc)
+        except Exception:
+            pass
     if not _service_desc:
         _service_desc = f"{_primary_lang} project with {len(_significant)} modules"
 
@@ -1609,7 +1849,7 @@ def to_html(
             for _dep, _ver in list(_deps.items()) + list(_dev_deps.items()):
                 _tech_name = _dep_map.get(_dep, _dep)
                 _tech_stack.append(_tech_name)
-                _tech_stack_detail.append({{"name": _tech_name, "version": _ver, "dep": _dep}})
+                _tech_stack_detail.append({"name": _tech_name, "version": _ver, "dep": _dep})
             _tech_stack = _tech_stack[:12]
     except Exception:
         pass
@@ -1630,44 +1870,73 @@ def to_html(
     _ddd_bcs = []
     _ddd_bc_links = []
     _node_id_to_data = {_n["id"]: _n for _n in vis_nodes}
+    # Filter by tags field: ["ddd", "bounded_context"]
     for _n in vis_nodes:
-        _label = _n.get("label", "")
-        # Match BC nodes like "BC-01 User Management Bounded Context"
-        if "Bounded Context" in _label or "BC-0" in _label:
-            _cid = _n.get("community", 0)
-            _color = COMMUNITY_COLORS[_cid % len(COMMUNITY_COLORS)] if _cid < len(COMMUNITY_COLORS) else COMMUNITY_COLORS[0]
-            _ddd_bcs.append({"id": _n["id"], "name": _label.replace(" Bounded Context", "").replace(" (Core Domain)", "").replace(" (Supporting Domain)", ""), "color": _color, "nodeId": _n["id"]})
-    # If no explicit BC nodes found, fall back to top Leiden communities with DDD-like names
+        _tags = _n.get("tags") or []
+        if "ddd" in _tags and "bounded_context" in _tags:
+            _desc = _n.get("desc", "") or ""
+            # Infer subdomain type from desc keywords
+            _subdomain = "unknown"
+            _desc_lower = _desc.lower()
+            if "核心" in _desc or "core" in _desc_lower:
+                _subdomain = "core"
+            elif "支撑" in _desc or "supporting" in _desc_lower:
+                _subdomain = "supporting"
+            elif "通用" in _desc or "generic" in _desc_lower:
+                _subdomain = "generic"
+            _subdomain_colors = {"core": "#4E79A7", "supporting": "#F28E2B", "generic": "#8D99AE", "unknown": "#4E79A7"}
+            _bc_color = _subdomain_colors[_subdomain]
+            _ddd_bcs.append({
+                "id": _n["id"], "name": _n.get("label", ""), "color": _bc_color,
+                "nodeId": _n["id"], "desc": _desc, "subdomain": _subdomain,
+                "concept_id": _n.get("concept_id", ""),
+            })
+    # If no DDD BC nodes found (project has no DDD docs), fall back to top Leiden communities
     if not _ddd_bcs:
         for _c in _significant[:5]:
-            _ddd_bcs.append({"id": str(_c["cid"]), "name": _c["label"], "color": _c["color"], "nodeId": None})
+            _ddd_bcs.append({"id": str(_c["cid"]), "name": _c["label"], "color": _c["color"], "nodeId": None, "desc": "", "subdomain": "unknown", "concept_id": ""})
 
-    # For each DDD BC, find related nodes via edges
+    # For each DDD BC, collect related tactical DDD concepts via edges
     _ddd_bc_details = []
     for _bc in _ddd_bcs:
         _bc_node_id = _bc.get("nodeId")
-        _related_concepts = []
+        _related_concepts = []  # aggregate_root, domain_event, etc.
         _related_files = []
+        _related_bcs = []
         if _bc_node_id:
             for _u, _v, _d in G.edges(data=True):
                 _other_id = None
+                _is_outgoing = False
                 if _u == _bc_node_id:
                     _other_id = _v
+                    _is_outgoing = True
                 elif _v == _bc_node_id:
                     _other_id = _u
+                    _is_outgoing = False
                 if _other_id and _other_id in _node_id_to_data:
                     _other = _node_id_to_data[_other_id]
                     _other_label = _other.get("label", "")
+                    _other_tags = _other.get("tags") or []
                     _other_type = _other.get("file_type", "")
                     _other_file = _other.get("source_file", "")
-                    if _other_type in ("concept", "rationale") and _other_label not in _related_concepts:
-                        _related_concepts.append(_other_label)
-                    if _other_file and _other_file not in _related_files:
+                    _rel = _d.get("relation", "")
+                    # DDD tactical concepts (aggregate_root, domain_event, invariant, value_object, domain_service)
+                    if "ddd" in _other_tags:
+                        _ddd_type = next((t for t in _other_tags if t != "ddd"), None)
+                        if _ddd_type and _ddd_type != "bounded_context":
+                            _related_concepts.append({"label": _other_label, "type": _ddd_type, "relation": _rel})
+                    # Related BCs
+                    if "bounded_context" in _other_tags and _other_label not in [r["label"] for r in _related_bcs]:
+                        _related_bcs.append({"label": _other_label, "relation": _rel, "direction": "out" if _is_outgoing else "in"})
+                    # Code files
+                    if _other_type == "code" and _other_file and _other_file not in _related_files:
                         _related_files.append(_other_file)
         _ddd_bc_details.append({
             "id": _bc["id"], "name": _bc["name"], "color": _bc["color"],
-            "concepts": _related_concepts[:10], "files": _related_files[:8],
-            "fileCount": len(_related_files),
+            "desc": _bc.get("desc", ""), "subdomain": _bc.get("subdomain", "unknown"),
+            "concepts": _related_concepts[:12], "relatedBCs": _related_bcs[:6],
+            "files": _related_files[:8], "fileCount": len(_related_files),
+            "codeFiles": _related_files[:6], "docFiles": [],
         })
 
     # Layout BC bubbles in a circle
@@ -1677,18 +1946,22 @@ def to_html(
         _r = 110 if _n_bc > 1 else 0
         _bc["x"] = 180 + _r * _math.cos(_angle)
         _bc["y"] = 170 + _r * _math.sin(_angle)
-        _bc["r"] = 30 + _i * 2
+        _bc["r"] = 30
 
-    # BC links (cross-BC edges in graph)
-    for _bc_a in _ddd_bcs:
-        for _bc_b in _ddd_bcs:
-            if _bc_a["id"] != _bc_b["id"]:
-                _a_id = _bc_a.get("nodeId")
-                _b_id = _bc_b.get("nodeId")
-                if _a_id and _b_id:
-                    _has_edge = G.has_edge(_a_id, _b_id) or G.has_edge(_b_id, _a_id)
-                    if _has_edge:
-                        _ddd_bc_links.append({"from": _bc_a["id"], "to": _bc_b["id"], "x1": _bc_a["x"], "y1": _bc_a["y"], "x2": _bc_b["x"], "y2": _bc_b["y"], "weight": 1})
+    # BC links with relationship labels
+    _bc_id_set = {b["id"] for b in _ddd_bcs}
+    for _u, _v, _d in G.edges(data=True):
+        if _u in _bc_id_set and _v in _bc_id_set:
+            _ba = next((x for x in _ddd_bcs if x["id"] == _u), None)
+            _bb = next((x for x in _ddd_bcs if x["id"] == _v), None)
+            if _ba and _bb:
+                _rel = _d.get("relation", "related")
+                _ddd_bc_links.append({
+                    "from": _u, "to": _v, "weight": 1,
+                    "x1": _ba["x"], "y1": _ba["y"],
+                    "x2": _bb["x"], "y2": _bb["y"],
+                    "label": _rel,
+                })
 
     _bc_bubbles_json = _js_safe(_ddd_bcs)
     _bc_links_json = _js_safe(_ddd_bc_links)
@@ -1817,7 +2090,7 @@ def to_html(
           <div class="ovw-info-card" style="padding:12px">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
               <span style="font-family:var(--gf-font-heading);font-size:0.875rem;font-weight:600;color:var(--gf-text-primary)">限界上下文 (BC)</span>
-              <span id="bc-detail-hint" style="font-size:0.6875rem;color:var(--gf-text-faint)">点击球体查看详情</span>
+              <span id="bc-detail-hint" style="font-size:0.6875rem;color:var(--gf-text-faint)">滚轮缩放 · 拖拽球体 · 点击查看详情</span>
             </div>
             <div style="display:flex;gap:8px">
               <svg class="bc-bubble-svg" viewBox="0 0 360 340" id="bc-bubbles" style="flex:1"></svg>
@@ -1863,7 +2136,13 @@ def to_html(
         <div class="filter-section-label">标签</div>
         <div class="filter-chip-row" id="filter-tags"></div>
       </div>
-      <div class="sidebar-list" id="node-list"></div>
+      <div class="sidebar-list" id="node-list">
+        <div class="confidence-bar" style="display:flex;align-items:center;gap:4px;padding:4px 12px;border-bottom:1px solid var(--gf-border-subtle);position:sticky;top:0;background:var(--gf-surface);z-index:5">
+          <span style="font-size:0.625rem;color:var(--gf-text-muted);font-weight:600;white-space:nowrap">置信度</span>
+          <input type="range" id="confidence-threshold" min="0" max="1" step="0.05" value="0.8" style="width:70px;accent-color:var(--gf-accent);cursor:pointer;height:12px" oninput="filterReviewQueue(this.value)">
+          <span id="threshold-value" style="font-family:var(--gf-font-mono);font-size:0.5625rem;color:var(--gf-accent-bright);min-width:20px">&lt;0.80</span>
+        </div>
+      </div>
     </aside>
     <!-- Center: graph -->
     <div class="graph-area">

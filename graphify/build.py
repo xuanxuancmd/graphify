@@ -1387,7 +1387,17 @@ def build(
             # survivor rewiring the edges get (#2805).
             hyperedges=combined.get("hyperedges"),
         )
-    return build_from_json(combined, directed=directed, root=root)
+    G = build_from_json(combined, directed=directed, root=root)
+
+    # Stamp node confidence fields based on _origin (AST → EXTRACTED/1.0,
+    # semantic → INFERRED/0.55). Edges already carry these from extractors;
+    # nodes do not (see llm.py:657 — confidence was deliberately edge-only).
+    # This must run BEFORE evaluate_graph so the Agent knows which items to
+    # evaluate (only INFERRED).
+    from graphify.evaluate import stamp_node_confidence
+    stamp_node_confidence(G)
+
+    return G
 
 
 def _norm_label(label: str | None) -> str:
@@ -1976,6 +1986,13 @@ def build_merge(
                 f"{_disk_n} → {G.number_of_nodes()} nodes. "
                 f"Pass prune_sources explicitly if you intend to remove them. (#479)"
             )
+
+    # Stamp node confidence for any NEW nodes that build_from_json added
+    # but were not stamped by build() (the --update/incremental path goes
+    # through build_merge, not build). This is idempotent — nodes that
+    # already have confidence fields are left untouched (setdefault).
+    from graphify.evaluate import stamp_node_confidence
+    stamp_node_confidence(G)
 
     return G
 

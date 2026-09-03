@@ -493,7 +493,7 @@ def _infer_ddd_type(ddd_type_raw: str) -> str:
         return "domain_event"
     if "不变式" in raw or "invariant" in raw:
         return "invariant"
-    if "限界上下文" in raw or "bounded" in raw or "bc" in raw:
+    if "限界上下文" in raw or "bounded context" in raw or raw.strip() == "bc":
         return "bounded_context"
     if "值对象" in raw or "value" in raw:
         return "value_object"
@@ -505,7 +505,7 @@ def _infer_ddd_type(ddd_type_raw: str) -> str:
         return "business_flow_step"
     if "术语" in raw or "glossary" in raw:
         return "glossary_term"
-    if "约束" in raw or "constraint" in raw or "tc" in raw:
+    if "约束" in raw or "constraint" in raw or raw.strip().startswith("tc"):
         return "tech_constraint"
     return "concept"
 
