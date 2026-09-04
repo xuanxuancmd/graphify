@@ -21,8 +21,10 @@ Test coverage:
 
   1. swagger_doc node exists (one per .yaml file)
   2. rest_endpoint nodes extracted (9 endpoints: 6 UserService + 3 AuthController)
-  3. Endpoint node fields: method, path, full_path, operation_id, swagger_tags,
-     summary, description, response_codes, has_request_body
+  3. Endpoint node shape: slim generic fields only — label is
+     ``METHOD:/full/path`` (the URL's sole carrier), desc = description +
+     x-examples (no summary), tags=["url"]; no method/path/operation_id/
+     swagger_tags/swagger-specific fields
   4. contains edges: swagger_doc -> rest_endpoint
   5. defined_in edges: rest_endpoint -> swagger_doc (reverse)
   6. references edges: rest_endpoint -> code AST class/function nodes
@@ -103,8 +105,6 @@ class TestSwaggerDocNode:
         assert swagger_doc_node["id"].startswith("swagger_doc_")
         assert swagger_doc_node["file_type"] == "document"
         assert "swagger" in swagger_doc_node["tags"]
-        assert swagger_doc_node["swagger_version"] == "2.x"
-        assert swagger_doc_node["base_path"] == "/rest"
         assert swagger_doc_node["label"] == "user-api.yaml"
 
     def test_source_file_is_relative(self, swagger_doc_node) -> None:
@@ -134,56 +134,64 @@ class TestEndpointNodes:
             assert ":/rest/" in ep["label"]
 
     def test_user_service_endpoints(self, endpoint_nodes) -> None:
-        user_eps = [e for e in endpoint_nodes if "UserService" in e.get("swagger_tags", [])]
+        # UserService endpoints are identified by their /userservice/ path
+        # prefix in the label (the slim node carries no swagger_tags field)
+        user_eps = [e for e in endpoint_nodes if "/userservice/" in e["label"]]
         # list, create, get-by-id, update, delete, suspend, reactivate = 7
         assert len(user_eps) == 7
 
     def test_auth_controller_endpoints(self, endpoint_nodes) -> None:
-        auth_eps = [e for e in endpoint_nodes if "AuthController" in e.get("swagger_tags", [])]
+        auth_eps = [e for e in endpoint_nodes if "/auth/" in e["label"]]
         assert len(auth_eps) == 3
 
     def test_get_users_endpoint(self, endpoint_nodes) -> None:
         ep = next(
             e for e in endpoint_nodes
-            if e["method"] == "GET" and e["path"] == "/userservice/v1/users"
+            if e["label"] == "GET:/rest/userservice/v1/users"
         )
-        assert ep["full_path"] == "/rest/userservice/v1/users"
         assert ep["label"] == "GET:/rest/userservice/v1/users"
-        assert ep["operation_id"] == "getUser"
-        assert ep["swagger_tags"] == ["UserService"]
-        assert "200" in ep["response_codes"]
-        assert ep["has_request_body"] is False
-        assert ep["base_path"] == "/rest"
+        assert ep["tags"] == ["url"]
+        assert ep["file_type"] == "concept"
 
-    def test_post_users_endpoint_has_request_body(self, endpoint_nodes) -> None:
+    def test_post_users_endpoint(self, endpoint_nodes) -> None:
         ep = next(
             e for e in endpoint_nodes
-            if e["method"] == "POST" and e["path"] == "/userservice/v1/users"
+            if e["label"] == "POST:/rest/userservice/v1/users"
         )
-        assert ep["operation_id"] == "createUser"
-        assert ep["has_request_body"] is True
-        assert "application/json" in ep["consumes"]
+        # desc carries the description text (semantic retrieval surface)
+        assert "user account" in ep["desc"] or "user" in ep["desc"].lower()
 
     def test_register_endpoint(self, endpoint_nodes) -> None:
         ep = next(
             e for e in endpoint_nodes
-            if e["path"] == "/auth/register"
+            if e["label"] == "POST:/rest/auth/register"
         )
-        assert ep["method"] == "POST"
-        assert ep["operation_id"] == "handleRegister"
-        assert ep["swagger_tags"] == ["AuthController"]
-        assert ep["full_path"] == "/rest/auth/register"
-        assert ep["summary"] == "Register a new user account"
-        assert ep["has_request_body"] is True
+        assert ep["node_kind"] == "rest_endpoint"
 
-    def test_endpoint_desc_has_summary_and_description(self, endpoint_nodes) -> None:
+    def test_endpoint_desc_excludes_summary(self, endpoint_nodes) -> None:
+        """desc = description + x-examples, WITHOUT summary (intentionally
+        excluded — redundant with description in swagger specs)."""
         ep = next(
             e for e in endpoint_nodes
-            if e["method"] == "POST" and e["path"] == "/auth/login"
+            if e["label"] == "POST:/rest/auth/login"
         )
-        # desc = summary + "\n\n" + description, with .strip() applied
-        assert ep["summary"] in ep["desc"]
-        assert ep["description"].strip() in ep["desc"]
+        assert "Authenticates the user" in ep["desc"]  # description content present
+        assert "Login and receive a JWT token" not in ep["desc"]  # summary excluded
+
+    def test_slim_node_has_no_swagger_fields(self, endpoint_nodes) -> None:
+        """The endpoint node must carry ONLY generic fields — the modeling
+        decision: URL lives in the label, associations in references edges."""
+        banned = (
+            "method", "path", "full_path", "operation_id", "swagger_tags",
+            "base_path", "summary", "description", "response_codes",
+            "has_request_body", "consumes",
+        )
+        for ep in endpoint_nodes:
+            for field in banned:
+                assert field not in ep, (
+                    f"endpoint {ep['label']} still carries swagger-specific "
+                    f"field {field!r}"
+                )
 
     def test_source_location_present(self, endpoint_nodes) -> None:
         for ep in endpoint_nodes:
@@ -232,7 +240,7 @@ class TestCodeAssociationEdges:
         )
 
     def test_user_service_endpoints_link_to_user_service_class(self, edges, endpoint_nodes) -> None:
-        user_eps = [e for e in endpoint_nodes if "UserService" in e.get("swagger_tags", [])]
+        user_eps = [e for e in endpoint_nodes if "/userservice/" in e["label"]]
         for ep in user_eps:
             refs_from_ep = [
                 e for e in edges
@@ -241,7 +249,7 @@ class TestCodeAssociationEdges:
             assert refs_from_ep, f"endpoint {ep['label']} has no references edges"
 
     def test_auth_endpoints_link_to_auth_controller_class(self, edges, endpoint_nodes) -> None:
-        auth_eps = [e for e in endpoint_nodes if "AuthController" in e.get("swagger_tags", [])]
+        auth_eps = [e for e in endpoint_nodes if "/auth/" in e["label"]]
         for ep in auth_eps:
             refs_from_ep = [
                 e for e in edges
@@ -250,11 +258,11 @@ class TestCodeAssociationEdges:
             assert refs_from_ep, f"endpoint {ep['label']} has no references edges"
 
     def test_endpoint_links_to_handler_function(self, edges, endpoint_nodes) -> None:
-        """The POST:/users endpoint with operationId=createUser should link
+        """The POST:/users endpoint (operationId=createUser) should link
         to a code node labeled 'createUser' (the UserService.createUser method)."""
         create_ep = next(
             e for e in endpoint_nodes
-            if e["method"] == "POST" and e["operation_id"] == "createUser"
+            if e["label"] == "POST:/rest/userservice/v1/users"
         )
         refs_from_create = [
             e for e in edges
@@ -266,11 +274,11 @@ class TestCodeAssociationEdges:
         assert len(refs_from_create) >= 1
 
     def test_endpoint_links_to_controller_class(self, edges, endpoint_nodes, nodes) -> None:
-        """The GET /auth/login endpoint with tag=AuthController should link
+        """The POST /auth/login endpoint (tag=AuthController) should link
         to the AuthController class node in the code AST."""
         login_ep = next(
             e for e in endpoint_nodes
-            if e["method"] == "POST" and e["path"] == "/auth/login"
+            if e["label"] == "POST:/rest/auth/login"
         )
         refs_from_login = [
             e for e in edges
@@ -295,7 +303,7 @@ class TestCodeAssociationEdges:
         """
         register_ep = next(
             e for e in endpoint_nodes
-            if e["method"] == "POST" and e["path"] == "/auth/register"
+            if e["label"] == "POST:/rest/auth/register"
         )
         refs_from_register = [
             e for e in edges

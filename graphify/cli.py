@@ -3159,6 +3159,12 @@ def dispatch_command(cmd: str) -> None:
         local_path = _clone_repo(url, branch=branch, out_dir=out_dir)
         print(local_path)
 
+    elif cmd == "learn":
+        # 学习模式：为 graph.html 的「学习」页签生成人读向的函数级语义
+        # 卡片 + 依赖序学习路径（.graph/learn.json），并重导 graph.html。
+        from graphify.learn import run_learn
+        run_learn(sys.argv[2:])
+
     elif cmd == "export":
         subcmd = sys.argv[2] if len(sys.argv) > 2 else ""
         if subcmd not in ("html", "callflow-html", "obsidian", "wiki", "svg", "graphml", "neo4j", "falkordb"):
@@ -4356,6 +4362,16 @@ def dispatch_command(cmd: str) -> None:
                     file=sys.stderr,
                 )
 
+        # Tag governance (graphify.tags): preload the graph's existing tag
+        # vocabulary into memory BEFORE semantic extraction, plus this run's
+        # deterministic AST/doc-extractor tags (ddd/swagger emit closed
+        # vocabularies). The AI sees it as a reuse-first hint; the merge-layer
+        # normalization below converges what it emits anyway.
+        from graphify.tags import TagVocabulary as _TagVocabulary
+        _tag_vocab = _TagVocabulary.from_graph(existing_graph_path)
+        _tag_vocab.absorb_nodes(ast_result.get("nodes", []))
+        _tag_hint = _tag_vocab.injection_list()
+
         # Semantic extraction on docs/papers/images. Check cache first.
         from graphify.cache import (
             check_semantic_cache as _check_semantic_cache,
@@ -4429,6 +4445,12 @@ def dispatch_command(cmd: str) -> None:
                         flush=True,
                     )
                 corpus_kwargs["on_chunk_done"] = _progress
+
+                # Reuse-first tag hint into every chunk's user message (both
+                # the default prompt group and custom YAML prompt groups).
+                # Empty on a first run — no vocabulary, no injection.
+                if _tag_hint:
+                    corpus_kwargs["tag_vocabulary"] = _tag_hint
 
                 # --- Gap-4: prompt registry — group uncached files by custom
                 # prompt spec. Each group forms its own LLM chunk(s) with its
@@ -4601,6 +4623,21 @@ def dispatch_command(cmd: str) -> None:
                 sem_result["hyperedges"].extend(fresh.get("hyperedges", []))
                 sem_result["input_tokens"] += fresh.get("input_tokens", 0)
                 sem_result["output_tokens"] += fresh.get("output_tokens", 0)
+
+        # Tag governance, merge layer: canonicalize every semantic-tier node's
+        # tags against the preloaded vocabulary — fresh extraction, custom
+        # YAML prompts, and cache replays all pass through here, so cached
+        # entries converge too. The semantic CACHE keeps raw tags (its
+        # entries are extraction vintages); only what enters the graph is
+        # normalized. Idempotent, so a replayed normalized entry is a no-op.
+        if sem_result["nodes"]:
+            _tagged = _tag_vocab.normalize_nodes(sem_result["nodes"])
+            if _tagged:
+                print(
+                    f"[graphify extract] tags: normalized {_tagged} node tag list(s) "
+                    f"against a vocabulary of {len(_tag_vocab)} tag(s)",
+                    file=sys.stderr,
+                )
 
         # Prune orphaned semantic cache entries. The semantic cache is
         # content-hash-keyed and unversioned, so it is never swept by the AST

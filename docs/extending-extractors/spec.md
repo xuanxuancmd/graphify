@@ -95,7 +95,7 @@ graphify 把一个项目建模成知识图谱,提取分两层:
 
 ### 2.4 检索集成
 
-`serve.py` 的 `_node_search_text` 条件拼接 `tags` 字段:只在节点实际携带非空 list 时追加,无 tags 字段的节点产出**字节级一致**的搜索文本,行为与 upstream 完全一致。
+`serve.py` 的 `_node_search_text` **不拼接** `tags` 字段: tags 是 graph.html 过滤面板的人面元数据,与 query 检索解耦(AI 回填 tags 后,拼接会把按 tag 的召回噪声引入 query 候选集)。
 
 `desc` 字段作为 embedding 文本源,参与 vector 检索。`norm_label`/`label_tokens`/`source_file` 参与字符串检索。
 
@@ -477,5 +477,5 @@ ddd 解析器虽纯本地无 LLM,但不在 post-commit hook 里跑,因为 hook �
 | AC19 | Tier 2 缓存按组用各自 prompt 指纹写入,编辑自定义 prompt 失效缓存 | 修改 prompt 后 cache miss |
 | AC20 | Tier 2 retry/bisection 路径透传 `system_prompt`,不回退默认 | mock 截断,验证 retry 用自定义 prompt |
 | AC21 | Tier 2 `*` glob 不跨 `/`,`**` 跨目录 | 单元测试 glob 语义 |
-| AC22 | tags 参与字符串检索 | `graphify query "aggregate_root"` 命中 |
+| AC22 | tags 不参与字符串检索(与 query 解耦,归 `tags.py` 治理 + graph.html 过滤) | `graphify query "aggregate_root"` 不因 tags 命中;`test_tags_excluded_from_search_text` |
 | AC23 | 改动不修改 markdown.py / build.py / dedup.py 既有行为 | git diff 为空 |

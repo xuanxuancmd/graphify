@@ -263,6 +263,76 @@ def existing_graph_node_count(path: "str | Path"):
     return len(nodes) if isinstance(nodes, list) else MALFORMED_GRAPH
 
 
+# Audit-provenance sidecar: LLM extraction reasons / evidence quotes live NEXT
+# TO graph.json in temp/, never inside it — graph.json is MR-visible data and
+# must stay clean of explanation prose. The sidecar is rebuilt on every export:
+# fresh extractions overwrite, reasons for edges preserved from a previous
+# build carry forward (an incremental rebuild loads semantic edges from an
+# already-stripped graph.json, so without carry-forward every rebuild would
+# lose the reasons of unchanged files), and entries whose edge no longer
+# exists are pruned.
+_REASONS_SIDECAR_REL = ("temp", "reasons.json")
+_REASONS_SCHEMA_VERSION = 1
+
+
+def _reasons_sidecar_path(output_path: "str | Path") -> Path:
+    return Path(output_path).parent.joinpath(*_REASONS_SIDECAR_REL)
+
+
+def _write_reasons_sidecar(
+    output_path: "str | Path",
+    *,
+    edges: dict,
+    nodes: dict,
+    live_edge_keys: set,
+    live_node_ids: set,
+) -> None:
+    """Merge freshly stripped reasons into the temp sidecar, prune dead entries.
+
+    Best-effort by design: a sidecar failure must never fail the graph export.
+    """
+    sidecar = _reasons_sidecar_path(output_path)
+    old_edges: dict = {}
+    old_nodes: dict = {}
+    try:
+        if sidecar.exists():
+            _prev = json.loads(sidecar.read_text(encoding="utf-8"))
+            if isinstance(_prev, dict):
+                if isinstance(_prev.get("edges"), dict):
+                    old_edges = _prev["edges"]
+                if isinstance(_prev.get("nodes"), dict):
+                    old_nodes = _prev["nodes"]
+    except (OSError, ValueError):
+        old_edges, old_nodes = {}, {}
+    merged_edges = {
+        k: v for k, v in {**old_edges, **edges}.items() if k in live_edge_keys
+    }
+    merged_nodes = {
+        k: v for k, v in {**old_nodes, **nodes}.items() if k in live_node_ids
+    }
+    try:
+        if not merged_edges and not merged_nodes:
+            if sidecar.exists():
+                sidecar.unlink()
+            return
+        sidecar.parent.mkdir(parents=True, exist_ok=True)
+        from graphify.paths import write_json_atomic
+        write_json_atomic(
+            sidecar,
+            {
+                "schema_version": _REASONS_SCHEMA_VERSION,
+                "edges": merged_edges,
+                "nodes": merged_nodes,
+            },
+            indent=2,
+        )
+    except OSError as exc:
+        print(
+            f"[graphify] WARNING: could not write reasons sidecar {sidecar}: {exc}",
+            file=sys.stderr,
+        )
+
+
 def to_json(G: nx.Graph, communities: dict[int, list[str]], output_path: str, *, force: bool = False, built_at_commit: str | None = None, community_labels: dict[int, str] | None = None) -> bool:
     # Safety check: refuse to silently shrink an existing graph (#479)
     existing_path = Path(output_path)
@@ -330,7 +400,20 @@ def to_json(G: nx.Graph, communities: dict[int, list[str]], output_path: str, *,
     def _json_sort_key(item: dict) -> str:
         return json.dumps(item, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
+    # Audit-only provenance accumulators: `reason`/`evidence_quote` are
+    # stripped from nodes/links below and persisted to the temp sidecar
+    # instead of graph.json (MR-visible data stays explanation-free).
+    _new_reason_edges: dict = {}
+    _new_reason_nodes: dict = {}
+    _live_edge_keys: set = set()
+
     for node in data["nodes"]:
+        _n_reason = node.pop("reason", None)
+        _n_quote = node.pop("evidence_quote", None)
+        if _n_reason is not None or _n_quote is not None:
+            _new_reason_nodes[node["id"]] = {
+                "reason": _n_reason, "evidence_quote": _n_quote,
+            }
         cid = node_community.get(node["id"])
         node["community"] = cid
         if cid is not None and _labels:
@@ -349,6 +432,17 @@ def to_json(G: nx.Graph, communities: dict[int, list[str]], output_path: str, *,
         if true_src is not None and true_tgt is not None:
             link["source"] = true_src
             link["target"] = true_tgt
+        # Audit-only fields never enter graph.json: pop them into the reasons
+        # sidecar so `graphify export html` can re-attach them without
+        # re-billing the LLM extraction.
+        _edge_key = f"{link['source']}|{link['target']}|{link.get('relation', '')}"
+        _live_edge_keys.add(_edge_key)
+        _reason = link.pop("reason", None)
+        _quote = link.pop("evidence_quote", None)
+        if _reason is not None or _quote is not None:
+            _new_reason_edges[_edge_key] = {
+                "reason": _reason, "evidence_quote": _quote,
+            }
     # Canonicalize the key order WITHIN each node/link dict. node_link_data always
     # appends the node key (`id`) at the end, so a node whose `id` was an inline
     # attribute on a cold build (position varies) lands last after a read-rebuild
@@ -408,6 +502,13 @@ def to_json(G: nx.Graph, communities: dict[int, list[str]], output_path: str, *,
     from graphify.paths import write_json_atomic
     # Atomic write: a crash/ENOSPC mid-write must not truncate a good graph.json.
     write_json_atomic(output_path, data, indent=2)
+    _write_reasons_sidecar(
+        output_path,
+        edges=_new_reason_edges,
+        nodes=_new_reason_nodes,
+        live_edge_keys=_live_edge_keys,
+        live_node_ids={n.get("id") for n in data["nodes"]},
+    )
     return True
 
 

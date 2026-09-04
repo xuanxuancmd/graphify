@@ -629,6 +629,8 @@ def _run_cli() -> None:
         print("  global list              list repos in the global graph")
         print("  global path              print path to the global graph file")
         print("  benchmark [graph.json]  measure token reduction vs naive full-corpus approach")
+        print("  learn [PATH]            generate human-oriented learning cards + guided tour")
+        print("                          (.graph/learn.json) for graph.html's learn tab")
         print("  export callflow-html    emit Mermaid-based architecture/call-flow HTML")
         print("  hook install            install post-commit/post-checkout git hooks (all platforms)")
         print("  hook uninstall          remove git hooks")

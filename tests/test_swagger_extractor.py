@@ -111,8 +111,6 @@ class TestSwagger2Extraction:
         doc = doc_nodes[0]
         assert doc["label"] == "apppublish.yaml"
         assert doc["file_type"] == "document"
-        assert doc["swagger_version"] == "2.x"
-        assert doc["base_path"] == "/rest"
         assert "swagger" in doc["tags"]
 
     def test_endpoint_count(self, result: ExtractionResult) -> None:
@@ -183,15 +181,6 @@ class TestOpenAPI3Extraction:
             (FIXTURES / "users_openapi3.yaml").read_text(encoding="utf-8"), encoding="utf-8"
         )
         return extract_swagger(fixture, root=tmp_path, nodes=None)
-
-    def test_version_detected(self, result: ExtractionResult) -> None:
-        doc = next(n for n in result.nodes if n.get("node_kind") == "swagger_doc")
-        assert doc["swagger_version"] == "3.x"
-
-    def test_base_path_from_servers(self, result: ExtractionResult) -> None:
-        doc = next(n for n in result.nodes if n.get("node_kind") == "swagger_doc")
-        # servers[0].url = https://api.example.com/v1 -> base_path = /v1
-        assert doc["base_path"] == "/v1"
 
     def test_endpoint_count(self, result: ExtractionResult) -> None:
         eps = [n for n in result.nodes if n.get("node_kind") == "rest_endpoint"]

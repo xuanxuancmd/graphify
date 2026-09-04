@@ -119,7 +119,7 @@ def test_install_project_claude_writes_project_scope(tmp_path, monkeypatch, caps
     project = tmp_path / "project"
     project.mkdir()
     monkeypatch.chdir(project)
-    monkeypatch.setattr(sys, "argv", ["graphify", "install", "--project"])
+    monkeypatch.setattr(sys, "argv", ["graphify", "install", "--project", "--platform", "claude"])
     with patch("graphify.__main__.Path.home", return_value=home):
         main()
     assert (project / ".claude" / "skills" / "graphify" / "SKILL.md").exists()
@@ -513,7 +513,7 @@ def test_uninstall_project_without_platform_removes_project_installs(tmp_path, m
     user_skill.write_text("user skill")
     monkeypatch.chdir(project)
     with patch("graphify.__main__.Path.home", return_value=home):
-        monkeypatch.setattr(sys, "argv", ["graphify", "install", "--project"])
+        monkeypatch.setattr(sys, "argv", ["graphify", "install", "--project", "--platform", "claude"])
         main()
         monkeypatch.setattr(sys, "argv", ["graphify", "uninstall", "--project"])
         main()
@@ -1229,3 +1229,139 @@ def test_codex_hook_command_is_a_real_cli_subcommand(tmp_path):
             f"codex hook registers {subcommand!r}, which the CLI does not dispatch "
             f"(#2165). Known commands: {sorted(dispatched)}"
         )
+
+
+# ── codeagent: bare-install default + .cac destination ───────────────────────
+
+
+def test_bare_install_defaults_to_codeagent_on_windows(tmp_path, monkeypatch):
+    """Bare `graphify install` targets codeagent even on Windows: everything
+    lands in ~/.cac (skill + CLAUDE.md registration + hooks) and ~/.claude is
+    never touched. Previously the Windows default was the `windows` platform,
+    which wrote ~/.claude."""
+    from graphify.__main__ import main
+
+    home = tmp_path / "home"
+    project = tmp_path / "project"
+    project.mkdir()
+    monkeypatch.chdir(project)
+    monkeypatch.setattr(sys, "argv", ["graphify", "install"])
+    with patch("graphify.__main__.Path.home", return_value=home), patch(
+        "graphify.__main__.platform.system", return_value="Windows"
+    ):
+        main()
+
+    assert (home / ".cac" / "skills" / "graphify" / "SKILL.md").exists()
+    assert (home / ".cac" / "AGENTS.md").exists()
+    assert "~/.cac/skills/graphify/SKILL.md" in (home / ".cac" / "AGENTS.md").read_text()
+    assert not (home / ".cac" / "CLAUDE.md").exists()
+    assert (home / ".cac" / "settings.json").exists()
+    assert not (home / ".claude").exists()
+
+
+def test_resolve_skill_file_codeagent_powershell_variant_on_windows(monkeypatch):
+    """On win32, codeagent's base skill.md resolves to the PowerShell variant
+    skill-windows.md (generic -windows suffix rule); on other OSes, the base."""
+    from graphify.install import _resolve_skill_file
+
+    monkeypatch.setattr("graphify.install.sys.platform", "win32")
+    assert _resolve_skill_file("codeagent") == "skill-windows.md"
+    monkeypatch.setattr("graphify.install.sys.platform", "linux")
+    assert _resolve_skill_file("codeagent") == "skill.md"
+
+
+def test_codeagent_install_registration_lands_in_cac_agents_md(tmp_path, monkeypatch):
+    """The codeagent registration goes to ~/.cac/AGENTS.md (its .cac home reads
+    AGENTS.md, not CLAUDE.md) with a .cac skill reference."""
+    from graphify.__main__ import install
+
+    monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
+    old = os.getcwd()
+    try:
+        os.chdir(tmp_path)
+        with patch("graphify.__main__.Path.home", return_value=tmp_path):
+            install(platform="codeagent")
+    finally:
+        os.chdir(old)
+
+    md = tmp_path / ".cac" / "AGENTS.md"
+    assert md.exists()
+    assert "~/.cac/skills/graphify/SKILL.md" in md.read_text()
+    assert ".claude" not in md.read_text()
+    assert not (tmp_path / ".cac" / "CLAUDE.md").exists()
+    assert not (tmp_path / ".claude").exists()
+
+
+def test_codeagent_install_ignores_claude_config_dir(tmp_path, monkeypatch):
+    """CLAUDE_CONFIG_DIR is a Claude Code variable; it must not redirect the
+    codeagent registration away from ~/.cac (#2694 follow-up)."""
+    from graphify.__main__ import install
+
+    home = tmp_path / "home"
+    home.mkdir()
+    config = tmp_path / "cfg"
+    config.mkdir()
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(config))
+    old = os.getcwd()
+    try:
+        os.chdir(tmp_path)
+        with patch("graphify.__main__.Path.home", return_value=home):
+            install(platform="codeagent")
+    finally:
+        os.chdir(old)
+
+    assert (home / ".cac" / "AGENTS.md").exists()
+    assert not (config / "CLAUDE.md").exists()
+    assert not (config / "AGENTS.md").exists()
+
+
+def test_codeagent_project_install_and_uninstall_roundtrip(tmp_path, monkeypatch):
+    """Project-scope codeagent install lands in ./.cac (skill + registration),
+    and `uninstall --project --platform codeagent` removes both."""
+    from graphify.__main__ import main
+
+    home = tmp_path / "home"
+    project = tmp_path / "project"
+    project.mkdir()
+    monkeypatch.chdir(project)
+    with patch("graphify.__main__.Path.home", return_value=home):
+        monkeypatch.setattr(
+            sys, "argv", ["graphify", "install", "--project", "--platform", "codeagent"]
+        )
+        main()
+        assert (project / ".cac" / "skills" / "graphify" / "SKILL.md").exists()
+        reg = project / ".cac" / "AGENTS.md"
+        assert reg.exists()
+        assert ".cac/skills/graphify/SKILL.md" in reg.read_text()
+        assert "~/" not in reg.read_text()  # project scope uses the relative ref
+        assert not (project / ".cac" / "CLAUDE.md").exists()
+        assert not (home / ".cac" / "skills").exists()  # user skill untouched
+
+        monkeypatch.setattr(
+            sys, "argv", ["graphify", "uninstall", "--project", "--platform", "codeagent"]
+        )
+        main()
+
+    assert not (project / ".cac" / "skills" / "graphify" / "SKILL.md").exists()
+    assert not reg.exists()
+
+
+def test_codeagent_global_uninstall_removes_cac_registration(tmp_path, monkeypatch):
+    """Global uninstall removes the ~/.cac/AGENTS.md registration install()
+    wrote, leaving no registration pointing at the removed skill."""
+    from graphify.__main__ import main
+
+    home = tmp_path / "home"
+    project = tmp_path / "project"
+    project.mkdir()
+    monkeypatch.chdir(project)
+    with patch("graphify.__main__.Path.home", return_value=home):
+        monkeypatch.setattr(sys, "argv", ["graphify", "install", "--platform", "codeagent"])
+        main()
+        assert (home / ".cac" / "AGENTS.md").exists()
+
+        monkeypatch.setattr(sys, "argv", ["graphify", "uninstall", "--platform", "codeagent"])
+        main()
+
+    assert not (home / ".cac" / "AGENTS.md").exists()
+    assert not (home / ".cac" / "skills" / "graphify" / "SKILL.md").exists()

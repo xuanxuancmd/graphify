@@ -63,8 +63,8 @@ FILE_NAME_REGEX = re.compile(r"^[\w/\\-]+\.\w{1,5}$")
 SNAKE_DOT_METHOD_REGEX = re.compile(r"^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$")
 PASCAL_DOT_METHOD_REGEX = re.compile(r"^([A-Z][a-zA-Z0-9]+)\.([a-zA-Z_][a-zA-Z0-9_]*)$")
 PASCAL_CASE_REGEX = re.compile(r"^[A-Z][a-zA-Z0-9]+$")
-HTTP_URL_REGEX = re.compile(r"^(GET|POST|PUT|DELETE|PATCH)\s+\/.+$", re.IGNORECASE)
-HTTP_COLON_URL_REGEX = re.compile(r"^(GET|POST|PUT|DELETE|PATCH):\/(.+)$", re.IGNORECASE)
+HTTP_URL_REGEX = re.compile(r"^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\s+\/.+$", re.IGNORECASE)
+HTTP_COLON_URL_REGEX = re.compile(r"^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS):\/(.+)$", re.IGNORECASE)
 PATH_URL_REGEX = re.compile(r"^\/.+")
 
 
@@ -78,12 +78,23 @@ _PATH_VAR_RE = re.compile(r"\{[^}]+\}")
 def _normalize_path_vars(p: str) -> str:
     """Normalize path variables: ``/rest/users/{userId}`` → ``/rest/users/{}``.
 
-    DDD docs may use ``{id}`` while the swagger endpoint's ``full_path`` carries
+    DDD docs may use ``{id}`` while the swagger endpoint's label carries
     ``{userId}``. Without normalization these never match. This rewrites every
     ``{...}`` segment to ``{}`` so path-variable anchors match regardless of the
     variable name.
     """
     return _PATH_VAR_RE.sub("{}", p)
+
+
+def _endpoint_method(node: dict) -> str:
+    """Extract the HTTP method from a rest_endpoint node's label.
+
+    Endpoint labels follow the ``METHOD:/full/path`` convention
+    (``GET:/rest/users/{id}`` → ``get``). Returns ``""`` when the label is not
+    in that shape (e.g. a legacy or non-swagger endpoint node).
+    """
+    m = re.match(r"^([A-Za-z]+):", node.get("label") or "")
+    return m.group(1).lower() if m else ""
 
 
 def _basename_without_ext(file_path: str) -> str:
@@ -139,9 +150,13 @@ def _build_code_indices(graph_nodes: list[dict]) -> dict[str, dict]:
 
     Indexes nodes with file_type=="code" (AST-extracted) for class/function/file
     matching. Also indexes ``rest_endpoint`` nodes (file_type=="concept",
-    node_kind=="rest_endpoint") into endpointIndex by their **path** (not label),
-    so URL anchors like ``POST:/rest/auth/register`` match regardless of the
-    HTTP method prefix in the label.
+    node_kind=="rest_endpoint") into endpointIndex by keys derived from their
+    **label** — the endpoint node carries no method/path fields; the URL lives
+    in the label (``GET:/rest/users/{id}``). Two key families are registered
+    per endpoint: a method+path key (``get:/rest/users/{id}`` — primary, lets
+    ``_match_code_anchor`` verify the HTTP method) and a bare-path key
+    (``/rest/users/{id}`` — for method-less anchors), each also in a
+    path-variable-normalized form so ``{id}`` and ``{userId}`` match each other.
     """
     file_index: dict[str, list[dict]] = {}
     name_index: dict[str, list[dict]] = {}
@@ -174,21 +189,24 @@ def _build_code_indices(graph_nodes: list[dict]) -> dict[str, dict]:
                 if norm and norm != label:
                     endpoint_index[norm] = node
 
-        # Endpoint nodes (swagger rest_endpoint): index by path, not label.
-        # The label is "POST:/rest/auth/register" — a URL anchor only
-        # carries the path "/rest/auth/register", so indexing by label
-        # would never match. Also index a path-variable-normalized form so
-        # "{id}" and "{userId}" match each other.
+        # Endpoint nodes (swagger rest_endpoint): the URL lives in the label
+        # ("GET:/rest/users/{id}") — the node carries no method/path fields.
+        # Parse the label and register BOTH a method+path key (primary: lets
+        # _match_code_anchor verify the anchor's HTTP method) and a bare-path
+        # key (for method-less anchors), each raw + path-variable-normalized
+        # (so "{id}" and "{userId}" match) + trailing-slash-stripped.
         if node.get("node_kind") == "rest_endpoint":
-            for path_key in ("full_path", "path"):
-                p = node.get(path_key)
-                if p:
-                    endpoint_index[p] = node
-                    endpoint_index[_normalize_path_vars(p)] = node
-                    norm = p.rstrip("/")
-                    if norm and norm != p:
-                        endpoint_index[norm] = node
-                        endpoint_index[_normalize_path_vars(norm)] = node
+            label = node.get("label") or ""
+            m = re.match(r"^([A-Za-z]+):(/.*)$", label)
+            if m:
+                method_key = m.group(1).lower() + ":" + m.group(2)
+                for key in (method_key, m.group(2)):
+                    endpoint_index[key] = node
+                    endpoint_index[_normalize_path_vars(key)] = node
+                    rstripped = key.rstrip("/") if len(key) > 1 else key
+                    if rstripped != key:
+                        endpoint_index[rstripped] = node
+                        endpoint_index[_normalize_path_vars(rstripped)] = node
 
     return {"fileIndex": file_index, "nameIndex": name_index, "endpointIndex": endpoint_index}
 
@@ -213,7 +231,11 @@ def _match_code_anchor(anchor: str, indices: dict) -> list[tuple[dict, str, floa
     3. PascalCase SimpleName (``OrderService``) — nameIndex by label
     3.5 Qualified name (``com.example.OrderService`` / ``module.OrderService``) —
         split last segment → nameIndex, disambiguate by source_file path hints
-    4-6. URL formats (``POST /path`` / ``POST:/path`` / ``/path``) — endpointIndex
+    4-6. URL formats (``POST /path`` / ``POST:/path`` / ``/path``) — endpointIndex.
+        Method-aware for format 5: a method+path key hit is EXTRACTED; when
+        only the bare path matches and the endpoint's own method (parsed from
+        its label) differs from the anchor's, the result is downgraded to
+        AMBIGUOUS so a wrong-method anchor never yields a 1.0-confidence edge.
 
     When graphify's language extractors don't set ``node_kind`` (e.g. the
     TS/JS extractor), falls back to ``_callable_class`` / ``_callable``
@@ -351,22 +373,32 @@ def _match_code_anchor(anchor: str, indices: dict) -> list[tuple[dict, str, floa
                           if ep.startswith(norm)]
         return prefix_matches
 
-    # 5. URL — HTTP method + colon + path
+    # 5. URL — HTTP method + colon + path (the canonical anchor format)
     m = HTTP_COLON_URL_REGEX.match(anchor)
     if m:
+        anchor_method = m.group(1).lower()
         raw_path = "/" + m.group(2)
         norm = raw_path.rstrip("/") if len(raw_path) > 1 else raw_path
-        _endpoint = indices["endpointIndex"].get(norm)
-        if not _endpoint:
-            _endpoint = indices["endpointIndex"].get(_normalize_path_vars(norm))
-        if _endpoint:
-            return [(_endpoint, "EXTRACTED", 1.0)]
-        # Also try exact raw (with trailing slash)
-        _endpoint = indices["endpointIndex"].get(raw_path)
-        if not _endpoint:
-            _endpoint = indices["endpointIndex"].get(_normalize_path_vars(raw_path))
-        if _endpoint:
-            return [(_endpoint, "EXTRACTED", 1.0)]
+        # Primary: method+path key — EXTRACTED only when the method matches too.
+        for key in (f"{anchor_method}:{norm}", f"{anchor_method}:{raw_path}"):
+            _endpoint = indices["endpointIndex"].get(key)
+            if not _endpoint:
+                _endpoint = indices["endpointIndex"].get(_normalize_path_vars(key))
+            if _endpoint:
+                return [(_endpoint, "EXTRACTED", 1.0)]
+        # Secondary: bare-path key — the path exists, possibly under another
+        # method. A method mismatch must NOT produce an EXTRACTED edge (a
+        # POST:/x anchor linking to a GET:/x endpoint at confidence 1.0 is a
+        # wrong relation); downgrade to AMBIGUOUS instead.
+        for key in (norm, raw_path):
+            _endpoint = indices["endpointIndex"].get(key)
+            if not _endpoint:
+                _endpoint = indices["endpointIndex"].get(_normalize_path_vars(key))
+            if _endpoint:
+                node_method = _endpoint_method(_endpoint)
+                if node_method and node_method != anchor_method:
+                    return [(_endpoint, "AMBIGUOUS", 0.3)]
+                return [(_endpoint, "EXTRACTED", 1.0)]
         prefix_matches = [(n, "AMBIGUOUS", 0.3)
                           for ep, n in indices["endpointIndex"].items()
                           if ep.startswith(norm)]

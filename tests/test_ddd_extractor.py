@@ -381,6 +381,107 @@ def test_code_anchor_colon_path_match():
 
 
 
+def _swagger_endpoint_node(ep_id: str, label: str) -> dict:
+
+    """A slim rest_endpoint node as the swagger extractor emits it — the URL
+    lives in the label; there are no method/path/full_path node fields."""
+
+    return {"id": ep_id, "label": label, "file_type": "concept",
+
+            "node_kind": "rest_endpoint", "source_file": "docs/user-api.yaml"}
+
+
+
+
+def test_code_anchor_url_matches_slim_endpoint_label():
+
+    """`GET:/rest/users/{id}` matches a slim rest_endpoint node by its label
+    (no full_path/path fields — the label is the URL's sole carrier)."""
+
+    nodes = [_swagger_endpoint_node("ep1", "GET:/rest/users/{id}")]
+
+    indices = _build_code_indices(nodes)
+
+    matched = _match_code_anchor("GET:/rest/users/{id}", indices)
+
+    assert len(matched) == 1
+
+    assert matched[0][0]["id"] == "ep1"
+
+    assert matched[0][1] == "EXTRACTED"
+
+    assert matched[0][2] == 1.0
+
+
+
+
+def test_code_anchor_url_matches_different_path_var_name():
+
+    """`GET:/rest/users/{userId}` matches an endpoint labeled with `{id}` —
+    path-variable names are normalized on both sides."""
+
+    nodes = [_swagger_endpoint_node("ep1", "GET:/rest/users/{id}")]
+
+    indices = _build_code_indices(nodes)
+
+    matched = _match_code_anchor("GET:/rest/users/{userId}", indices)
+
+    assert len(matched) == 1
+
+    assert matched[0][0]["id"] == "ep1"
+
+    assert matched[0][1] == "EXTRACTED"
+
+
+
+
+def test_code_anchor_url_method_mismatch_downgrades_to_ambiguous():
+
+    """A wrong-method anchor (`PUT:/rest/users` vs a `GET:/rest/users`
+    endpoint) must NOT produce an EXTRACTED edge — it downgrades to
+    AMBIGUOUS 0.3 (path exists, method differs)."""
+
+    nodes = [
+
+        _swagger_endpoint_node("ep_get", "GET:/rest/users"),
+
+        _swagger_endpoint_node("ep_post", "POST:/rest/users"),
+
+    ]
+
+    indices = _build_code_indices(nodes)
+
+    matched = _match_code_anchor("PUT:/rest/users", indices)
+
+    assert len(matched) == 1
+
+    assert matched[0][1] == "AMBIGUOUS"
+
+    assert matched[0][2] == 0.3
+
+
+
+
+def test_code_anchor_bare_path_matches_slim_endpoint():
+
+    """A method-less bare-path anchor (`/rest/users/{id}`) matches the slim
+    endpoint via the bare-path key — no method signal, so EXTRACTED stands."""
+
+    nodes = [_swagger_endpoint_node("ep1", "GET:/rest/users/{id}")]
+
+    indices = _build_code_indices(nodes)
+
+    matched = _match_code_anchor("/rest/users/{id}", indices)
+
+    assert len(matched) == 1
+
+    assert matched[0][0]["id"] == "ep1"
+
+    assert matched[0][1] == "EXTRACTED"
+
+
+
+
 
 def test_code_anchor_no_match_returns_none():
 
@@ -820,7 +921,11 @@ def test_default_merge_mode_does_not_suppress_llm(tmp_path: Path):
 
     result = extract([tmp_path / "context-map.md"], root=tmp_path, nodes=[])
 
-    assert result["suppress_llm_files"] == set()
+    # extract() returns suppress_llm_files as a LIST (documented at
+    # extract.py:7327-7334 — JSON has no set type, and cli.py json.dumps
+    # the result). Assert emptiness type-agnostically so the test holds
+    # regardless of container type, matching the intent "no files suppressed".
+    assert not result["suppress_llm_files"]
 
 
 
@@ -828,21 +933,34 @@ def test_default_merge_mode_does_not_suppress_llm(tmp_path: Path):
 
 # ---------------------------------------------------------------------------
 
-# AC10: tags participate in string retrieval
+# AC10 (revised): tags are filter metadata for graph.html, NOT query text.
+
+# The ddd fork originally appended tags to serve.py's _node_search_text so
+
+# query "aggregate_root" matched doc-anchors. That coupled filter metadata to
+
+# query recall, and AI-emitted tags turned it into a noise channel — removed.
+
+# These tests now guard the decoupling: tags must never enter search text.
 
 # ---------------------------------------------------------------------------
 
 
 
-def test_tags_retrieval_aggregate_root():
+def test_tags_excluded_from_search_text():
 
-    """tags field participates in string retrieval via _node_search_text."""
+    """tags must NOT participate in string retrieval (query/tag decoupling).
+
+    A node carrying ddd tags produces search text without them — query
+    semantics stay tag-independent; ddd type filtering lives in the
+    graph.html tag panel.
+    """
 
     node = {
 
         "id": "docanchor_test_AG-01",
 
-        "label": "??????",
+        "label": "Order",
 
         "tags": ["ddd", "aggregate_root"],
 
@@ -850,9 +968,15 @@ def test_tags_retrieval_aggregate_root():
 
     text = _node_search_text(node, node["id"])
 
-    assert "aggregate_root" in text
+    assert "aggregate_root" not in text
 
-    assert "ddd" in text
+    assert "ddd" not in text
+
+    # The standard fields are still present
+
+    assert "order" in text
+
+    assert "docanchor_test_ag-01" in text
 
 
 
@@ -860,9 +984,9 @@ def test_tags_retrieval_aggregate_root():
 
 def test_tags_retrieval_no_tags_node_unaffected():
 
-    """A node without a tags field produces search text identical to upstream
+    """A node without a tags field produces upstream-identical search text
 
-    (no trailing NUL from an empty tags field, no field-position shift)."""
+    (five NUL-separated fields, no trailing NUL)."""
 
     node = {"id": "src_foo:Foo", "label": "Foo", "source_file": "src/foo.py"}
 
@@ -874,9 +998,7 @@ def test_tags_retrieval_no_tags_node_unaffected():
 
     assert "src/foo.py" in text
 
-    # No trailing NUL: tags is omitted entirely when absent, so the last field
-
-    # is source_tokens ("src foo py") which is non-empty here.
+    # No trailing NUL: the last field is source_tokens ("src foo py").
 
     assert not text.endswith("\x00"), f"text should not end with NUL, got: {text!r}"
 
@@ -891,8 +1013,6 @@ def test_tags_retrieval_non_list_tags_ignored():
     node_str_tags = {"id": "x", "label": "X", "tags": "not_a_list"}
 
     text_str = _node_search_text(node_str_tags, "x")
-
-    # Should not crash; tags_text empty string filtered out
 
     assert "x" in text_str
 

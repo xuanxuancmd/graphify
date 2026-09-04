@@ -141,7 +141,7 @@ def _html_styles() -> str:
   .detail-body { flex:1; overflow-y:auto; padding:12px 16px; }
   .detail-field { display:flex; justify-content:space-between; padding:5px 0; font-size:0.75rem; border-bottom:1px solid var(--gf-border-subtle); }
   .detail-field-label { color:var(--gf-text-muted); }
-  .detail-field-value { color:var(--gf-text-secondary); font-family:var(--gf-font-mono); font-size:0.6875rem; }
+  .detail-field-value { color:var(--gf-text-secondary); font-family:var(--gf-font-mono); font-size:0.6875rem; min-width:0; word-break:break-all; }
   .detail-tags { display:flex; flex-wrap:wrap; gap:4px; padding:8px 0; }
   .detail-tag { font-size:10px; padding:2px 7px; border-radius:12px; background:rgba(78,121,167,0.08); color:var(--gf-accent-bright); border:1px solid rgba(78,121,167,0.15); font-family:var(--gf-font-mono); }
   .detail-nav { display:flex; gap:8px; padding:12px 16px; border-top:1px solid var(--gf-border-subtle); flex-shrink:0; }
@@ -169,7 +169,7 @@ def _html_styles() -> str:
   .btn-primary { background:var(--gf-accent); color:#fff; }
   .btn-primary:hover { background:var(--gf-accent-bright); }
   .btn-ghost { background:var(--gf-surface); color:var(--gf-text-secondary); border:1px solid var(--gf-border-medium); }
-  .edit-note { font-size:0.6875rem; color:var(--gf-text-faint); margin-top:8px; font-family:var(--gf-font-mono); }
+  .edit-note { font-size:0.6875rem; color:var(--gf-text-faint); margin-top:8px; font-family:var(--gf-font-mono); word-break:break-all; }
 
   /* No-edit hint (for high-confidence nodes) */
   .no-edit-hint { padding:16px; text-align:center; font-size:0.6875rem; color:var(--gf-text-muted); background:var(--gf-elevated); border-top:1px solid var(--gf-border-subtle); }
@@ -197,6 +197,144 @@ def _html_styles() -> str:
   /* Neighbor links (delegated click, no inline onclick - #1838) */
   .neighbor-link { display:block; padding:3px 6px; margin:2px 0; border-radius:4px; cursor:pointer; font-size:0.75rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--gf-text-secondary); }
   .neighbor-link:hover { background:var(--gf-elevated); color:var(--gf-text-primary); }
+
+  /* Learn tab v2 —— 多视角（业务流 / 代码架构 / 特性下钻） */
+  .learn-shell { flex:1; display:flex; overflow:hidden; }
+  .learn-guide { padding:24px; color:var(--gf-text-muted); font-size:0.75rem; line-height:1.8; }
+  .learn-guide code { font-family:var(--gf-font-mono); background:var(--gf-panel); padding:1px 5px; border-radius:4px; color:var(--gf-accent-bright); }
+  .persp-nav { width:300px; flex-shrink:0; background:var(--gf-surface); border-right:1px solid var(--gf-border-subtle); display:flex; flex-direction:column; }
+  .persp-group { border-bottom:1px solid var(--gf-border-subtle); }
+  .persp-head { display:flex; align-items:center; gap:8px; padding:12px; cursor:pointer; user-select:none; border-left:2px solid transparent; }
+  .persp-head:hover { background:var(--gf-elevated); }
+  .persp-group.open .persp-head { border-left-color:var(--gf-accent); background:linear-gradient(90deg, rgba(78,121,167,0.06), transparent 70%); }
+  .persp-head .chev { transition:transform var(--gf-transition); color:var(--gf-text-faint); font-size:9px; }
+  .persp-group.open .persp-head .chev { transform:rotate(90deg); }
+  .persp-title { font-family:var(--gf-font-heading); font-size:0.75rem; font-weight:600; color:var(--gf-text-primary); }
+  .persp-sub { font-size:0.625rem; color:var(--gf-text-muted); margin-top:1px; }
+  .persp-items { display:none; padding-bottom:8px; }
+  .persp-group.open .persp-items { display:block; }
+  .persp-item { display:flex; align-items:center; gap:8px; width:100%; text-align:left; padding:5px 12px 5px 24px; border:none; border-left:2px solid transparent; background:transparent; font-family:var(--gf-font-body); font-size:0.75rem; color:var(--gf-text-secondary); cursor:pointer; border-radius:0 4px 4px 0; transition:background var(--gf-transition); }
+  .persp-item:hover { background:var(--gf-elevated); }
+  .persp-item.active { background:rgba(78,121,167,0.08); color:var(--gf-accent-bright); border-left-color:var(--gf-accent); }
+  .persp-item .meta { margin-left:auto; font-family:var(--gf-font-mono); font-size:0.5625rem; color:var(--gf-text-faint); white-space:nowrap; }
+  .persp-item .md-badge { font-family:var(--gf-font-mono); font-size:0.5rem; padding:1px 5px; border-radius:var(--gf-radius-full,99px); background:var(--gf-status-inferred-bg); color:var(--gf-status-inferred); flex-shrink:0; }
+  .learn-footer { margin-top:auto; border-top:1px solid var(--gf-border-subtle); padding:8px 16px; font-size:0.625rem; color:var(--gf-text-muted); display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .learn-footer .b { font-family:var(--gf-font-mono); font-size:0.5625rem; padding:1px 5px; border-radius:99px; }
+  .learn-footer .b1 { background:var(--gf-status-extracted-bg); color:var(--gf-status-extracted); }
+  .learn-footer .b2 { background:var(--gf-status-inferred-bg); color:var(--gf-status-inferred); }
+
+  /* 学习视图容器 */
+  .lview { flex:1; display:none; min-width:0; overflow:hidden; animation:learnViewIn 240ms ease-out; }
+  .lview.active { display:flex; }
+  @keyframes learnViewIn {{ from {{ opacity:0; transform:translateY(6px); }} to {{ opacity:1; transform:translateY(0); }} }}
+
+  /* 业务流视角 */
+  .stage { flex:1; display:flex; flex-direction:column; min-width:0; }
+  .stage-crumb { display:flex; align-items:center; gap:6px; padding:10px 24px; font-family:var(--gf-font-mono); font-size:0.625rem; color:var(--gf-text-muted); border-bottom:1px solid var(--gf-border-subtle); background:var(--gf-surface); }
+  .stage-crumb .here { color:var(--gf-accent-bright); }
+  .stage-crumb .prov { margin-left:auto; color:var(--gf-text-faint); }
+  .stage-scroll { flex:1; overflow:auto; padding:20px 24px; }
+  .stage-title-row { display:flex; align-items:baseline; gap:16px; margin-bottom:12px; flex-wrap:wrap; }
+  .stage-title-row h1 { font-family:var(--gf-font-heading); font-size:1.375rem; font-weight:600; letter-spacing:-0.01em; }
+  .member-chip { font-family:var(--gf-font-mono); font-size:0.5625rem; padding:2px 8px; border-radius:99px; border:1px solid var(--gf-border-medium); color:var(--gf-text-secondary); cursor:pointer; background:var(--gf-panel); }
+  .member-chip:hover { border-color:var(--gf-accent); color:var(--gf-accent-bright); }
+  .diagram-frame { background:var(--gf-panel); border:1px solid var(--gf-border-subtle); border-radius:12px; padding:12px; }
+  .diagram-frame .mermaid { display:flex; justify-content:center; overflow-x:auto; }
+  .diagram-frame .mermaid-src { font-family:var(--gf-font-mono); font-size:0.6875rem; color:var(--gf-text-secondary); white-space:pre-wrap; padding:8px; }
+  .step-timeline { padding:16px 24px 24px; border-top:1px solid var(--gf-border-subtle); background:var(--gf-surface); }
+  .step-tl-head { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
+  .step-tl-nav { margin-left:auto; display:flex; align-items:center; gap:8px; }
+  .step-tl-nav .pos { font-family:var(--gf-font-mono); font-size:0.625rem; color:var(--gf-text-muted); }
+  .step-btn { width:26px; height:26px; border-radius:4px; border:1px solid var(--gf-border-medium); background:var(--gf-panel); color:var(--gf-text-secondary); cursor:pointer; }
+  .step-btn:disabled { opacity:0.3; cursor:default; }
+  .step-btn:hover:not(:disabled) { border-color:var(--gf-accent); color:var(--gf-accent-bright); }
+  .step-track { display:flex; gap:2px; margin-bottom:12px; }
+  .step-seg { flex:1; height:3px; border-radius:2px; background:var(--gf-panel); cursor:pointer; }
+  .step-seg.done { background:var(--gf-accent-dim); }
+  .step-seg.current { background:var(--gf-accent); box-shadow:0 0 8px var(--gf-accent-glow); }
+  .step-card { display:flex; gap:16px; background:var(--gf-panel); border:1px solid var(--gf-border-subtle); border-radius:12px; padding:12px 16px; }
+  .step-idx { font-family:var(--gf-font-mono); font-size:1.375rem; font-weight:600; color:var(--gf-accent-bright); width:32px; flex-shrink:0; }
+  .step-msg { font-family:var(--gf-font-mono); font-size:0.75rem; color:var(--gf-text-primary); margin-bottom:4px; }
+  .step-msg .ar { color:var(--gf-accent); }
+  .step-desc { font-size:0.75rem; line-height:1.65; color:var(--gf-text-secondary); }
+  .step-desc code { font-family:var(--gf-font-mono); font-size:0.85em; background:var(--gf-surface); padding:1px 4px; border-radius:3px; color:var(--gf-accent-bright); }
+  .step-cite { font-family:var(--gf-font-mono); font-size:0.5625rem; color:var(--gf-text-faint); margin-top:4px; }
+  .ctx-panel { width:320px; flex-shrink:0; border-left:1px solid var(--gf-border-subtle); background:var(--gf-surface); display:flex; flex-direction:column; overflow:hidden; }
+  .ctx-head { padding:16px; border-bottom:1px solid var(--gf-border-subtle); }
+  .ctx-body { flex:1; overflow-y:auto; padding:16px; }
+  .ctx-name { font-family:var(--gf-font-mono); font-size:0.8125rem; font-weight:600; }
+  .ctx-intent { font-size:0.75rem; line-height:1.6; color:var(--gf-text-secondary); margin:8px 0; }
+  .learn-lbl { font-size:0.5625rem; color:var(--gf-text-muted); text-transform:uppercase; letter-spacing:0.06em; font-weight:600; display:block; margin-bottom:4px; }
+  .anchor-chip { display:inline-flex; align-items:center; gap:3px; font-family:var(--gf-font-mono); font-size:0.5625rem; padding:2px 7px; margin:0 3px 3px 0; border-radius:4px; border:1px solid var(--gf-border-medium); background:var(--gf-panel); color:var(--gf-text-secondary); cursor:pointer; transition:all var(--gf-transition); }
+  .anchor-chip:hover {{ border-color:var(--gf-accent); color:var(--gf-accent-bright); }}
+  .anchor-chip::before {{ content:''; width:4px; height:4px; border-radius:50%; background:var(--gf-accent); }}
+  .rf-item { display:flex; align-items:center; gap:8px; padding:8px 12px; margin-bottom:8px; background:var(--gf-panel); border:1px solid var(--gf-border-subtle); border-radius:8px; cursor:pointer; font-size:0.75rem; color:var(--gf-text-secondary); width:100%; text-align:left; font-family:var(--gf-font-body); transition:all var(--gf-transition); }}
+  .rf-item:hover {{ background:var(--gf-elevated); }}
+  .rf-item .go {{ margin-left:auto; color:var(--gf-text-faint); }}
+  .ctx-div {{ height:1px; background:var(--gf-border-subtle); margin:12px 0; }}
+
+  /* 代码架构视角 */
+  .arch-center {{ flex:1; overflow-y:auto; padding:20px 24px; display:flex; flex-direction:column; gap:20px; }}
+  .arch-card {{ background:var(--gf-surface); border:1px solid var(--gf-border-subtle); border-radius:12px; padding:16px; }}
+  .arch-card h3 {{ font-family:var(--gf-font-heading); font-size:0.875rem; font-weight:600; margin-bottom:12px; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }}
+  .arch-card h3 .cnt {{ font-family:var(--gf-font-mono); font-size:0.5625rem; color:var(--gf-text-faint); font-weight:400; }}
+  .dir-tree {{ font-family:var(--gf-font-mono); font-size:0.75rem; line-height:1.9; color:var(--gf-text-secondary); }}
+  .dir-tree .dir {{ color:var(--gf-accent-bright); font-weight:600; }}
+  .dir-tree .row {{ display:flex; gap:8px; padding:0 6px; margin:0 -2px; border-radius:4px; cursor:pointer; }}
+  .dir-tree .row::before {{ content:''; width:5px; height:5px; border-radius:2px; background:var(--gf-border-strong); flex-shrink:0; margin-top:8px; }}
+  .dir-tree .row.dir-row::before {{ border-radius:50%; background:var(--gf-accent-dim); }}
+  .dir-tree .row:hover {{ background:var(--gf-elevated); }}
+  .dir-tree .ncnt {{ margin-left:auto; color:var(--gf-text-faint); font-size:0.5625rem; white-space:nowrap; }}
+  .feat-grid {{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }}
+  .feat-card {{ background:var(--gf-panel); border:1px solid var(--gf-border-subtle); border-radius:8px; padding:12px; cursor:pointer; transition:all var(--gf-transition); }}
+  .feat-card:hover {{ transform:translateY(-1px); box-shadow:var(--gf-shadow-md); border-color:rgba(78,121,167,0.4); }}
+  .feat-name {{ font-size:0.75rem; font-weight:600; color:var(--gf-text-primary); display:flex; align-items:center; gap:6px; }}
+  .feat-name .go {{ margin-left:auto; color:var(--gf-accent); font-size:0.625rem; opacity:0; transition:opacity var(--gf-transition); }}
+  .feat-card:hover .feat-name .go {{ opacity:1; }}
+  .feat-desc {{ font-size:0.625rem; color:var(--gf-text-muted); margin:4px 0; line-height:1.5; }}
+  .feat-meta {{ font-family:var(--gf-font-mono); font-size:0.5625rem; color:var(--gf-text-faint); }}
+  .arch-right {{ width:42%; flex-shrink:0; border-left:1px solid var(--gf-border-subtle); display:flex; flex-direction:column; background:var(--gf-root); }}
+  .arch-right .panel-head {{ padding:12px 16px; border-bottom:1px solid var(--gf-border-subtle); background:var(--gf-surface); }}
+  .arch-right .diagram-scroll {{ flex:1; overflow:auto; padding:16px; }}
+  .arch-right .cap {{ padding:8px 16px; font-family:var(--gf-font-mono); font-size:0.5625rem; color:var(--gf-text-muted); border-top:1px solid var(--gf-border-subtle); background:var(--gf-surface); }}
+
+  /* 特性下钻视角 */
+  .doc-scroll {{ flex:1; overflow-y:auto; }}
+  .doc {{ max-width:820px; margin:0 auto; padding:24px 24px 140px; }}
+  .doc-header {{ display:flex; align-items:center; gap:12px; margin-bottom:8px; }}
+  .doc-header h1 {{ font-family:var(--gf-font-heading); font-size:1.75rem; font-weight:700; }}
+  .md-toggle {{ margin-left:auto; display:flex; background:var(--gf-panel); border-radius:8px; padding:2px; }}
+  .md-toggle button {{ border:none; background:transparent; padding:4px 12px; font-family:var(--gf-font-mono); font-size:0.625rem; color:var(--gf-text-muted); border-radius:6px; cursor:pointer; }}
+  .md-toggle button.active {{ background:var(--gf-surface); color:var(--gf-accent-bright); box-shadow:var(--gf-shadow-sm); }}
+  .doc-meta {{ display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }}
+  .doc h2 {{ font-family:var(--gf-font-heading); font-size:1.0625rem; font-weight:600; margin:24px 0 8px; display:flex; align-items:baseline; gap:8px; }}
+  .doc h2 .no {{ font-family:var(--gf-font-mono); font-size:0.625rem; color:var(--gf-accent); }}
+  .doc p {{ font-size:0.8125rem; line-height:1.7; color:var(--gf-text-secondary); margin-bottom:12px; }}
+  .doc ul {{ margin:0 0 12px 16px; }}
+  .doc li {{ font-size:0.8125rem; line-height:1.7; color:var(--gf-text-secondary); margin-bottom:8px; }}
+  .tp-list {{ display:flex; flex-direction:column; gap:8px; margin:12px 0; }}
+  .tp-item {{ background:var(--gf-surface); border:1px solid var(--gf-border-subtle); border-radius:8px; padding:12px 16px; transition:border-color var(--gf-transition); }}
+  .tp-item:hover {{ border-color:rgba(78,121,167,0.35); }}
+  .tp-name {{ font-size:0.75rem; font-weight:600; color:var(--gf-text-primary); }}
+  .tp-why {{ font-size:0.75rem; color:var(--gf-text-secondary); line-height:1.6; margin:3px 0 6px; }}
+  .code-block {{ background:var(--gf-panel); border:1px solid var(--gf-border-subtle); border-radius:8px; overflow:hidden; margin:12px 0; }}
+  .code-block .cb-head {{ display:flex; align-items:center; padding:6px 12px; border-bottom:1px solid var(--gf-border-subtle); font-family:var(--gf-font-mono); font-size:0.5625rem; color:var(--gf-text-muted); background:var(--gf-surface); gap:6px; }}
+  .code-block .cb-head .fn {{ color:var(--gf-accent-bright); }}
+  .code-block .cb-head .tier {{ font-size:0.5rem; padding:1px 6px; border-radius:99px; background:var(--gf-status-ambiguous-bg); color:var(--gf-status-ambiguous); margin-left:auto; }}
+  .code-block pre {{ font-family:var(--gf-font-mono); font-size:0.6875rem; line-height:1.7; padding:8px 0; overflow-x:auto; color:var(--gf-text-secondary); margin:0; }}
+  .cl {{ display:flex; gap:12px; padding:0 12px; white-space:pre; }}
+  .cl .ln {{ color:var(--gf-text-faint); width:24px; text-align:right; flex-shrink:0; user-select:none; }}
+  .cl.focal {{ background:rgba(78,121,167,0.08); box-shadow:inset 2px 0 0 var(--gf-accent); }}
+  .cl.focal .ln {{ color:var(--gf-accent-bright); font-weight:600; }}
+  .cl .note {{ color:var(--gf-status-ambiguous); font-style:italic; }}
+  .doc .mermaid {{ background:var(--gf-panel); border:1px solid var(--gf-border-subtle); border-radius:12px; padding:12px; margin:12px 0; display:flex; justify-content:center; overflow-x:auto; }}
+  .md-src {{ display:none; font-family:var(--gf-font-mono); font-size:0.6875rem; line-height:1.7; color:var(--gf-text-secondary); white-space:pre-wrap; background:var(--gf-panel); border:1px solid var(--gf-border-subtle); border-radius:12px; padding:16px; }}
+  .doc-wrap.show-src .doc-render {{ display:none; }}
+  .doc-wrap.show-src .md-src {{ display:block; }}
+  .doc-rail {{ width:280px; flex-shrink:0; border-left:1px solid var(--gf-border-subtle); background:var(--gf-surface); overflow-y:auto; padding:16px; }}
+  .rail-item {{ display:flex; align-items:center; gap:8px; padding:4px 8px; font-size:0.6875rem; color:var(--gf-text-secondary); border-radius:4px; cursor:pointer; border:none; border-left:2px solid transparent; background:transparent; width:100%; text-align:left; font-family:var(--gf-font-body); transition:all var(--gf-transition); }}
+  .rail-item:hover {{ background:var(--gf-elevated); border-left-color:var(--gf-accent); }}
+  .rail-item .no {{ font-family:var(--gf-font-mono); font-size:0.5625rem; color:var(--gf-accent); width:16px; }}
 
   /* Overview tab content */
   .overview-page { flex:1; overflow-y:auto; padding:24px 32px; background:var(--gf-root); }
@@ -360,7 +498,7 @@ def _review_queue_script(review_json: str) -> str:
     return ""
 
 
-def _html_script(nodes_json: str, edges_json: str, legend_json: str, type_index_json: str, tag_index_json: str, review_json: str = "[]", bc_bubbles_json: str = "[]", bc_links_json: str = "[]", lang_donut_json: str = "[]", lang_total: int = 0, bc_details_json: str = "[]") -> str:
+def _html_script(nodes_json: str, edges_json: str, legend_json: str, type_index_json: str, tag_index_json: str, review_json: str = "[]", bc_bubbles_json: str = "[]", bc_links_json: str = "[]", lang_donut_json: str = "[]", lang_total: int = 0, bc_details_json: str = "[]", learn_json: str = "null") -> str:
     return f"""<script>
 const RAW_NODES = {nodes_json};
 const RAW_EDGES = {edges_json};
@@ -368,6 +506,7 @@ const LEGEND = {legend_json};
 const TYPE_INDEX = {type_index_json};
 const TAG_INDEX = {tag_index_json};
 const REVIEW = {review_json};
+const LEARN = {learn_json};
 const COMMUNITY_COLORS = ["#4E79A7","#F28E2B","#E15759","#76B7B2","#59A14F","#EDC948","#B07AA1","#FF9DA7","#9C755F","#BAB0AC"];
 const BC_BUBBLES = {bc_bubbles_json};
 const BC_LINKS = {bc_links_json};
@@ -399,6 +538,14 @@ const edgesDS = new vis.DataSet(RAW_EDGES.map((e, i) => ({{
   color: e.color,
   arrows: {{ to: {{ enabled: true, scaleFactor: 0.5 }} }},
 }})));
+
+// Edge index for the audit detail panel: undirected storage keeps one edge
+// per node pair, so "from|to" in true direction is a unique key.
+const EDGE_BY_KEY = {{}};
+RAW_EDGES.forEach((e, i) => {{ EDGE_BY_KEY[e.from + '|' + e.to] = Object.assign({{ _visId: i }}, e); }});
+function findEdge(from, to) {{
+  return EDGE_BY_KEY[from + '|' + to] || EDGE_BY_KEY[to + '|' + from] || null;
+}}
 
 const container = document.getElementById('graph');
 const network = new vis.Network(container, {{ nodes: nodesDS, edges: edgesDS }}, {{
@@ -435,7 +582,6 @@ const tabs = document.querySelectorAll('.mode-tab');
 const tabPages = document.querySelectorAll('.tab-page');
 const graphEl = document.getElementById('graph');
 const reviewGraphArea = document.querySelector('#page-review .graph-area');
-const learnGraphArea = document.getElementById('learn-graph-area');
 const bottomBar = document.querySelector('.bottom-bar');
 
 function moveToTab(target) {{
@@ -444,17 +590,13 @@ function moveToTab(target) {{
   tabPages.forEach(p => p.classList.remove('active'));
   const page = document.getElementById('page-' + target);
   if (page) page.classList.add('active');
-  // Move graph element to the active tab's graph area (review or learn)
-  if (target === 'review' && reviewGraphArea) {{
+  // The graph lives in the review tab only. Overview and learn own their
+  // space (learn = multi-perspective reading UI), so both hide the bottom bar.
+  if (target === 'review') {{
     reviewGraphArea.insertBefore(graphEl, reviewGraphArea.firstChild);
     if (bottomBar) bottomBar.style.display = 'flex';
     setTimeout(() => network.redraw(), 50);
-  }} else if (target === 'learn' && learnGraphArea) {{
-    learnGraphArea.insertBefore(graphEl, learnGraphArea.firstChild);
-    if (bottomBar) bottomBar.style.display = 'flex';
-    setTimeout(() => network.redraw(), 50);
   }} else {{
-    // Overview tab - hide bottom bar, graph stays in last tab's area (hidden)
     if (bottomBar) bottomBar.style.display = 'none';
   }}
 }}
@@ -483,6 +625,16 @@ function filterReviewQueue(threshold) {{
   if (meta) meta.textContent = visible + ' 项待审核';
   const badge = document.getElementById('review-badge');
   if (badge) badge.textContent = visible;
+}}
+
+// Audit reason card: label + wrapped text. word-break keeps long paths and
+// verbatim quotes readable inside the detail panel (fixed-width, no clipping).
+function gfReasonBlock(label, text) {{
+  if (!text) return '';
+  return '<div style="margin:2px 0 8px">' +
+    '<div style="font-size:0.5625rem;color:var(--gf-text-muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;margin-bottom:2px">' + esc(label) + '</div>' +
+    '<div style="font-size:0.6875rem;color:var(--gf-text-secondary);white-space:pre-wrap;word-break:break-all;line-height:1.5;background:var(--gf-elevated);padding:6px 8px;border-radius:6px;border-left:2px solid var(--gf-accent)">' + esc(text) + '</div>' +
+  '</div>';
 }}
 
 // == Node detail panel ==
@@ -517,6 +669,19 @@ function showInfo(nodeId) {{
   const detailHeader = document.getElementById('detail-header-content');
   const editSection = document.getElementById('edit-section');
 
+  // Audit provenance section: extraction reason / evidence quote / evaluation
+  // verdict for nodes implicated in the review queue (parity with edges).
+  const auditHtml = (reviewItem && (reviewItem.reason || reviewItem.evidence_quote || reviewItem.evaluation_reason))
+    ? `
+    <div class="detail-field" style="flex-direction:column;align-items:flex-start;border-bottom:none;padding-top:8px">
+      <span class="detail-field-label" style="margin-bottom:4px">审查依据</span>
+    </div>
+    ${{gfReasonBlock('推断理由', reviewItem.reason)}}
+    ${{gfReasonBlock('原文引用', reviewItem.evidence_quote)}}
+    ${{gfReasonBlock('评估结论', reviewItem.evaluation_reason)}}
+    ${{reviewItem.source_location ? `<div class="detail-field"><span class="detail-field-label">位置</span><span class="detail-field-value">${{esc(reviewItem.source_location)}}</span></div>` : ''}}`
+    : '';
+
   detailHeader.innerHTML = `
     <div class="detail-name">${{esc(n.label)}}</div>
     <div class="detail-meta">${{confBadge}} ${{kindHtml}} <span>${{esc(n._file_type || 'unknown')}}</span></div>
@@ -527,6 +692,7 @@ function showInfo(nodeId) {{
     <div class="detail-field"><span class="detail-field-label">社区</span><span class="detail-field-value">${{esc(n._community_name)}}</span></div>
     <div class="detail-field"><span class="detail-field-label">连接数</span><span class="detail-field-value">${{n._degree}}</span></div>
     ${{tagsHtml}}
+    ${{auditHtml}}
     <div style="padding:8px 0"><button class="sidebar-toggle" style="width:auto;padding:4px 10px;border:1px solid var(--gf-border-medium);background:var(--gf-surface);font-size:0.6875rem;font-weight:600;color:var(--gf-text-muted);border-radius:6px" onclick="showAllProps('${{esc(nodeId)}}')">全部属性</button></div>
     ${{neighborIds.length ? `<div class="detail-field" style="border-bottom:none;padding-top:8px"><span class="detail-field-label">相邻节点 (${{neighborIds.length}})</span></div><div id="neighbors-list">${{neighborItems}}</div>` : ''}}
   `;
@@ -544,11 +710,71 @@ function showInfo(nodeId) {{
   }}
 }}
 
+// == Edge detail panel (audit parity with node detail) ==
+// Clicking an edge review item (or a graph edge) shows the EDGE's own detail —
+// relation, endpoints, source file, extraction reason, evidence quote,
+// evaluation verdict — instead of only focusing the source node.
+let _currentEdge = null;
+function showEdgeInfo(from, to, item) {{
+  const e = findEdge(from, to);
+  if (!e && !item) return;
+  const src = e ? e.from : from, tgt = e ? e.to : to;
+  const sN = nodesDS.get(src), tN = nodesDS.get(tgt);
+  const sLabel = sN ? sN.label : src, tLabel = tN ? tN.label : tgt;
+  const relation = (e && e.label) || (item && item.edge && item.edge.relation) || '';
+  const confidence = e ? e.confidence : '';
+  const score = e ? e.confidence_score : (item ? item.confidence_score : undefined);
+  const reason = (e && e.reason) || (item && item.reason) || '';
+  const quote = (e && e.evidence_quote) || (item && item.evidence_quote) || '';
+  const evalReason = (e && e.evaluation_reason) || (item && item.evaluation_reason) || '';
+  const srcFile = (e && e.source_file) || (item && item.source_file) || '';
+  const srcLoc = (e && e.source_location) || (item && item.source_location) || '';
+  const badgeCls = confidence === 'EXTRACTED' ? 'kb-extracted' : (confidence === 'AMBIGUOUS' ? 'kb-ambiguous' : 'kb-inferred');
+  const scoreTxt = (score !== undefined && score !== null)
+    ? ' <span style="font-family:var(--gf-font-mono);color:var(--gf-text-muted)">' + Number(score).toFixed(2) + '</span>'
+    : '';
+  const detailHeader = document.getElementById('detail-header-content');
+  const detailBody = document.getElementById('detail-body');
+  const editSection = document.getElementById('edit-section');
+  if (detailHeader) {{
+    detailHeader.innerHTML =
+      '<div class="detail-name">' + esc(sLabel) + ' <span style="color:var(--gf-accent)">&rarr;</span> ' + esc(tLabel) + '</div>' +
+      '<div class="detail-meta">' + (confidence ? '<span class="kind-badge ' + badgeCls + '">' + esc(confidence) + '</span> ' : '') +
+      '<span>' + esc(relation) + '</span>' + scoreTxt + '</div>';
+  }}
+  if (detailBody) {{
+    detailBody.innerHTML =
+      '<div class="detail-field"><span class="detail-field-label">关系</span><span class="detail-field-value">' + esc(relation || '-') + '</span></div>' +
+      '<div class="detail-field"><span class="detail-field-label">来源节点</span><span class="detail-field-value"><span class="neighbor-link" style="display:inline;padding:0 4px 0 0" data-nid="' + esc(src) + '">' + esc(sLabel) + '</span></span></div>' +
+      '<div class="detail-field"><span class="detail-field-label">目标节点</span><span class="detail-field-value"><span class="neighbor-link" style="display:inline;padding:0 4px 0 0" data-nid="' + esc(tgt) + '">' + esc(tLabel) + '</span></span></div>' +
+      '<div class="detail-field"><span class="detail-field-label">来源文件</span><span class="detail-field-value">' + esc(srcFile || '-') + '</span></div>' +
+      (srcLoc ? '<div class="detail-field"><span class="detail-field-label">位置</span><span class="detail-field-value">' + esc(srcLoc) + '</span></div>' : '') +
+      '<div class="detail-field" style="flex-direction:column;align-items:flex-start;border-bottom:none;padding-top:8px"><span class="detail-field-label" style="margin-bottom:4px">审查依据</span></div>' +
+      gfReasonBlock('推断理由', reason) +
+      gfReasonBlock('原文引用', quote) +
+      gfReasonBlock('评估结论', evalReason) +
+      `<div style="padding:4px 0"><button class="sidebar-toggle" style="width:auto;padding:4px 10px;border:1px solid var(--gf-border-medium);background:var(--gf-surface);font-size:0.6875rem;font-weight:600;color:var(--gf-text-muted);border-radius:6px" onclick="showEdgeProps('${{esc(src)}}','${{esc(tgt)}}')">全部属性</button></div>`;
+  }}
+  if (e && e._visId !== undefined) {{
+    try {{ network.selectEdges([e._visId]); network.fit({{ nodes: [src, tgt], animation: {{ duration: 400 }} }}); }} catch (err) {{}}
+  }}
+  if (editSection) {{
+    editSection.style.display = 'block';
+    const textarea = document.getElementById('edit-textarea');
+    if (textarea) textarea.value = reason || evalReason || (item ? (item.detail || '') : '');
+    const filePath = document.getElementById('edit-file-path');
+    if (filePath && srcFile) filePath.textContent = '\u2192 ' + srcFile;
+  }}
+  _currentNodeId = null;
+  _currentEdge = {{ from: src, to: tgt, source_file: srcFile }};
+}}
+
 function focusNode(nodeId) {{
   network.focus(nodeId, {{ scale: 1.4, animation: true }});
   network.selectNodes([nodeId]);
   showInfo(nodeId);
   _setCurrentNode(nodeId);
+  _currentEdge = null;
   // Also select in node list
   document.querySelectorAll('.node-item').forEach(el => el.classList.remove('selected'));
   const listEl = document.querySelector('.node-item[data-nid="' + nodeId + '"]');
@@ -564,11 +790,8 @@ function focusNode(nodeId) {{
   }});
 }}
 
-// Show all properties in a modal
-function showAllProps(nodeId) {{
-  const n = nodesDS.get(nodeId);
-  if (!n) return;
-  const raw = n._raw || {{}};
+// Show all properties in a modal (shared by nodes and edges)
+function showPropsModal(raw, title, skipKeys) {{
   // Remove existing modal
   const existing = document.querySelector('.props-modal');
   if (existing) existing.remove();
@@ -578,9 +801,9 @@ function showAllProps(nodeId) {{
   modal.addEventListener('click', (e) => {{ if (e.target === modal) modal.remove(); }});
   let rowsHtml = '';
   // Always show label first
-  rowsHtml += '<div class="props-modal-row"><div class="props-modal-key">label</div><div class="props-modal-val">' + esc(raw.label || n.label || '') + '</div></div>';
+  rowsHtml += '<div class="props-modal-row"><div class="props-modal-key">label</div><div class="props-modal-val">' + esc(raw.label || title || '') + '</div></div>';
   // Then all other fields (sorted, skip vis-internal)
-  const skip = new Set(['id','label','color','size','font','title','community','community_name','degree']);
+  const skip = new Set(skipKeys);
   const keys = Object.keys(raw).filter(k => !skip.has(k)).sort();
   for (const key of keys) {{
     let val = raw[key];
@@ -592,7 +815,7 @@ function showAllProps(nodeId) {{
   modal.innerHTML = 
     '<div class="props-modal-content">' +
       '<div class="props-modal-header">' +
-        '<span class="props-modal-title">' + esc(raw.label || n.label || nodeId) + '</span>' +
+        '<span class="props-modal-title">' + esc(title) + '</span>' +
         '<button class="sidebar-toggle" id="props-modal-close" title="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>' +
       '</div>' +
       '<div class="props-modal-body">' + rowsHtml + '</div>' +
@@ -601,6 +824,22 @@ function showAllProps(nodeId) {{
   // Attach close handler after DOM insertion
   const closeBtn = modal.querySelector('#props-modal-close');
   if (closeBtn) closeBtn.addEventListener('click', () => modal.remove());
+}}
+
+function showAllProps(nodeId) {{
+  const n = nodesDS.get(nodeId);
+  if (!n) return;
+  showPropsModal(n._raw || {{}}, n.label || nodeId,
+    ['id','label','color','size','font','title','community','community_name','degree']);
+}}
+
+function showEdgeProps(from, to) {{
+  const e = findEdge(from, to);
+  if (!e) return;
+  const sN = nodesDS.get(e.from), tN = nodesDS.get(e.to);
+  const title = (sN ? sN.label : e.from) + ' \u2192 ' + (tN ? tN.label : e.to);
+  showPropsModal(e, title,
+    ['from','to','label','title','dashes','width','color','_visId']);
 }}
 
 // Neighbor links use a data attribute + one delegated listener rather than an
@@ -635,6 +874,11 @@ container.addEventListener('click', () => {{
 network.on('click', params => {{
   if (params.nodes.length > 0) {{
     showInfo(params.nodes[0]);
+    network.selectNodes([params.nodes[0]]);
+  }} else if (params.edges && params.edges.length > 0) {{
+    // Edge click: show the edge's own audit detail (parity with nodes).
+    const raw = RAW_EDGES[params.edges[0]];
+    if (raw) showEdgeInfo(raw.from, raw.to);
   }}
 }});
 
@@ -881,8 +1125,9 @@ function renderNodeList() {{
           (isSeen ? '' : '<span style="font-size:0.6875rem;color:var(--gf-text-faint);cursor:pointer" data-action="seen">标记已查看</span>') +
         '</div>' +
         (detail ? '<div class="node-detail">' + detail + '</div>' : '') +
+        (item.reason ? '<div class="node-detail" style="color:var(--gf-text-secondary)">为什么: ' + esc(item.reason) + '</div>' : '') +
         (reason ? '<div class="node-detail" style="font-style:italic;color:var(--gf-text-faint)">→ ' + reason + '</div>' : '') +
-        (file ? '<div class="node-file">' + file + '</div>' : '');
+        (file ? '<div class="node-file" title="' + file + '">' + file + '</div>' : '');
       // Click on "标记已查看" button
       const seenBtn = el.querySelector('[data-action="seen"]');
       if (seenBtn) {{
@@ -892,13 +1137,18 @@ function renderNodeList() {{
           renderNodeList();
         }});
       }}
-      // Click on item -> focus node + show edit panel
+      // Click on item -> edge items open the EDGE detail panel (parity with
+      // node clicks); node items focus the node (rich detail + edit panel);
+      // unresolvable items (islands without a node) fall back to the minimal
+      // review view.
       el.addEventListener('click', () => {{
-        if (nodeId && nodesDS.get(nodeId)) {{
+        if (item.edge && findEdge(item.edge.from, item.edge.to)) {{
+          showEdgeInfo(item.edge.from, item.edge.to, item);
+        }} else if (nodeId && nodesDS.get(nodeId)) {{
           focusNode(nodeId);
+        }} else {{
+          showReviewEdit(item);
         }}
-        // Always show edit panel for review items (even if node not found)
-        showReviewEdit(item);
         // Mark as seen
         REVIEW_SEEN.add(itemKey);
         renderNodeList();
@@ -941,7 +1191,8 @@ function showReviewEdit(item) {{
   if (detailBody) {{
     detailBody.innerHTML = 
       '<div class="detail-field"><span class="detail-field-label">来源文件</span><span class="detail-field-value">' + esc(item.source_file || item.file || '-') + '</span></div>' +
-      '<div class="detail-field"><span class="detail-field-label">位置</span><span class="detail-field-value">' + esc(item.source_location || '') + '</span></div>';
+      '<div class="detail-field"><span class="detail-field-label">位置</span><span class="detail-field-value">' + esc(item.source_location || '') + '</span></div>' +
+      (item.reason ? '<div class="detail-field" style="flex-direction:column;align-items:flex-start;border-bottom:none;padding-top:8px"><span class="detail-field-label" style="margin-bottom:4px">说明</span></div>' + gfReasonBlock('原因', item.reason) : '');
   }}
   // Pre-fill edit fields
   const detail = item.detail || item.reason || '';
@@ -1235,7 +1486,13 @@ document.addEventListener('click', e => {{
 let _currentNodeId = null;
 function _setCurrentNode(nodeId) {{ _currentNodeId = nodeId; }}
 function navSourceFile() {{
-  if (!_currentNodeId) return;
+  if (!_currentNodeId) {{
+    // Edge selected: open the edge's own source file.
+    if (_currentEdge && _currentEdge.source_file) {{
+      window.open('../../' + _currentEdge.source_file, '_blank');
+    }}
+    return;
+  }}
   const n = nodesDS.get(_currentNodeId);
   if (!n) return;
   const sf = n._source_file || (n._raw && n._raw.source_file) || '';
@@ -1321,10 +1578,290 @@ function toggleDetail(tab) {{
   setTimeout(() => network.redraw(), 200);
 }}
 
+// == Learn tab v2: 多视角（业务流 / 代码架构 / 特性下钻）==
+const learnShell = document.getElementById('learn-shell');
+const LEARN_OK = !!(LEARN && LEARN.version === 2);
+
+// Mermaid：CDN 失败（离线）时降级为源码展示。
+window._gfMermaidOk = (typeof mermaid !== 'undefined');
+if (window._gfMermaidOk) {{
+  try {{
+    mermaid.initialize({{
+      startOnLoad: false, theme: 'base',
+      themeVariables: {{
+        background: '#e8ebf1', primaryColor: '#ffffff', primaryTextColor: '#1a1d2e',
+        primaryBorderColor: '#4E79A7', lineColor: '#7a7f96', secondaryColor: '#f4f6fa',
+        tertiaryColor: '#eef0f5', actorBkg: '#ffffff', actorBorder: '#4E79A7',
+        actorTextColor: '#1a1d2e', actorLineColor: '#c4cbd8', signalColor: '#4a4e64',
+        signalTextColor: '#4a4e64', noteBkgColor: 'rgba(78,121,167,0.08)',
+        noteTextColor: '#1a1d2e', noteBorderColor: 'rgba(78,121,167,0.35)',
+        altBkg: 'rgba(78,121,167,0.04)', activationBkgColor: '#dbe5f0',
+        sequenceNumberColor: '#ffffff', clusterBkg: 'rgba(232,235,241,0.7)',
+        clusterBorder: 'rgba(78,121,167,0.25)', edgeLabelBackground: '#ffffff',
+        fontFamily: "'IBM Plex Sans', sans-serif", fontSize: '13px'
+      }}
+    }});
+  }} catch (e) {{ window._gfMermaidOk = false; }}
+}}
+
+function learnMermaid(container, src) {{
+  if (!container) return;
+  if (window._gfMermaidOk) {{
+    const pre = document.createElement('pre');
+    pre.className = 'mermaid';
+    pre.textContent = src;
+    container.appendChild(pre);
+    try {{ mermaid.run({{ nodes: [pre] }}); }} catch (e) {{ pre.className = 'mermaid-src'; }}
+  }} else {{
+    const pre = document.createElement('pre');
+    pre.className = 'mermaid-src';
+    pre.textContent = src;
+    container.appendChild(pre);
+  }}
+}}
+
+function learnAnchorChips(anchors) {{
+  return (anchors || []).map(a => {{
+    const file = String(a).split(' L')[0];
+    return '<span class="anchor-chip" title="打开源文件" onclick="window.open(\'../../\' + decodeURIComponent(\'' + encodeURIComponent(file) + '\'), \'_blank\')">' + esc(a) + '</span>';
+  }}).join('');
+}}
+
+function learnBlockHtml(b) {{
+  if (b.type === 'p') {{
+    return '<p>' + esc(b.text) + '</p>';
+  }}
+  if (b.type === 'bullets') {{
+    return '<ul>' + (b.items || []).map(it =>
+      '<li>' + esc(it.text) + (it.anchor ? ' ' + learnAnchorChips([it.anchor]) : '') + '</li>'
+    ).join('') + '</ul>';
+  }}
+  if (b.type === 'techpoints') {{
+    return '<div class="tp-list">' + (b.items || []).map(it =>
+      '<div class="tp-item"><div class="tp-name">' + esc(it.name) + '</div>' +
+      '<div class="tp-why">' + esc(it.why) + '</div>' +
+      (it.anchors && it.anchors.length ? '<div>' + learnAnchorChips(it.anchors) + '</div>' : '') +
+      '</div>'
+    ).join('') + '</div>';
+  }}
+  if (b.type === 'code') {{
+    let lines = '';
+    (b.lines || []).forEach(ln => {{
+      const note = ln.note ? '<span class="note">  \u2190 ' + esc(ln.note) + '</span>' : '';
+      lines += '<div class="cl' + (ln.focal ? ' focal' : '') + '"><span class="ln">' + ln.ln + '</span><span>' + esc(ln.text) + '</span>' + note + '</div>';
+    }});
+    return '<div class="code-block"><div class="cb-head"><span class="fn">' + esc(b.file) + '</span> \u00b7 L' + b.start + '-L' + b.end +
+      (b.fn ? ' \u00b7 ' + esc(b.fn) + '()' : '') + '<span class="tier">' + esc(b.tier || '') + '</span></div><pre>' + lines + '</pre></div>';
+  }}
+  return '';
+}}
+
+let learnCur = {{ persp: 'flow', idx: 0 }};
+
+function switchLearn(persp, idx) {{
+  learnCur = {{ persp: persp, idx: idx || 0 }};
+  document.querySelectorAll('.lview').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.persp-item').forEach(it => it.classList.remove('active'));
+  document.querySelectorAll('.persp-group').forEach(g => g.classList.remove('open'));
+  const grp = document.getElementById('pg-' + persp);
+  if (grp) grp.classList.add('open');
+  const items = document.querySelectorAll('.persp-item[data-persp="' + persp + '"]');
+  if (items[idx]) items[idx].classList.add('active');
+  else if (items.length) items[0].classList.add('active');
+  const view = document.getElementById('lview-' + persp);
+  if (view) {{
+    view.classList.add('active');
+    if (persp === 'flow') renderLearnFlow(learnCur.idx);
+    if (persp === 'arch') renderLearnArch();
+    if (persp === 'feature') renderLearnFeature(learnCur.idx);
+  }}
+}}
+window.switchLearn = switchLearn;
+
+function initLearn() {{
+  if (!learnShell) return;
+  if (!LEARN_OK) {{
+    learnShell.innerHTML = '<div class="learn-guide">暂无学习内容。运行 <code>/graphify learn</code>（或 CLI <code>graphify learn</code>）生成多视角学习内容 —— 业务流 / 代码架构 / 特性下钻。纯结构化模式零 LLM 成本，加 <code>--backend</code> 可获得中文讲解。</div>';
+    return;
+  }}
+  const flows = LEARN.flows || [];
+  const feats = LEARN.features || [];
+  let items1 = flows.map((f, i) =>
+    '<button class="persp-item' + (i === 0 ? ' active' : '') + '" data-persp="flow" data-idx="' + i + '">' +
+    esc(f.name) + '<span class="meta">' + esc(f.meta || '') + '</span></button>').join('');
+  if (!items1) items1 = '<div style="padding:4px 24px;font-size:0.6875rem;color:var(--gf-text-faint)">未识别到业务流</div>';
+  let items3 = feats.map((f, i) =>
+    '<button class="persp-item" data-persp="feature" data-idx="' + i + '">' +
+    esc(f.name) + '<span class="md-badge">MD</span></button>').join('');
+  if (!items3) items3 = '<div style="padding:4px 24px;font-size:0.6875rem;color:var(--gf-text-faint)">暂无特性文档</div>';
+  learnShell.innerHTML =
+    '<aside class="persp-nav">' +
+      '<div style="padding:12px 16px;border-bottom:1px solid var(--gf-border-subtle)">' +
+        '<div style="font-family:var(--gf-font-heading);font-size:0.8125rem;font-weight:600">' + esc(LEARN.project_summary ? String(LEARN.project_summary).slice(0, 120) : '学习') + '</div>' +
+      '</div>' +
+      '<div class="persp-group open" id="pg-flow"><div class="persp-head"><span class="chev">\u25b6</span><div><div class="persp-title">业务流视角</div><div class="persp-sub">从请求到响应的调用路径</div></div></div><div class="persp-items">' + items1 + '</div></div>' +
+      '<div class="persp-group" id="pg-arch"><div class="persp-head"><span class="chev">\u25b6</span><div><div class="persp-title">代码架构视角</div><div class="persp-sub">目录 · 关键特性 · 基础类图</div></div></div><div class="persp-items"><button class="persp-item" data-persp="arch" data-idx="0">系统总览</button></div></div>' +
+      '<div class="persp-group" id="pg-feature"><div class="persp-head"><span class="chev">\u25b6</span><div><div class="persp-title">特性下钻</div><div class="persp-sub">逐特性的深度分析文档（MD）</div></div></div><div class="persp-items">' + items3 + '</div></div>' +
+      '<div class="learn-footer"><span class="b b1">结构化</span>' +
+      (LEARN.backend && LEARN.backend !== 'none' ? '<span class="b b2">' + esc(LEARN.backend) + '</span>' : '') +
+      '<span>' + flows.length + ' 流 \u00b7 ' + feats.length + ' 文档</span></div>' +
+    '</aside>' +
+    '<main class="lview active" id="lview-flow"></main>' +
+    '<main class="lview" id="lview-arch"></main>' +
+    '<main class="lview" id="lview-feature"></main>';
+  learnShell.querySelectorAll('.persp-head').forEach(h => {{
+    h.addEventListener('click', () => {{
+      const grp = h.parentElement;
+      const p = grp.id.replace('pg-', '');
+      if (p) switchLearn(p, 0);
+    }});
+  }});
+  learnShell.querySelectorAll('.persp-item').forEach(it => {{
+    it.addEventListener('click', () => switchLearn(it.dataset.persp, parseInt(it.dataset.idx, 10) || 0));
+  }});
+  renderLearnFlow(0);
+}}
+
+function renderLearnFlow(idx) {{
+  const f = (LEARN.flows || [])[idx];
+  const el = document.getElementById('lview-flow');
+  if (!f || !el) return;
+  const chips = (f.participants || []).map(p => '<span class="member-chip">' + esc(p) + '</span>').join('');
+  el.innerHTML =
+    '<div class="stage">' +
+      '<div class="stage-crumb">user-project / <span class="here">' + esc(f.name) + '</span><span class="prov">' + esc(f.provenance || '') + '</span></div>' +
+      '<div class="stage-scroll">' +
+        '<div class="stage-title-row"><h1>' + esc(f.name) + '</h1><div style="display:flex;gap:4px;flex-wrap:wrap">' + chips + '</div></div>' +
+        '<div class="diagram-frame" id="lf-diagram"></div>' +
+      '</div>' +
+      '<div class="step-timeline">' +
+        '<div class="step-tl-head"><span class="learn-lbl" style="margin:0">分步讲解</span>' +
+        '<div class="step-tl-nav"><button class="step-btn" id="lf-prev">\u2190</button><span class="pos" id="lf-pos"></span><button class="step-btn" id="lf-next">\u2192</button></div></div>' +
+        '<div class="step-track" id="lf-track"></div>' +
+        '<div class="step-card"><div class="step-idx" id="lf-idx"></div><div><div class="step-msg" id="lf-msg"></div><div class="step-desc" id="lf-desc"></div><div class="step-cite" id="lf-cite"></div></div></div>' +
+      '</div>' +
+    '</div>' +
+    '<aside class="ctx-panel">' +
+      '<div class="ctx-head"><span class="learn-lbl">主符号上下文</span><div class="ctx-name">' + esc(f.context ? f.context.node : '') + '</div></div>' +
+      '<div class="ctx-body">' +
+        '<div class="ctx-intent">' + esc(f.context ? f.context.intent : '') + '</div>' +
+        '<div class="ctx-div"></div>' +
+        '<span class="learn-lbl">代码锚点</span><div>' + learnAnchorChips(f.context && f.context.anchors) + '</div>' +
+        '<div class="ctx-div"></div>' +
+        '<span class="learn-lbl">深入</span>' +
+        '<button class="rf-item" onclick="switchLearn(\'feature\', ' + Math.max(0, (LEARN.features || []).findIndex(x => x.flow_id === f.id)) + ')">' + esc(f.name) + ' \u00b7 特性下钻文档<span class="go">\u2192</span></button>' +
+      '</div>' +
+    '</aside>';
+  learnMermaid(document.getElementById('lf-diagram'), f.mermaid || '');
+  // 分步讲解
+  const steps = f.steps || [];
+  let cur = 0;
+  const track = document.getElementById('lf-track');
+  steps.forEach((_, i) => {{
+    const seg = document.createElement('span');
+    seg.className = 'step-seg';
+    seg.addEventListener('click', () => {{ cur = i; render(); }});
+    track.appendChild(seg);
+  }});
+  function render() {{
+    const s = steps[cur] || {{}};
+    document.getElementById('lf-idx').textContent = String(cur + 1).padStart(2, '0');
+    document.getElementById('lf-msg').innerHTML = esc(s.msg || '').replace(/(\u2192|\u2190)/g, '<span class="ar">$1</span>');
+    document.getElementById('lf-desc').textContent = s.desc || '';
+    document.getElementById('lf-cite').textContent = s.cite || '';
+    document.getElementById('lf-pos').textContent = (cur + 1) + ' / ' + steps.length;
+    document.getElementById('lf-prev').disabled = cur === 0;
+    document.getElementById('lf-next').disabled = cur >= steps.length - 1;
+    track.querySelectorAll('.step-seg').forEach((seg, i) => {{
+      seg.className = 'step-seg' + (i < cur ? ' done' : i === cur ? ' current' : '');
+    }});
+  }}
+  document.getElementById('lf-prev').addEventListener('click', () => {{ if (cur > 0) {{ cur--; render(); }} }});
+  document.getElementById('lf-next').addEventListener('click', () => {{ if (cur < steps.length - 1) {{ cur++; render(); }} }});
+  if (steps.length) render();
+}}
+
+function renderLearnArch() {{
+  const a = LEARN.architecture || {{}};
+  const el = document.getElementById('lview-arch');
+  if (!el) return;
+  const rows = (a.tree || []).map(r =>
+    '<div class="row' + (r.kind === 'dir' ? ' dir-row' : '') + '"><span class="' + (r.kind === 'dir' ? 'dir' : '') + '">' + esc(r.label) + '</span>' +
+    (r.note ? '<span class="ncnt">' + esc(r.note) + '</span>' : '') + '</div>').join('');
+  const cards = (a.features || []).map((c, i) =>
+    '<div class="feat-card" onclick="switchLearn(\'feature\', ' + i + ')">' +
+    '<div class="feat-name">' + esc(c.name) + '<span class="go">下钻 \u2192</span></div>' +
+    '<div class="feat-desc">' + esc(c.desc || '') + '</div>' +
+    '<div class="feat-meta">' + esc(c.modules || '') + '</div></div>').join('');
+  const hasClass = !!(a.class_diagram);
+  el.innerHTML =
+    '<div class="arch-center">' +
+      '<div class="arch-card"><h3>目录结构 <span class="cnt">' + (a.tree || []).length + ' 行</span></h3><div class="dir-tree">' + rows + '</div></div>' +
+      '<div class="arch-card"><h3>关键特性 <span class="cnt">点击进入特性下钻</span></h3><div class="feat-grid">' + (cards || '<div style="font-size:0.6875rem;color:var(--gf-text-faint)">暂无</div>') + '</div></div>' +
+    '</div>' +
+    (hasClass ?
+      '<aside class="arch-right"><div class="panel-head"><span class="learn-lbl" style="margin:0">基础类图</span><div style="font-size:0.625rem;color:var(--gf-text-muted);margin-top:2px">领域结构层 · 特性行为见下钻文档</div></div><div class="diagram-scroll" id="la-diagram"></div><div class="cap">来源：AST 类/方法提取 · contains + calls 边</div></aside>'
+      : '');
+  if (hasClass) learnMermaid(document.getElementById('la-diagram'), a.class_diagram);
+}}
+
+function renderLearnFeature(idx) {{
+  const f = (LEARN.features || [])[idx];
+  const el = document.getElementById('lview-feature');
+  if (!f || !el) return;
+  const secs = (f.sections || []).map(s => {{
+    let blocks = '';
+    (s.blocks || []).forEach(b => {{
+      if (b.type === 'mermaid') {{
+        blocks += '<div class="mermaid-holder" data-src="' + encodeURIComponent(b.src) + '"></div>';
+      }} else {{
+        blocks += learnBlockHtml(b);
+      }}
+    }});
+    return '<h2 id="fsec-' + s.no + '"><span class="no">' + esc(s.no) + '</span>' + esc(s.title) + '</h2>' + blocks;
+  }}).join('');
+  const outline = (f.outline || []).map(o =>
+    '<button class="rail-item" onclick="document.getElementById(\'fsec-' + o.no + '\').scrollIntoView({{behavior:\'smooth\',block:\'start\'}})"><span class="no">' + esc(o.no) + '</span>' + esc(o.title) + '</button>').join('');
+  el.innerHTML =
+    '<div class="doc-scroll"><div class="doc doc-wrap" id="lf-doc">' +
+      '<div class="doc-header"><h1>' + esc(f.name) + '</h1>' +
+      '<div class="md-toggle"><button class="active" id="lf-render">渲染</button><button id="lf-src">MD 源码</button></div></div>' +
+      '<div class="doc-meta"><span class="accent-pill">特性下钻</span><span class="accent-pill">' + (f.outline || []).length + ' 节</span>' +
+      '<span class="accent-pill">' + (f.backend || LEARN.backend || '结构化') + '</span></div>' +
+      '<div class="doc-render">' + secs + '</div>' +
+      '<pre class="md-src">' + esc(f.doc_md || '') + '</pre>' +
+    '</div></div>' +
+    '<aside class="doc-rail">' +
+      '<span class="learn-lbl">文档大纲</span>' + outline +
+      '<div class="ctx-div"></div>' +
+      '<span class="learn-lbl">代码锚点（' + (f.anchors || []).length + '）</span><div>' + learnAnchorChips(f.anchors) + '</div>' +
+      '<div class="ctx-div"></div>' +
+      '<span class="learn-lbl">关联视角</span>' +
+      '<button class="rf-item" onclick="switchLearn(\'flow\', 0)">业务流视角<span class="go">\u2192</span></button>' +
+      '<button class="rf-item" onclick="switchLearn(\'arch\', 0)">基础类图 \u00b7 架构视角<span class="go">\u2192</span></button>' +
+    '</aside>';
+  // mermaid 块懒渲染（视图已激活，容器可见，测量正确）。
+  el.querySelectorAll('.mermaid-holder').forEach(h => {{
+    learnMermaid(h, decodeURIComponent(h.dataset.src));
+  }});
+  const wrap = document.getElementById('lf-doc');
+  document.getElementById('lf-render').addEventListener('click', () => {{
+    wrap.classList.remove('show-src');
+    document.getElementById('lf-render').classList.add('active');
+    document.getElementById('lf-src').classList.remove('active');
+  }});
+  document.getElementById('lf-src').addEventListener('click', () => {{
+    wrap.classList.add('show-src');
+    document.getElementById('lf-src').classList.add('active');
+    document.getElementById('lf-render').classList.remove('active');
+  }});
+}}
+
 // == Initialize ==
 renderFilterChips();
 renderNodeList();
 updateStats();
+initLearn();
 </script>"""
 
 
@@ -1375,6 +1912,7 @@ def to_html(
     node_limit: int | None = None,
     learning_overlay: dict | None = None,
     review_queue: list[dict] | None = None,
+    learn_data: dict | None = None,
 ) -> bool:
     """Generate an interactive vis.js HTML visualization of the graph.
 
@@ -1393,6 +1931,12 @@ def to_html(
     anchors (islands), ambiguous multi-match edges, inferred edges, and
     LLM semantic gaps. Each item carries its source file so the user can
     filter by file. Clicking an item focuses the related node in the graph.
+
+    If learn_data is provided (or a learn.json sidecar exists next to the
+    output), the third tab (学习) is populated with human-oriented learning
+    content: a dependency-ordered guided tour and per-node learning cards
+    (intent / contract / key-algorithm implementation with focal lines).
+    Empty/missing data keeps the tab's guidance placeholder.
 
     Returns True when the output was written. Returns False when an aggregated
     view would contain fewer than two communities and is intentionally skipped.
@@ -1494,9 +2038,50 @@ def to_html(
             learning_overlay = _llo(Path(output_path))
         except Exception:
             learning_overlay = {}
+    # Learn sidecar (human-comprehension content for the third tab). Same
+    # best-effort pattern: absent/empty sidecar => no LEARN constant payload,
+    # so the un-annotated render stays byte-identical to pre-feature.
+    if learn_data is None:
+        learn_data = {}
+        try:
+            from graphify.learn import load_learn_sidecar as _lls
+            learn_data = _lls(Path(output_path))
+        except Exception:
+            learn_data = {}
     # Status -> ring color. preferred=green, contested=amber. Tentative gets no
     # ring (it's not yet trustworthy enough to highlight in the map).
     _RING = {"preferred": "#22c55e", "contested": "#f59e0b"}
+
+    # Reasons sidecar (audit provenance): extraction-time `reason` /
+    # `evidence_quote` edge attrs win when present (fresh build in memory);
+    # the .graph/temp/reasons.json sidecar fills the gap when G was reloaded
+    # from an already-stripped graph.json (e.g. `graphify export html`). Same
+    # best-effort pattern as the learning overlay above.
+    _reasons_map: dict = {}
+    try:
+        _rp = Path(output_path).parent / "temp" / "reasons.json"
+        if _rp.exists():
+            _loaded = json.loads(_rp.read_text(encoding="utf-8"))
+            if isinstance(_loaded, dict) and isinstance(_loaded.get("edges"), dict):
+                _reasons_map = _loaded["edges"]
+    except Exception:
+        _reasons_map = {}
+
+    def _edge_reasons(u: str, v: str, data: dict) -> tuple:
+        """(reason, evidence_quote) for an edge, attrs first, sidecar fallback."""
+        r = data.get("reason")
+        q = data.get("evidence_quote")
+        if r is None and q is None:
+            ent = _reasons_map.get(
+                f"{data.get('_src', u)}|{data.get('_tgt', v)}|{data.get('relation', '')}"
+            )
+            if isinstance(ent, dict):
+                r = ent.get("reason")
+                q = ent.get("evidence_quote")
+        return (
+            sanitize_label(r) if r else "",
+            sanitize_label(q) if q else "",
+        )
 
     # Build nodes list for vis.js
     vis_nodes = []
@@ -1527,6 +2112,8 @@ def to_html(
             "tags": (data.get("tags") or []),
             "node_kind": data.get("node_kind", ""),
             "degree": deg,
+            # Concept/doc descriptions power the detail panel's 描述 row.
+            "desc": sanitize_label(str(data.get("desc") or "")),
         }
         # Conditional learning fields — only present for annotated nodes, so
         # un-annotated output keeps the exact pre-feature node dict shape.
@@ -1585,6 +2172,7 @@ def to_html(
         relation = data.get("relation", "")
         true_src = data.get("_src", u)
         true_tgt = data.get("_tgt", v)
+        _reason_txt, _quote_txt = _edge_reasons(u, v, data)
         vis_edges.append({
             "from": true_src,
             "to": true_tgt,
@@ -1596,6 +2184,12 @@ def to_html(
             "confidence": confidence,
             "confidence_score": confidence_score,
             "evaluated": bool(data.get("evaluated", False)),
+            # Audit provenance for the edge detail panel (showEdgeInfo).
+            "reason": _reason_txt,
+            "evidence_quote": _quote_txt,
+            "evaluation_reason": sanitize_label(str(data.get("evaluation_reason") or "")),
+            "source_file": sanitize_label(str(data.get("source_file") or "")),
+            "source_location": sanitize_label(str(data.get("source_location") or "")),
         })
 
     # Build community legend data
@@ -1627,6 +2221,7 @@ def to_html(
             relation = data.get("relation", "")
             evaluated = bool(data.get("evaluated", False))
             reason = sanitize_label(str(data.get("evaluation_reason") or ""))
+            _ext_reason, _ext_quote = _edge_reasons(u, v, data)
             review_items.append({
                 "type": "ambiguous_edge" if confidence == "AMBIGUOUS" else "inferred_edge",
                 "title": f"{src_label} → {tgt_label}",
@@ -1634,9 +2229,20 @@ def to_html(
                 "confidence_score": score,
                 "evaluated": evaluated,
                 "evaluation_reason": reason,
+                # Extraction-time provenance (why this edge was created).
+                "reason": _ext_reason,
+                "evidence_quote": _ext_quote,
                 "source_file": sanitize_label(str(data.get("source_file") or "")),
                 "source_location": sanitize_label(str(data.get("source_location") or "")),
                 "node_id": u,
+                # Edge identity so the audit click can open the EDGE's own
+                # detail panel (parity with node clicks) instead of just
+                # focusing the source node.
+                "edge": {
+                    "from": data.get("_src", u),
+                    "to": data.get("_tgt", v),
+                    "relation": relation,
+                },
             })
     # Low-confidence nodes from the graph (LLM-generated nodes that the
     # Evaluation Agent scored low, or unverified nodes).
@@ -1669,6 +2275,9 @@ def to_html(
     edges_json = _js_safe(vis_edges)
     legend_json = _js_safe(legend_data)
     review_json = _js_safe(review_items)
+    # Learn tab payload: pass null when empty so the frontend branch is a
+    # single falsy check (and the byte-identity guarantee holds pre-feature).
+    learn_json = _js_safe(learn_data) if learn_data else "null"
     hyperedges_json = _js_safe(getattr(G, "graph", {}).get("hyperedges", []))
     _raw_title = sanitize_label(_html_document_title(output_path))
     title = _html.escape(_raw_title)
@@ -1991,6 +2600,9 @@ def to_html(
 <script src="https://unpkg.com/vis-network@9.1.6/standalone/umd/vis-network.min.js"
         integrity="sha384-Ux6phic9PEHJ38YtrijhkzyJ8yQlH8i/+buBR8s3mAZOJrP1gwyvAcIYl3GWtpX1"
         crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"
+        integrity="sha384-WmdflGW9aGfoBdHc4rRyWzYuAjEmDwMdGdiPNacbwfGKxBW/SO6guzuQ76qjnSlr"
+        crossorigin="anonymous"></script>
 {_html_styles()}
 </head>
 <body>
@@ -2187,54 +2799,10 @@ def to_html(
   </div>
 </div>
 
-<!-- Learn tab -->
+<!-- Learn tab (multi-perspective: 业务流 / 代码架构 / 特性下钻) -->
 <div id="page-learn" class="tab-page">
-  <div class="workspace">
-    <!-- Left rail -->
-    <div class="sidebar-rail" id="learn-sidebar-rail" onclick="toggleSidebar('learn')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-    </div>
-    <aside class="sidebar" id="learn-sidebar">
-      <div class="sidebar-header">
-        <div style="flex:1">
-          <div class="sidebar-title">引导漫游</div>
-          <div class="sidebar-meta">按依赖顺序浏览架构</div>
-        </div>
-        <button class="sidebar-toggle" onclick="toggleSidebar('learn')" title="收起侧栏">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-        </button>
-      </div>
-      <div class="sidebar-list" id="tour-list">
-        <div style="padding:20px 16px;color:var(--gf-text-muted);font-size:0.75rem">漫游功能需要运行 <code style="font-family:var(--gf-font-mono);background:var(--gf-panel);padding:1px 4px;border-radius:3px">graphify --learn</code> 生成。</div>
-      </div>
-    </aside>
-    <div class="graph-area" id="learn-graph-area">
-      <!-- graph container will be moved here by JS when learn tab is active -->
-      <div class="graph-stats">{stats}</div>
-    </div>
-    <aside class="detail-panel" id="learn-detail-panel">
-      <div class="detail-header">
-        <div style="flex:1">
-          <div class="detail-name">学习模式</div>
-          <div class="detail-meta">点击图谱节点查看详情</div>
-        </div>
-        <button class="sidebar-toggle" onclick="toggleDetail('learn')" title="收起面板">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-        </button>
-      </div>
-      <div class="detail-body" id="learn-detail">
-        <div style="color:var(--gf-text-muted);font-size:0.75rem;text-align:center;padding:20px 0">选择图谱中的节点查看信息</div>
-      </div>
-      <div class="detail-nav">
-        <button class="detail-nav-btn" onclick="navSourceFile()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>源文件 ↗</button>
-        <button class="detail-nav-btn" onclick="navPath()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>路径</button>
-        <button class="detail-nav-btn" onclick="navExplain()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>解释</button>
-      </div>
-    </aside>
-    <!-- Right rail -->
-    <div class="detail-rail" id="learn-detail-rail" onclick="toggleDetail('learn')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-    </div>
+  <div class="learn-shell" id="learn-shell">
+    <!-- 左视角手风琴 + 视图容器由 JS 从 LEARN 渲染；无数据时显示引导。 -->
   </div>
 </div>
 
@@ -2246,7 +2814,7 @@ def to_html(
   <div class="bottom-stats" id="stats-bottom">{stats}</div>
 </footer>
 
-{_html_script(nodes_json, edges_json, legend_json, _js_safe(type_index), _js_safe(tag_index), review_json, _bc_bubbles_json, _bc_links_json, _lang_donut_json, _lang_total, _bc_details_json)}
+{_html_script(nodes_json, edges_json, legend_json, _js_safe(type_index), _js_safe(tag_index), review_json, _bc_bubbles_json, _bc_links_json, _lang_donut_json, _lang_total, _bc_details_json, learn_json)}
 {_hyperedge_script(hyperedges_json)}
 </body>
 </html>"""

@@ -6,7 +6,7 @@
 |---------|------|---------|:---------:|------|---------|-------------|---------|--------------|
 | {描述性契约名称} | C-{xx}-{yy} | 入站/出站 | {BC 名称} | 同步/异步 | {协议} | `{锚点}` | {operationId} | {业务承诺} | {失败后果} |
 
-> 代码锚点列按协议类型填三类格式之一：REST 契约填 url名（`POST:/path`），trait 契约填 `TraitName.method`，事件契约填 `ClassName.method`（发布点）。
+> 代码锚点列按协议类型填三类格式之一：REST 契约填 `POST:/path`（URL 路径变量照抄 swagger yaml 原始拼写，如 `GET:/rest/users/{id}`），trait 契约填 `TraitName.method`，事件契约填 `ClassName.method`（发布点）。同一格多个锚点用 `·` 分隔。
 
 ## BC 内契约（可选）
 

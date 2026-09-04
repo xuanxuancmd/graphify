@@ -123,15 +123,13 @@ class TestRebuildCodeProcessesSwaggerYaml:
         # 1. swagger_doc node exists
         doc_nodes = [n for n in nodes if n.get("node_kind") == "swagger_doc"]
         assert len(doc_nodes) == 1, f"expected 1 swagger_doc node, got {len(doc_nodes)}"
-        assert doc_nodes[0]["base_path"] == "/rest"
 
-        # 2. rest_endpoint node exists
+        # 2. rest_endpoint node exists (URL lives in the label; no method/
+        #    full_path/operation_id/swagger_tags fields on the slim node)
         eps = [n for n in nodes if n.get("node_kind") == "rest_endpoint"]
         assert len(eps) == 1, f"expected 1 rest_endpoint, got {len(eps)}"
-        assert eps[0]["method"] == "GET"
-        assert eps[0]["full_path"] == "/rest/hooktest/v1/items"
-        assert eps[0]["operation_id"] == "listItems"
-        assert eps[0]["swagger_tags"] == ["ItemController"]
+        assert eps[0]["label"] == "GET:/rest/hooktest/v1/items"
+        assert eps[0]["tags"] == ["url"]
 
         # 3. The TS code node (ItemController class) is in the graph
         code_labels = [n.get("label") for n in nodes if n.get("file_type") == "code"]
@@ -205,7 +203,7 @@ class TestRebuildCodeProcessesSwaggerYaml:
             f"expected 2 endpoints after yaml-only change, got {len(eps)}: "
             f"{[e['label'] for e in eps]}"
         )
-        methods = {e["method"] for e in eps}
+        methods = {e["label"].split(":", 1)[0] for e in eps}
         assert methods == {"GET", "POST"}
 
     def test_non_swagger_yaml_not_in_code_files(self, project: Path) -> None:
@@ -241,4 +239,4 @@ class TestRebuildCodeProcessesSwaggerYaml:
         # The docker-compose.yaml should not have created any swagger nodes
         eps = [n for n in graph.get("nodes", []) if n.get("node_kind") == "rest_endpoint"]
         # 1 endpoint from api.yaml, 0 from docker-compose.yaml
-        assert all("hooktest" in e.get("full_path", "") for e in eps)
+        assert all("hooktest" in e.get("label", "") for e in eps)

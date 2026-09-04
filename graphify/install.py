@@ -279,23 +279,31 @@ def _project_scope_root(path: Path, project_dir: Path) -> Path:
     except ValueError:
         return path
     return project_dir / rel.parts[0] if rel.parts else path
-def _remove_claude_skill_registration(project_dir: Path) -> None:
-    """Remove the project-scoped Claude skill registration file/section."""
-    claude_md = project_dir / ".claude" / "CLAUDE.md"
-    if not claude_md.exists():
+def _remove_skill_registration_md(md_path: Path) -> None:
+    """Remove the H1 `# graphify` skill-registration section from a CLAUDE.md.
+
+    install() writes the skill registration as an H1 section (`# graphify`),
+    distinct from the /graphify skill's H2 always-on injection (`## graphify`)
+    — this targets the former. The file is deleted when the section was its
+    only content.
+    """
+    if not md_path.exists():
         return
-    content = claude_md.read_text(encoding="utf-8")
+    content = md_path.read_text(encoding="utf-8")
     # Match the exact H1 `# graphify` registration heading, never a substring of a
     # user's `## graphify`/`### graphify` (#2062). Section runs to the next H1.
     cleaned = _remove_marker_section(content, "# graphify", boundary_prefix="# ")
     if cleaned is None:
         return
     if cleaned:
-        claude_md.write_text(cleaned + "\n", encoding="utf-8")
-        print(f"  CLAUDE.md        ->  graphify skill registration removed from {claude_md}")
+        md_path.write_text(cleaned + "\n", encoding="utf-8")
+        print(f"  {md_path.name:<16} ->  graphify skill registration removed from {md_path}")
     else:
-        claude_md.unlink()
-        print(f"  CLAUDE.md        ->  deleted {claude_md}")
+        md_path.unlink()
+        print(f"  {md_path.name:<16} ->  deleted {md_path}")
+def _remove_claude_skill_registration(project_dir: Path, config_home: str = ".claude") -> None:
+    """Remove the project-scoped Claude skill registration file/section."""
+    _remove_skill_registration_md(project_dir / config_home / "CLAUDE.md")
 def _print_project_git_add_hint(paths: list[Path]) -> None:
     unique: list[str] = []
     for path in paths:
@@ -491,6 +499,12 @@ _PLATFORM_CONFIG: dict[str, dict] = {
         "skill_dst": Path(".cac") / "skills" / "graphify" / "SKILL.md",
         "claude_md": True,
         "skill_refs": "claude",
+        # Registration home for the claude_md branch: ~/.cac (global) and
+        # <project>/.cac (project), mirroring claude's .claude — but the
+        # registration file is AGENTS.md (what the .cac home reads), not
+        # CLAUDE.md.
+        "config_home": ".cac",
+        "registration_md": "AGENTS.md",
     },
 }
 # CLI-only platform aliases, resolved to a real _PLATFORM_CONFIG key before
@@ -672,29 +686,35 @@ def install(platform: str = "codeagent", *, project: bool = False, project_dir: 
         # Register in the matching Claude Code scope. Honor CLAUDE_CONFIG_DIR
         # for the global (non-project) case, same as _platform_skill_destination
         # does for the skill copy path (#527) -- this always-on registration
-        # path was missed by that fix (#2694).
+        # path was missed by that fix (#2694). Platforms with their own config
+        # home (codeagent -> .cac, registering in AGENTS.md) register there
+        # instead, and CLAUDE_CONFIG_DIR -- a Claude Code variable -- never
+        # redirects them, mirroring the skill-copy guard in
+        # _platform_skill_destination.
+        config_home = str(cfg.get("config_home", ".claude"))
+        registration_md = str(cfg.get("registration_md", "CLAUDE.md"))
         if project:
-            claude_md = project_dir / ".claude" / "CLAUDE.md"
-            skill_ref = ".claude/skills/graphify/SKILL.md"
-        elif os.environ.get("CLAUDE_CONFIG_DIR"):
+            md_path = project_dir / config_home / registration_md
+            skill_ref = f"{config_home}/skills/graphify/SKILL.md"
+        elif os.environ.get("CLAUDE_CONFIG_DIR") and config_home == ".claude":
             config_dir = Path(os.environ["CLAUDE_CONFIG_DIR"])
-            claude_md = config_dir / "CLAUDE.md"
+            md_path = config_dir / registration_md
             skill_ref = str(config_dir / "skills" / "graphify" / "SKILL.md")
         else:
-            claude_md = Path.home() / ".claude" / "CLAUDE.md"
-            skill_ref = "~/.claude/skills/graphify/SKILL.md"
+            md_path = Path.home() / config_home / registration_md
+            skill_ref = f"~/{config_home}/skills/graphify/SKILL.md"
         registration = _skill_registration(skill_ref)
-        if claude_md.exists():
-            content = claude_md.read_text(encoding="utf-8")
+        if md_path.exists():
+            content = md_path.read_text(encoding="utf-8")
             if "graphify" in content:
-                print(f"  CLAUDE.md        ->  already registered (no change)")
+                print(f"  {registration_md:<16} ->  already registered (no change)")
             else:
-                claude_md.write_text(content.rstrip() + registration, encoding="utf-8")
-                print(f"  CLAUDE.md        ->  skill registered in {claude_md}")
+                md_path.write_text(content.rstrip() + registration, encoding="utf-8")
+                print(f"  {registration_md:<16} ->  skill registered in {md_path}")
         else:
-            claude_md.parent.mkdir(parents=True, exist_ok=True)
-            claude_md.write_text(registration.lstrip(), encoding="utf-8")
-            print(f"  CLAUDE.md        ->  created at {claude_md}")
+            md_path.parent.mkdir(parents=True, exist_ok=True)
+            md_path.write_text(registration.lstrip(), encoding="utf-8")
+            print(f"  {registration_md:<16} ->  created at {md_path}")
 
     if platform == "codebuddy":
         # Register in ~/.codebuddy/CODEBUDDY.md (CodeBuddy only)
@@ -1698,6 +1718,11 @@ def _project_uninstall(platform_name: str, project_dir: Path | None = None) -> N
         # project=True keeps `uninstall --project` project-scoped; previously
         # this deleted the user-global codebuddy skill (#2215).
         codebuddy_uninstall(project_dir, project=True)
+    elif platform_name == "codeagent":
+        # Mirror of the claude branch for codeagent's .cac home: removes the
+        # project skill, the .cac/CLAUDE.md registration, and the root-CLAUDE.md
+        # sections; hooks are global-only, so the global hook goes as well.
+        codeagent_uninstall(project_dir, project=True)
     else:
         _remove_skill_file(platform_name, project=True, project_dir=project_dir)
 def _project_uninstall_all(project_dir: Path | None = None) -> None:
@@ -2280,6 +2305,15 @@ def codeagent_uninstall(project_dir: Path | None = None, *, project: bool = Fals
     elif not removed_any:
         print("graphify section not found in CLAUDE.md - nothing to do")
 
+    # The installer's registration is an H1 `# graphify` section in
+    # <project>/.cac/AGENTS.md (codeagent's config home registers in AGENTS.md,
+    # not CLAUDE.md), distinct from the H2 always-on sections stripped above;
+    # remove it, plus the ~/.cac/AGENTS.md global registration on a user-scope
+    # uninstall.
+    _remove_skill_registration_md(project_dir / ".cac" / "AGENTS.md")
+    if remove_user_skill:
+        _remove_skill_registration_md(Path.home() / ".cac" / "AGENTS.md")
+
     _uninstall_codeagent_hook_global()
 
 
@@ -2321,9 +2355,13 @@ def dispatch_install_cli(cmd: str) -> bool:
     if cmd not in _CLI_INSTALL_COMMANDS:
         return False
     if cmd == "install":
-        # Default to windows platform on Windows, codeagent elsewhere.
-        # codeagent uses .cac directory (same mechanism as claude's .claude).
-        default_platform = "windows" if platform.system() == "Windows" else "codeagent"
+        # codeagent is the bare-install default on every OS. On Windows the
+        # codeagent skill resolves to the PowerShell variant (skill-windows.md,
+        # via _resolve_skill_file) and lands in ~/.cac — the .claude twin
+        # directory — so `graphify install` behaves identically everywhere.
+        # Claude Code users pass `--platform claude` (or `windows`) to target
+        # ~/.claude instead.
+        default_platform = "codeagent"
         selected_platform: str | None = None
         project_scope = False
         strict = False

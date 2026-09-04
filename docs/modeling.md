@@ -61,6 +61,8 @@ graphify 把一个项目（代码、文档、DDD 文档、配置文件 YAML/JSON
 | `page` | `markdown.py:393` | markdown 文件节点 |
 | `heading` | `markdown.py:345,475` | markdown 标题节点 (# ~ ######) |
 | `doc-anchor` | `ddd.py:372` | DDD 文档锚点节点 |
+| `rest_endpoint` | `swagger.py` | swagger/openapi 端点节点(label 为 `METHOD:/full/path`) |
+| `swagger_doc` | `swagger.py` | swagger 规范文件节点 |
 | `file` | (推断) | 代码文件节点(AST extractor 不显式设置,通过 `label==basename(source_file)` 推断,`ddd.py:113`) |
 | `class` | (部分语言) | 类声明(部分 AST extractor 设置;TS/JS 用 `_callable_class` 标记代替) |
 | `function` / `method_definition` / `function_definition` | (部分语言) | 函数/方法声明(同上,TS/JS 用 `_callable` 标记代替) |
@@ -90,6 +92,8 @@ graphify 把一个项目（代码、文档、DDD 文档、配置文件 YAML/JSON
 | markdown 文件 | `make_id(str(path))` | `docs/readme.md → docs_readme` |
 | markdown 标题 | `make_id(stem, title)` 重名时追加行号 | `make_id(stem, title, str(line_num))` |
 | DDD doc-anchor | `make_id("docanchor", stem, concept_id)` | `docanchor_docs_order_domain_model_AG-01` |
+| swagger 端点 | `make_id("swagger_ep", stem, method小写, norm_full_path)` | `GET /rest/users/{id}` → `swagger_ep_user_api_get_rest_users_id`(花括号剥除,`/`→`_`,变量名保留) |
+| swagger 文档 | `make_id("swagger_doc", stem)` | `swagger_doc_user_api` |
 | 包清单 | `make_id("pkg", name)` | `pkg_requests`(按包名 canonical,跨清单去重) |
 | JSON config ref | `make_id("ref", val_text)` | `ref_./tsconfig_base.json` |
 | LLM 语义节点 | `{stem}_{entity}` | prompt 规约,`llm.py:493-494` |
@@ -159,6 +163,14 @@ graphify 把一个项目（代码、文档、DDD 文档、配置文件 YAML/JSON
 | `extends` | 配置继承(tsconfig/eslint extends) | `json_config.py:176,187`;`apex.py:132`;`dart.py:396` |
 | `depends_on` | 包依赖 | `manifest_ingest.py:103` |
 | `dispatches_to` | C# 接口方法调度 | `csharp_dispatch.py:31` |
+
+**Swagger 文档边** (`swagger.py`):
+
+| 关系 | 语义 | 来源 |
+|---|---|---|
+| `contains` | swagger_doc → rest_endpoint | `swagger.py` |
+| `defined_in` | rest_endpoint → swagger_doc(contains 的反向,供 path 查询) | `swagger.py` |
+| `references` | rest_endpoint → 控制器类(tags[0] 匹配)/处理函数(operationId 匹配代码索引) | `swagger.py` |
 
 **DDD 边** (`ddd.py:787-792`,pending 内部类型→最终 relation 映射):
 
@@ -265,14 +277,53 @@ graphify 把一个项目（代码、文档、DDD 文档、配置文件 YAML/JSON
 **无专用 AST 提取器**。走 LLM 语义提取(extraction-spec.md 通用 prompt),产出 `concept`/`rationale`/`document` 节点 + `conceptually_related_to`/`semantically_similar_to`/`references`/`cites` 等语义边。
 
 **例外**:
+- swagger / openapi 规范 yaml 走 `extractors/custom/swagger.py` 确定性解析(见 §3.5b),不走 LLM
 - `apm.yml`/`apm.yaml` 走 `manifest_ingest.py` 确定性解析(见 §3.3)
 - markdown 中的 YAML frontmatter 由 `markdown.py:100-140` 解析到 page 节点的 `frontmatter` 字段
 
+### 3.5b swagger / openapi 规范 YAML
+
+**文件**: `extractors/custom/swagger.py`
+
+**识别** (`_is_swagger_spec`):`swagger: "2.0"` / `openapi: "3.x"` key 存在,或 `paths` 下有 `/` 前缀 key 含 HTTP method 子键(宽松匹配)。非 swagger yaml(docker-compose/CI/k8s)返回 None,回退默认文档提取。
+
+**提取方式**: 纯确定性 yaml 解析(safe_load 取数据 + compose 取行号),`suppress_llm=True`(Tier 1,零 LLM 成本),`merge_mode="replace"`(结构化数据,默认 markdown 只加噪声)。
+
+**产出节点** (全通用字段,无 swagger 专属字段):
+
+| 节点 | node_kind | file_type | 说明 |
+|---|---|---|---|
+| 文档节点 | `swagger_doc` | `document` | 每个规范文件一个,`label=文件名`,`tags=["swagger"]` |
+| 端点节点 | `rest_endpoint` | `concept` | 每个 `paths.<path>.<method>` 一个,形态如下 |
+
+端点节点形态:
+
+```python
+{
+    "id": "swagger_ep_<stem>_<method>_<norm_path>",   # 花括号剥除, / → _, 变量名保留进 ID
+    "label": "GET:/rest/users/{id}",                  # METHOD:/full/path, 路径变量与 yaml 原文一致
+    "file_type": "concept",
+    "source_file": "docs/user-api.yaml",
+    "source_location": "L118",
+    "node_kind": "rest_endpoint",
+    "desc": "description + x-examples",               # 不含 summary(与 description 冗余)
+    "tags": ["url"],
+}
+```
+
+**URL 的唯一载体是 label**: method 与路径从 label 可完整恢复(首个 `:` 前是 method);控制器/处理函数关联由 `references` 边承载;请求/响应结构细节留在 yaml 原文,经 `source_file` + `source_location` 可回溯。`tags=["url"]` 参与词法检索,使 "url" 类查询能命中端点节点(§4.1)。
+
+**desc 是语义检索唯一入口** (`embeddings.py:_node_embed_text`): 端点的业务语言(description + 示例报文)经 embedding 服务于中文/自然语言查询("用户注册怎么做");label 的 token(get/rest/users)服务于词法查询。
+
+**DDD URL 锚点匹配** (`ddd.py:_build_code_indices`): DDD 文档 `<anchor:code>` 列的 `HTTP方法:/路径` 锚点(如 `GET:/rest/users/{id}`)按端点 **label** 派生的键匹配——method+path 主键(method 精确核对,锚点方法与端点不符时降级 AMBIGUOUS)+ 裸路径键 + 路径变量归一化变体(`{id}`/`{userId}` 互匹配)。
+
+**产出边**: `contains`(doc→endpoint)、`defined_in`(endpoint→doc,反向)、`references`(endpoint→控制器类 via `tags[0]`、→处理函数 via `operationId`;Java 代码生成项目有 `Impl` 后缀回退)。未匹配的 tags/operationId 记入 `unmatched`,不产影子节点。
+
 ### 3.6 DDD 文档（context-map / technical-constraints / business-flow / invariants / contracts / domain-events / domain-model）
 
-**文件**: `extractors/ddd.py`(888 LOC,从 `parse-ddd-tables.mjs` 逐行移植)
+**文件**: `extractors/ddd.py`(从 `parse-ddd-tables.mjs` 逐行移植)
 
-**识别** (`ddd.py:30-38,837-839`):文件路径(lowercased)含关键词:`context-map`/`technical-constraints`/`business-flow`/`invariants`/`contracts`/`domain-events`/`domain-model`
+**识别** (`ddd.py` `extract_ddd`):**文件名精确匹配白名单**——`path.name.lower()` 必须等于 `f"{kw}.md"`(关键词 + `.md`);目录名不参与匹配,`api/contracts/` 下的文件不会因路径含 `contracts` 被误吸入。
 
 **产出节点** (`ddd.py:356-377` `_make_node`):doc-anchor 节点,全通用字段(无 `ddd_*` 前缀):
 
@@ -322,10 +373,9 @@ graphify 把一个项目（代码、文档、DDD 文档、配置文件 YAML/JSON
 | 3 | `nid` | `str(nid).lower()` | `_find_node` 的 `joined == nid_lower` tier | ✅ |
 | 4 | `source_file` | `(source_file or "").lower()` | `_score_nodes` 的 `t in source` source-match tier | ✅ |
 | 5 | `source_tokens` | `" ".join(_search_tokens(source_file))` | `_find_node` 的 `term == source_tokens` source_exact tier(路径精确匹配) | ✅ |
-| 6 | `tags` | `" ".join(tags)` | 让 `aggregate_root`/`ddd` 等查询匹配 doc-anchor 节点 | ⚠️ 条件:仅当 tags 是非空 list 时追加 |
-| 7 | `nid_folded` | `_strip_diacritics(nid).lower()` | `_find_node` 的 `norm_query == nid_norm` tier(Hangul 等 NFKD 分解) | ⚠️ 条件:仅当 nid 非 ASCII 且 fold 后不同时追加 |
+| 6 | `nid_folded` | `_strip_diacritics(nid).lower()` | `_find_node` 的 `norm_query == nid_norm` tier(Hangul 等 NFKD 分解) | ⚠️ 条件:仅当 nid 非 ASCII 且 fold 后不同时追加 |
 
-> **关键设计**: tags 和 nid_folded 是**条件拼接** — 无 tags 字段的节点产出**字节级一致**的搜索文本(无尾随 NUL,无字段位移),行为与 upstream 完全一致 (`test_tags_retrieval_no_tags_node_unaffected` 测试验证)。
+> **关键设计**: `tags` 字段**不进搜索文本** — tags 是 graph.html 过滤面板的人面元数据,不是内容(见 `tags.py` 治理);query 语义与 tags 完全解耦。`nid_folded` 是唯一**条件拼接**字段。
 
 ### 4.2 字符串检索打分层级（`_score_query` / `_find_node`）
 
@@ -429,6 +479,5 @@ graphify 把一个项目（代码、文档、DDD 文档、配置文件 YAML/JSON
 | 默认语义检索(source) | `source_file` | 子串包含 | 0.5 × idf | `serve.py:293` |
 | fuzzy 字符串检索 | `label` | JaroWinkler | ≥0.85,bonus = 2.0 × sim | `fuzzy.py:18`;`hybrid_scorer.py:138-146` |
 | vector 语义检索 | `desc` 的 embedding | cosine 相似度 | bonus = 5.0 × sim | `hybrid_scorer.py:106-136` |
-| tags 检索 | `tags`(条件拼接进搜索文本) | 走 substring/exact tier | 同默认语义检索 | `serve.py:357-365` |
 | 路径精确检索 | `source_file` tokenized | 精确 token 匹配 | source_exact tier(最高优先级) | `serve.py:1487` |
 | ID 检索 | `id` lower | 精确/前缀/子串 | exact/prefix/substring tier | `serve.py:1488-1500` |

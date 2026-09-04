@@ -375,44 +375,6 @@ def _detect_version(spec: dict) -> str:
     return ""
 
 
-def _extract_responses(operation: dict, version: str) -> list[dict]:
-    """Extract response status codes + descriptions + schema types.
-
-    Returns ``[{"code": "200", "description": "...", "schema_type": "string"}]``.
-    """
-    responses = operation.get("responses")
-    if not isinstance(responses, dict):
-        return []
-    out: list[dict] = []
-    for code, resp in responses.items():
-        if not isinstance(resp, dict):
-            continue
-        entry: dict = {"code": str(code), "description": resp.get("description", "")}
-        # Swagger 2.0: schema.type
-        schema = resp.get("schema")
-        if isinstance(schema, dict):
-            entry["schema_type"] = schema.get("type", "")
-        # OpenAPI 3.x: content.<mime>.schema.type
-        content = resp.get("content")
-        if isinstance(content, dict) and "schema_type" not in entry:
-            for _mime, mime_val in content.items():
-                if isinstance(mime_val, dict) and isinstance(mime_val.get("schema"), dict):
-                    entry["schema_type"] = mime_val["schema"].get("type", "")
-                    break
-        out.append(entry)
-    return out
-
-
-def _has_request_body(operation: dict, version: str) -> bool:
-    """Swagger 2.0: ``parameters`` with ``in: body``. OpenAPI 3.x: ``requestBody``."""
-    if version.startswith("3"):
-        return "requestBody" in operation
-    params = operation.get("parameters")
-    if isinstance(params, list):
-        return any(isinstance(p, dict) and p.get("in") == "body" for p in params)
-    return False
-
-
 def _extract_examples(operation: dict) -> list[str]:
     """Pull ``x-examples`` from the operation (custom swagger extension).
 
@@ -443,8 +405,8 @@ def _extract_examples(operation: dict) -> list[str]:
 # Node + Edge builders
 # ---------------------------------------------------------------------------
 
-def _make_doc_node(*, doc_path: str, stem: str, version: str, base_path: str) -> dict:
-    """Build the per-file swagger document node."""
+def _make_doc_node(*, doc_path: str, stem: str) -> dict:
+    """Build the per-file swagger document node (generic fields only)."""
     return {
         "id": _make_id("swagger_doc", stem),
         "label": Path(doc_path).name,
@@ -453,8 +415,6 @@ def _make_doc_node(*, doc_path: str, stem: str, version: str, base_path: str) ->
         "source_location": None,
         "node_kind": "swagger_doc",
         "tags": ["swagger"],
-        "swagger_version": version,
-        "base_path": base_path,
     }
 
 
@@ -467,33 +427,32 @@ def _make_endpoint_node(
     base_path: str,
     operation: dict,
     line_num: int,
-    version: str = "2.x",
 ) -> dict:
     """Build one REST endpoint node from a ``paths.<path>.<method>`` block.
 
-    ``label`` follows the ``METHOD:/full/path`` convention so the URL is
-    recoverable from the label alone.  ``desc`` merges description and
-    x-examples (summary is intentionally excluded — it is redundant with
-    description in swagger specs) so ``graphify query`` / ``explain``
-    return the full human-readable context for the endpoint.
+    ``label`` follows the ``METHOD:/full/path`` convention — the URL exactly
+    as written in the yaml, path variables keeping their original names
+    (``GET:/rest/users/{id}``) — so the URL is recoverable from the label
+    alone and token-based retrieval (``graphify query`` / ``path`` /
+    ``explain``) sees the same tokens a user would type.
 
-    Swagger-specific fields (``method``, ``path``, ``full_path``,
-    ``operation_id``, ``swagger_tags``, ``summary``, ``description``,
-    ``base_path``, ``response_codes``, ``has_request_body``, ``consumes``)
-    are also stored on the node so downstream consumers (DDD endpointIndex,
-    serve.py, callflow HTML) can use them without re-parsing the yaml.
+    ``desc`` is description + x-examples (summary is intentionally excluded —
+    redundant with description) so the semantic tier embeds the endpoint's
+    business language and ``graphify query`` / ``explain`` return the full
+    human-readable context.
+
+    All fields are generic — no swagger-specific fields. Controller/handler
+    associations live in ``references`` edges (built by :func:`extract_swagger`);
+    request/response structure stays in the yaml itself, reachable via
+    ``source_file`` + ``source_location``.
     """
     full_path = (base_path or "") + path
     method_upper = method.upper()
     description = operation.get("description", "") or ""
-    summary = operation.get("summary", "") or ""
     examples = _extract_examples(operation)
 
-    # desc = summary + description + examples, so graphify query / explain
-    # return the full human-readable context for the endpoint.
+    # desc = description + examples (no summary — redundant with description).
     parts: list[str] = []
-    if summary:
-        parts.append(summary)
     if description:
         parts.append(description)
     if examples:
@@ -505,15 +464,6 @@ def _make_endpoint_node(
     endpoint_id = _make_id("swagger_ep", stem, method_upper.lower(), norm_path) if norm_path \
         else _make_id("swagger_ep", stem, method_upper.lower(), "root")
 
-    # Swagger-specific fields for downstream consumers
-    raw_tags = operation.get("tags", []) or []
-    if not isinstance(raw_tags, list):
-        raw_tags = []
-    response_codes = [r["code"] for r in _extract_responses(operation, version)]
-    consumes = operation.get("consumes", []) or []
-    if not isinstance(consumes, list):
-        consumes = []
-
     return {
         "id": endpoint_id,
         "label": f"{method_upper}:{full_path}",
@@ -523,30 +473,7 @@ def _make_endpoint_node(
         "node_kind": "rest_endpoint",
         "desc": desc,
         "tags": ["url"],
-        # Swagger-specific fields for DDD endpointIndex, serve.py, callflow
-        "method": method_upper,
-        "path": path,
-        "full_path": full_path,
-        "operation_id": operation.get("operationId", "") or "",
-        "swagger_tags": raw_tags,
-        "base_path": base_path,
-        "summary": summary,
-        "description": description,
-        "response_codes": response_codes,
-        "has_request_body": _has_request_body(operation, version),
-        "consumes": consumes,
     }
-
-
-def _version_from_op(operation: dict) -> str:
-    """Operation-level version hint (fallback when spec-level version absent).
-
-    Presence of ``requestBody`` implies 3.x; ``parameters[in:body]`` implies 2.x.
-    Defaults to "" (treated as 2.x by _has_request_body / _extract_responses).
-    """
-    if "requestBody" in operation:
-        return "3.x"
-    return ""
 
 
 def _make_edge(
@@ -618,7 +545,7 @@ def extract_swagger(
     doc_path = path.resolve().relative_to(root.resolve()).as_posix()
     stem = _file_stem(Path(doc_path))
 
-    doc_node = _make_doc_node(doc_path=doc_path, stem=stem, version=version, base_path=base_path)
+    doc_node = _make_doc_node(doc_path=doc_path, stem=stem)
     nodes: list[dict] = [doc_node]
     edges: list[dict] = []
     unmatched: list[dict] = []
@@ -644,7 +571,6 @@ def extract_swagger(
             ep_node = _make_endpoint_node(
                 doc_path=doc_path, stem=stem, method=method, path=path_str,
                 base_path=base_path, operation=operation, line_num=line_num,
-                version=version,
             )
             nodes.append(ep_node)
 
@@ -662,9 +588,9 @@ def extract_swagger(
             ))
 
             # --- Code association: tags -> controller class ---
-            # The endpoint node carries swagger_tags/operation_id as fields
-            # for downstream consumers (DDD endpointIndex, serve.py). The
-            # references edge also carries the relationship explicitly.
+            # The references edge carries the controller/handler relationship
+            # explicitly — the endpoint node itself keeps no swagger-specific
+            # fields (URL lives in the label, semantics in desc).
             raw_tags = operation.get("tags", []) or []
             if not isinstance(raw_tags, list):
                 raw_tags = []

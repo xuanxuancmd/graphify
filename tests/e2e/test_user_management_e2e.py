@@ -371,10 +371,10 @@ class TestCrossFileEdgeResolution:
 class TestUnmatchedAnchors:
     """Verify ddd-unmatched.json behavior.
 
-    After the anchor-matching fixes (nameIndex normalization, endpointIndex by
-    full_path, _clean_anchor strip, config-before-md ordering), all anchors in
-    the user-management fixture resolve — unmatched is 0 or the sidecar is
-    absent. These tests verify that state.
+    After the anchor-matching fixes (nameIndex normalization, endpointIndex
+    derived from endpoint labels, _clean_anchor strip, config-before-md
+    ordering), all anchors in the user-management fixture resolve — unmatched
+    is 0 or the sidecar is absent. These tests verify that state.
     """
 
     def test_sidecar_empty_or_absent(self):
@@ -395,7 +395,11 @@ class TestUnmatchedAnchors:
 # ---------------------------------------------------------------------------
 
 class TestTagsField:
-    """Verify doc-anchor nodes carry tags usable by serve.py _node_search_text."""
+    """Verify doc-anchor nodes carry tags for the graph.html tag panel.
+
+    Tags are filter metadata only — serve.py query retrieval deliberately
+    ignores them (query/tag decoupling; see test_ddd_extractor.py AC10).
+    """
 
     def test_all_doc_anchors_have_tags(self, doc_anchors):
         for n in doc_anchors:

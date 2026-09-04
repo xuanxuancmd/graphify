@@ -40,11 +40,11 @@ pip install graphifyy && graphify install
 
 | 平台 | 安装命令 |
 |------|----------|
-| Claude Code | `graphify install` |
+| Claude Code | `graphify install --platform claude` |
 | OpenCode | `graphify install --platform opencode` |
-| CodeAgent | `graphify install --platform codeagent` |
+| CodeAgent | `graphify install`（默认，任何 OS 都落 `~/.cac`；Windows 上自动使用 PowerShell 版 skill） |
 
-安装命令做两件事：①把 skill 装到全局（`~/.claude/skills/` 或 `~/.config/opencode/skills/` 等），②把常驻 hook 装到全局配置（Claude/CodeAgent 写 `~/.claude/settings.json` / `~/.cac/settings.json` 的 PreToolUse hook；OpenCode 写 `~/.config/opencode/plugins/graphify.js` 的 `tool.execute.before` plugin）。
+安装命令做两件事：①把 skill 装到全局（默认 `~/.cac/skills/`（CodeAgent）；Claude Code 为 `~/.claude/skills/`，OpenCode 为 `~/.config/opencode/skills/` 等），②把常驻 hook 装到全局配置（Claude/CodeAgent 写 `~/.claude/settings.json` / `~/.cac/settings.json` 的 PreToolUse hook；OpenCode 写 `~/.config/opencode/plugins/graphify.js` 的 `tool.execute.before` plugin）。
 
 Codex 用户还需要在 `~/.codex/config.toml` 的 `[features]` 下打开 `multi_agent = true`，这样才能并行提取。CodeBuddy 使用与 Claude Code 相同的 Agent 工具和 PreToolUse hook 机制。OpenClaw 目前的并行 agent 支持还比较早期，所以使用顺序提取。Trae 使用 Agent 工具进行并行子代理调度，**不支持** PreToolUse hook，因此 AGENTS.md 是其常驻机制。
 
@@ -129,6 +129,7 @@ When the user types `/graphify`, use the installed graphify skill or instruction
 | `/graphify query "<question>" --budget <N>` | 限制输出 token 数（默认 2000） |
 | `/graphify path "<A>" "<B>"` | 两节点间最短路径 |
 | `/graphify explain "<X>"` | 节点的自然语言解释 |
+| `/graphify learn` | 为 graph.html 学习页签生成人读向学习卡片与引导漫游 |
 
 #### 导出与可视化
 
@@ -254,6 +255,7 @@ When the user types `/graphify`, use the installed graphify skill or instruction
 | `graphify save-result` | 保存 Q&A 结果到 .graph/memory/ | 对外（query 后自动调用） |
 | `graphify reflect` | 聚合 .graph/memory/ 生成 lessons 文档 | 对外 |
 | `graphify label <path>` | 用 LLM 为社区命名 | 对外 |
+| `graphify learn [PATH]` | 为 graph.html 学习页签生成人读向学习卡片 + 引导漫游（`--no-llm` 纯结构化零成本；`--backend` 中文讲解；按源文件指纹增量缓存） | 对外 |
 
 #### Embedding 配置
 

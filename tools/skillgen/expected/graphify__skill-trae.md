@@ -299,6 +299,29 @@ Only dispatch subagents for files listed in `.graph/.graphify_uncached.txt`. If 
 
 Load files from `.graph/.graphify_uncached.txt`. Split into chunks of 20-25 files each. Each image gets its own chunk (vision needs separate context). When splitting, group files from the same directory together so related artifacts land in the same chunk and cross-file relationships are more likely to be extracted.
 
+Derive the tag vocabulary once, before dispatching — every subagent prompt substitutes the same TAG_VOCABULARY value (the graph's existing tags plus this run's deterministic AST/doc-extractor tags, so AI-emitted tags converge instead of fragmenting into per-run variants). The try/except is a version guard: an out-of-band skill install over an older graphify package (no graphify.tags yet) degrades to "no vocabulary" instead of aborting extraction:
+```bash
+"$(cat .graph/.graphify_python)" -c "
+import json
+from pathlib import Path
+
+try:
+    from graphify.tags import TagVocabulary
+    vocab = TagVocabulary.from_graph(Path('.graph/graph.json'))
+    for _f in ('.graph/.graphify_ast.json', '.graph/.graphify_doc.json'):
+        _p = Path(_f)
+        if _p.exists():
+            try:
+                vocab.absorb_nodes(json.loads(_p.read_text(encoding='utf-8')).get('nodes', []))
+            except Exception:
+                pass
+    tags = vocab.injection_list()
+except ImportError:
+    tags = []
+print('TAG_VOCABULARY=' + (', '.join(tags) if tags else '(none yet - invent sparingly)'))
+"
+```
+
 **Step B2 - Dispatch ALL subagents in a single message**
 
 > Uses the `Task` tool for parallel subagent dispatch.
@@ -413,6 +436,23 @@ from pathlib import Path
 ast = json.loads(Path('.graph/.graphify_ast.json').read_text(encoding=\"utf-8\"))
 doc = json.loads(Path('.graph/.graphify_doc.json').read_text(encoding=\"utf-8\"))
 sem = json.loads(Path('.graph/.graphify_semantic.json').read_text(encoding=\"utf-8\"))
+
+# Tag governance, merge layer: canonicalize semantic-tier tags against the
+# preloaded vocabulary (graph.json + this run's deterministic AST/doc tags) -
+# covers fresh chunks and cache replays alike, mirroring cli.py's merge-layer
+# normalization so both extraction paths converge identically. Version guard:
+# an older graphify package without graphify.tags skips normalization rather
+# than failing the whole merge.
+try:
+    from graphify.tags import TagVocabulary
+    _vocab = TagVocabulary.from_graph(Path('.graph/graph.json'))
+    _vocab.absorb_nodes(ast['nodes'])
+    _vocab.absorb_nodes(doc.get('nodes', []))
+    _changed = _vocab.normalize_nodes(sem['nodes'])
+    if _changed:
+        print(f'Tags: normalized {_changed} node tag list(s) against {len(_vocab)} vocabulary tag(s)')
+except ImportError:
+    pass
 
 # Merge: AST nodes first, doc nodes deduplicated by id, then semantic
 seen = {n['id'] for n in ast['nodes']}

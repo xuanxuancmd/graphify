@@ -1,0 +1,1952 @@
+{
+ "version": 1,
+ "generated_at": "2026-09-04T09:40:37+00:00",
+ "backend": "none",
+ "project_summary": "共 1886 个节点、3876 条关系、141 个社区。主要区域：社区 0（87 节点）、社区 1（66 节点）、社区 2（63 节点）、社区 3（62 节点）、社区 4（62 节点）。",
+ "tour": [
+  {
+   "order": 1,
+   "title": "项目入口",
+   "nodeIds": [
+    "frontend_src_test_server_ts",
+    "frontend_src_app_tsx",
+    "frontend_src_main_tsx"
+   ],
+   "description": "这一步覆盖：server.ts；App.tsx；main.tsx。"
+  },
+  {
+   "order": 2,
+   "title": "社区 1（第 1 层依赖）",
+   "nodeIds": [
+    "frontend_src_test_pages_boardpage_test_tsx",
+    "frontend_src_test_pages_postspage_groupby_test_tsx",
+    "frontend_src_test_components_groupbyconditions_test_tsx",
+    "frontend_src_pages_landingpage_tsx"
+   ],
+   "description": "这一步覆盖：BoardPage.test.tsx；PostsPage.groupBy.test.tsx；GroupByConditions.test.tsx；LandingPage.tsx。"
+  },
+  {
+   "order": 3,
+   "title": "社区 1（第 1 层依赖）",
+   "nodeIds": [
+    "frontend_src_test_pages_siegespage_test_tsx",
+    "frontend_src_test_components_changelogdropdown_test_tsx"
+   ],
+   "description": "这一步覆盖：SiegesPage.test.tsx；ChangelogDropdown.test.tsx。"
+  },
+  {
+   "order": 4,
+   "title": "社区 22（第 1 层依赖）",
+   "nodeIds": [
+    "frontend_src_components_siegelayout_tsx",
+    "frontend_src_context_authcontext_tsx",
+    "frontend_src_components_layout_tsx",
+    "frontend_src_components_requireauth_tsx"
+   ],
+   "description": "这一步覆盖：SiegeLayout.tsx；AuthContext.tsx；Layout.tsx；RequireAuth.tsx。"
+  },
+  {
+   "order": 5,
+   "title": "社区 7（第 1 层依赖）",
+   "nodeIds": [
+    "frontend_src_pages_postprioritiespage_tsx",
+    "frontend_src_pages_siegespage_tsx"
+   ],
+   "description": "这一步覆盖：PostPrioritiesPage.tsx；SiegesPage.tsx。"
+  },
+  {
+   "order": 6,
+   "title": "社区 3（第 1 层依赖）",
+   "nodeIds": [
+    "frontend_src_pages_siegesettingspage_tsx"
+   ],
+   "description": "这一步覆盖：SiegeSettingsPage.tsx。"
+  },
+  {
+   "order": 7,
+   "title": "社区 15（第 1 层依赖）",
+   "nodeIds": [
+    "frontend_src_pages_memberdetailpage_tsx"
+   ],
+   "description": "这一步覆盖：MemberDetailPage.tsx。"
+  },
+  {
+   "order": 8,
+   "title": "社区 36（第 1 层依赖）",
+   "nodeIds": [
+    "frontend_src_test_components_poststab_test_tsx"
+   ],
+   "description": "这一步覆盖：PostsTab.test.tsx。"
+  },
+  {
+   "order": 9,
+   "title": "社区 7（第 2 层依赖）",
+   "nodeIds": [
+    "frontend_src_components_ui_button_tsx",
+    "frontend_src_components_ui_table_tsx",
+    "frontend_src_components_ui_select_tsx"
+   ],
+   "description": "这一步覆盖：button.tsx；table.tsx；select.tsx。"
+  },
+  {
+   "order": 10,
+   "title": "社区 1（第 2 层依赖）",
+   "nodeIds": [
+    "frontend_src_lib_utils_ts"
+   ],
+   "description": "这一步覆盖：utils.ts。"
+  },
+  {
+   "order": 11,
+   "title": "社区 3（第 2 层依赖）",
+   "nodeIds": [
+    "frontend_src_components_ui_dialog_tsx"
+   ],
+   "description": "这一步覆盖：dialog.tsx。"
+  }
+ ],
+ "nodes": {
+  "frontend_src_pages_siegesettingspage_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，引用 server.ts、server 等 2 个模块"
+   },
+   "seeAlso": [
+    "frontend_src_api_types_ts",
+    "frontend_src_api_sieges_ts",
+    "frontend_src_lib_utils_ts",
+    "lib_utils_cn",
+    "api_types_siege",
+    "api_types_notificationbatchresponse",
+    "api_types_notificationresultitem",
+    "api_types_notifyresponse"
+   ],
+   "citations": [
+    "frontend/src/pages/SiegeSettingsPage.tsx L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_pages_memberdetailpage_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 1 个符号：ROLE_OPTIONS"
+   },
+   "seeAlso": [
+    "frontend_src_api_types_ts",
+    "api_types_memberrole",
+    "frontend_src_api_members_ts",
+    "frontend_src_lib_grouppostconditions_ts",
+    "frontend_src_app_tsx",
+    "frontend_src_test_components_groupbyconditions_test_tsx",
+    "frontend_src_components_ui_button_tsx",
+    "frontend_src_components_ui_select_tsx"
+   ],
+   "citations": [
+    "frontend/src/pages/MemberDetailPage.tsx L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_pages_postprioritiespage_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 2 个符号：DescriptionCell()、Tab"
+   },
+   "seeAlso": [
+    "frontend_src_lib_utils_ts",
+    "lib_utils_cn",
+    "frontend_src_api_members_ts",
+    "frontend_src_lib_grouppostconditions_ts",
+    "frontend_src_app_tsx",
+    "frontend_src_test_components_groupbyconditions_test_tsx",
+    "frontend_src_components_ui_select_tsx",
+    "frontend_src_components_ui_table_tsx"
+   ],
+   "citations": [
+    "frontend/src/pages/PostPrioritiesPage.tsx L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_lib_utils_ts": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 1 个符号：cn()"
+   },
+   "seeAlso": [
+    "api_types_siegemember",
+    "frontend_src_components_postsuggestionsmodal_tsx",
+    "frontend_src_pages_siegesettingspage_tsx",
+    "pages_postspage_postspage",
+    "frontend_src_test_components_poststab_test_tsx",
+    "pages_memberspage_memberspage",
+    "frontend_src_pages_postprioritiespage_tsx",
+    "frontend_src_test_pages_boardpage_test_tsx"
+   ],
+   "citations": [
+    "frontend/src/lib/utils.ts L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_api_types_ts": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 41 个符号：MemberRole、SiegeStatus、BuildingType、Member、SyncMatch…"
+   },
+   "seeAlso": [
+    "api_types_siegemember",
+    "frontend_src_components_postsuggestionsmodal_tsx",
+    "frontend_src_pages_siegesettingspage_tsx",
+    "pages_boardpage_boardpage",
+    "frontend_src_api_sieges_ts",
+    "pages_postspage_postspage",
+    "frontend_src_test_components_poststab_test_tsx",
+    "pages_memberspage_memberspage"
+   ],
+   "citations": [
+    "frontend/src/api/types.ts L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_components_postsuggestionsmodal_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 18 个符号：OutcomeFilter、Classification、PRIORITY_META、getPriorityMeta()、SKIP_REASON_LABEL…"
+   },
+   "seeAlso": [
+    "frontend_src_api_types_ts",
+    "frontend_src_api_sieges_ts",
+    "frontend_src_lib_utils_ts",
+    "e2e_board_spec_poststab",
+    "lib_utils_cn",
+    "test_utils_renderwithproviders",
+    "frontend_src_test_server_ts",
+    "test_server_server"
+   ],
+   "citations": [
+    "frontend/src/components/PostSuggestionsModal.tsx L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_pages_siegespage_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 4 个符号：StatusBadgeVariant、STATUS_VARIANTS、STATUS_LABELS、SiegesPage()"
+   },
+   "seeAlso": [
+    "frontend_src_api_types_ts",
+    "frontend_src_api_sieges_ts",
+    "api_types_siegestatus",
+    "frontend_src_app_tsx",
+    "frontend_src_components_ui_button_tsx",
+    "frontend_src_components_ui_table_tsx",
+    "frontend_src_components_ui_badge_tsx",
+    "ui_button_button"
+   ],
+   "citations": [
+    "frontend/src/pages/SiegesPage.tsx L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_test_components_poststab_test_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 16 个符号：makePostBoard()、setupHandlers()、navigateToPostsTab()、makeTwoPostBoard()、board…"
+   },
+   "seeAlso": [
+    "api_types_siegemember",
+    "frontend_src_api_types_ts",
+    "pages_boardpage_boardpage",
+    "frontend_src_lib_utils_ts",
+    "api_types_siege",
+    "test_utils_renderwithproviders",
+    "frontend_src_test_server_ts",
+    "test_server_server"
+   ],
+   "citations": [
+    "frontend/src/test/components/PostsTab.test.tsx L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_test_server_ts": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 1 个符号：server"
+   },
+   "seeAlso": [
+    "api_types_siegemember",
+    "frontend_src_components_postsuggestionsmodal_tsx",
+    "frontend_src_pages_siegesettingspage_tsx",
+    "pages_postspage_postspage",
+    "frontend_src_test_components_poststab_test_tsx",
+    "pages_memberspage_memberspage",
+    "frontend_src_test_pages_boardpage_test_tsx",
+    "frontend_src_pages_landingpage_tsx"
+   ],
+   "citations": [
+    "frontend/src/test/server.ts L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_test_pages_boardpage_test_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 13 个符号：makeBoard()、makeSiegeMember()、setupDefaultHandlers()、renderBoard()、ones…"
+   },
+   "seeAlso": [
+    "api_types_siegemember",
+    "frontend_src_api_types_ts",
+    "pages_boardpage_boardpage",
+    "frontend_src_lib_utils_ts",
+    "api_types_siege",
+    "test_utils_renderwithproviders",
+    "frontend_src_test_server_ts",
+    "test_server_server"
+   ],
+   "citations": [
+    "frontend/src/test/pages/BoardPage.test.tsx L1"
+   ],
+   "fp": ""
+  },
+  "scripts_excel_import_tests_test_import_excel_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 60 个符号：test_parse_filename()、test_parse_filename_with_path_prefix()、test_parse_filename_invalid_random()、test_parse_filename_invalid_impossible_date()、test_role_mapping_heavy_hitter()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "scripts/excel-import/tests/test_import_excel.py L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_api_sieges_ts": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 24 个符号：getSieges()、getSiege()、createSiege()、updateSiege()、deleteSiege()…"
+   },
+   "seeAlso": [
+    "api_types_siegemember",
+    "frontend_src_api_types_ts",
+    "frontend_src_components_postsuggestionsmodal_tsx",
+    "frontend_src_pages_siegesettingspage_tsx",
+    "pages_boardpage_boardpage",
+    "pages_postspage_postspage",
+    "e2e_board_spec_poststab",
+    "api_types_buildingtype"
+   ],
+   "citations": [
+    "frontend/src/api/sieges.ts L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_post_suggestions_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 39 个符号：_make_session()、_preview()、test_preview_raises_400_on_completed_siege()、test_preview_single_post_single_member_match()、test_preview_no_match_produces_skip_reason_no_match()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_post_suggestions.py L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_test_pages_postspage_groupby_test_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 7 个符号：SAMPLE_CONDITIONS、TWO_POSTS、expandFirstPost()、expandAllPosts()、rowToggle…"
+   },
+   "seeAlso": [
+    "frontend_src_api_types_ts",
+    "pages_postspage_postspage",
+    "frontend_src_lib_utils_ts",
+    "test_utils_renderwithproviders",
+    "api_types_postcondition",
+    "frontend_src_test_server_ts",
+    "test_server_server",
+    "api_types_post"
+   ],
+   "citations": [
+    "frontend/src/test/pages/PostsPage.groupBy.test.tsx L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_components_discordsyncmodal_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 2 个符号：ConfidenceVariant、CONFIDENCE_LABEL"
+   },
+   "seeAlso": [
+    "frontend_src_api_types_ts",
+    "pages_memberspage_memberspage",
+    "frontend_src_api_members_ts",
+    "frontend_src_components_ui_button_tsx",
+    "frontend_src_components_ui_dialog_tsx",
+    "frontend_src_components_ui_table_tsx",
+    "ui_button_button",
+    "frontend_src_components_ui_badge_tsx"
+   ],
+   "citations": [
+    "frontend/src/components/DiscordSyncModal.tsx L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_test_components_groupbyconditions_test_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 7 个符号：setupConditions()、setupMember()、openConditionsTab()、elements、renderMemberDetail()…"
+   },
+   "seeAlso": [
+    "frontend_src_api_types_ts",
+    "frontend_src_lib_utils_ts",
+    "frontend_src_pages_memberdetailpage_tsx",
+    "frontend_src_pages_postprioritiespage_tsx",
+    "test_utils_renderwithproviders",
+    "api_types_postcondition",
+    "frontend_src_test_server_ts",
+    "test_server_server"
+   ],
+   "citations": [
+    "frontend/src/test/components/GroupByConditions.test.tsx L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_validation_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 39 个符号：_make_condition()、test_validate_endpoint_404()、test_validate_endpoint_returns_result()、test_rule1_inactive_member_error()、test_rule1_active_member_no_error()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_validation.py L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_pages_landingpage_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 8 个符号：LandingOrSieges()、SLIDES、ShieldIcon()、GitHubIcon()、CheckIcon()…"
+   },
+   "seeAlso": [
+    "frontend_src_lib_utils_ts",
+    "test_utils_renderwithproviders",
+    "frontend_src_test_server_ts",
+    "frontend_src_app_tsx",
+    "test_server_server",
+    "frontend_src_context_authcontext_tsx",
+    "components_carousel_carousel",
+    "context_authcontext_useauth"
+   ],
+   "citations": [
+    "frontend/src/pages/LandingPage.tsx L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_test_pages_siegespage_test_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 1 个符号：sieges"
+   },
+   "seeAlso": [
+    "frontend_src_api_types_ts",
+    "frontend_src_lib_utils_ts",
+    "api_types_siege",
+    "test_utils_renderwithproviders",
+    "frontend_src_pages_siegespage_tsx",
+    "frontend_src_test_server_ts",
+    "test_server_server"
+   ],
+   "citations": [
+    "frontend/src/test/pages/SiegesPage.test.tsx L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_image_gen_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 30 个符号：_make_building_dict()、_make_group_dict()、test_build_assignments_html_contains_title()、test_build_assignments_html_contains_building_type()、test_build_assignments_html_reserve_cell()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_image_gen.py L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_lib_grouppostconditions_ts": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 4 个符号：GroupByMode、ConditionGroup、groupByLevel()、groupByType()"
+   },
+   "seeAlso": [
+    "frontend_src_api_types_ts",
+    "pages_postspage_postspage",
+    "frontend_src_pages_memberdetailpage_tsx",
+    "frontend_src_pages_postprioritiespage_tsx",
+    "api_types_postcondition",
+    "components_groupbytoggle_groupbytoggle",
+    "frontend_src_lib_usegroupbypreference_ts",
+    "pages_postspage_postrow"
+   ],
+   "citations": [
+    "frontend/src/lib/groupPostConditions.ts L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_components_siegelayout_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 1 个符号：SiegeLayout()"
+   },
+   "seeAlso": [
+    "frontend_src_api_types_ts",
+    "frontend_src_api_sieges_ts",
+    "api_types_siege",
+    "frontend_src_test_server_ts",
+    "frontend_src_app_tsx",
+    "test_server_server",
+    "api_sieges_getsiege"
+   ],
+   "citations": [
+    "frontend/src/components/SiegeLayout.tsx L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_components_ui_button_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 3 个符号：buttonVariants、ButtonProps、Button"
+   },
+   "seeAlso": [
+    "api_types_siegemember",
+    "frontend_src_components_postsuggestionsmodal_tsx",
+    "frontend_src_pages_siegesettingspage_tsx",
+    "pages_boardpage_boardpage",
+    "pages_postspage_postspage",
+    "frontend_src_lib_utils_ts",
+    "pages_memberspage_memberspage",
+    "frontend_src_pages_memberdetailpage_tsx"
+   ],
+   "citations": [
+    "frontend/src/components/ui/button.tsx L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_auth_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 30 个符号：_make_jwt()、_make_expired_jwt()、_make_member()、_make_mock_db()、test_auth_disabled_allows_access()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_auth.py L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_context_authcontext_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 5 个符号：AuthUser、AuthContextValue、AuthContext、AuthProvider()、useAuth()"
+   },
+   "seeAlso": [
+    "frontend_src_lib_utils_ts",
+    "test_utils_renderwithproviders",
+    "frontend_src_pages_landingpage_tsx",
+    "frontend_src_test_server_ts",
+    "test_server_server",
+    "frontend_src_components_layout_tsx",
+    "frontend_src_api_client_ts",
+    "context_authcontext_useauth"
+   ],
+   "citations": [
+    "frontend/src/context/AuthContext.tsx L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_api_members_ts": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 10 个符号：getMember()、createMember()、updateMember()、deleteMember()、getMemberPreferences()…"
+   },
+   "seeAlso": [
+    "api_types_siegemember",
+    "frontend_src_api_types_ts",
+    "pages_postspage_postspage",
+    "pages_memberspage_memberspage",
+    "frontend_src_pages_memberdetailpage_tsx",
+    "frontend_src_pages_postprioritiespage_tsx",
+    "frontend_src_components_discordsyncmodal_tsx",
+    "api_types_member"
+   ],
+   "citations": [
+    "frontend/src/api/members.ts L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_components_layout_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 2 个符号：navLinkClass()、Layout()"
+   },
+   "seeAlso": [
+    "frontend_src_lib_utils_ts",
+    "lib_utils_cn",
+    "test_utils_renderwithproviders",
+    "frontend_src_test_server_ts",
+    "frontend_src_app_tsx",
+    "test_server_server",
+    "frontend_src_context_authcontext_tsx",
+    "frontend_src_components_changelogdropdown_tsx"
+   ],
+   "citations": [
+    "frontend/src/components/Layout.tsx L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_app_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 1 个符号：App()"
+   },
+   "seeAlso": [
+    "api_types_siegemember",
+    "frontend_src_pages_siegesettingspage_tsx",
+    "pages_boardpage_boardpage",
+    "pages_postspage_postspage",
+    "pages_memberspage_memberspage",
+    "frontend_src_pages_memberdetailpage_tsx",
+    "frontend_src_pages_postprioritiespage_tsx",
+    "frontend_src_pages_landingpage_tsx"
+   ],
+   "citations": [
+    "frontend/src/App.tsx L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_api_client_ts": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 1 个符号：apiClient"
+   },
+   "seeAlso": [
+    "frontend_src_api_sieges_ts",
+    "frontend_src_api_members_ts",
+    "frontend_src_context_authcontext_tsx",
+    "frontend_src_api_posts_ts",
+    "backend_app_api_notifications_py",
+    "app_http_api_version",
+    "pages_loginpage_loginpage",
+    "frontend_src_api_board_ts"
+   ],
+   "citations": [
+    "frontend/src/api/client.ts L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_test_components_changelogdropdown_test_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 1 个符号：renderDropdown()"
+   },
+   "seeAlso": [
+    "frontend_src_lib_utils_ts",
+    "test_utils_renderwithproviders",
+    "frontend_src_test_server_ts",
+    "test_server_server",
+    "frontend_src_components_changelogdropdown_tsx"
+   ],
+   "citations": [
+    "frontend/src/test/components/ChangelogDropdown.test.tsx L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_notifications_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 21 个符号：_make_batch()、_make_batch_result()、_make_db_session()、test_notify_returns_batch_id()、test_notify_siege_not_found()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_notifications.py L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_components_ui_dialog_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 6 个符号：DialogOverlay、DialogContent、DialogHeader()、DialogFooter()、DialogTitle…"
+   },
+   "seeAlso": [
+    "api_types_siegemember",
+    "frontend_src_components_postsuggestionsmodal_tsx",
+    "frontend_src_pages_siegesettingspage_tsx",
+    "pages_boardpage_boardpage",
+    "frontend_src_lib_utils_ts",
+    "frontend_src_pages_memberdetailpage_tsx",
+    "lib_utils_cn",
+    "frontend_src_components_discordsyncmodal_tsx"
+   ],
+   "citations": [
+    "frontend/src/components/ui/dialog.tsx L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_notification_message_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 24 个符号：_stronghold_pos()、_defense_tower_pos()、_post_pos()、test_no_previous_siege_all_current_in_set_at()、test_empty_sections_omitted_all_no_change()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_notification_message.py L1"
+   ],
+   "fp": ""
+  },
+  "scripts_excel_import_import_excel_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 20 个符号：ParsedMember、ParsedAssignment、ParsedReserve、ParsedPostConfig、ParsedPostConditions…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "scripts/excel-import/import_excel.py L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_components_changelogdropdown_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 1 个符号：hasUnread()"
+   },
+   "seeAlso": [
+    "frontend_src_lib_utils_ts",
+    "lib_utils_cn",
+    "frontend_src_components_layout_tsx",
+    "frontend_src_components_ui_dropdown_menu_tsx",
+    "frontend_src_test_components_changelogdropdown_test_tsx",
+    "api_changelog_markchangelogseen",
+    "frontend_src_api_changelog_ts",
+    "api_changelog_fetchchangelogstatus"
+   ],
+   "citations": [
+    "frontend/src/components/ChangelogDropdown.tsx L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_components_ui_table_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 7 个符号：Table、TableBody、TableFooter、TableRow、TableHead…"
+   },
+   "seeAlso": [
+    "api_types_siegemember",
+    "frontend_src_lib_utils_ts",
+    "pages_memberspage_memberspage",
+    "lib_utils_cn",
+    "frontend_src_pages_postprioritiespage_tsx",
+    "frontend_src_components_discordsyncmodal_tsx",
+    "frontend_src_pages_siegespage_tsx"
+   ],
+   "citations": [
+    "frontend/src/components/ui/table.tsx L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_api_posts_ts": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 6 个符号：PostPriorityConfig、getPostPriorities()、updatePostPriority()、getPosts()、updatePost()…"
+   },
+   "seeAlso": [
+    "frontend_src_api_types_ts",
+    "pages_boardpage_boardpage",
+    "pages_postspage_postspage",
+    "e2e_board_spec_poststab",
+    "frontend_src_pages_postprioritiespage_tsx",
+    "api_types_post",
+    "frontend_src_api_client_ts"
+   ],
+   "citations": [
+    "frontend/src/api/posts.ts L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_components_ui_select_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 7 个符号：SelectTrigger、SelectScrollUpButton、SelectScrollDownButton、SelectContent、SelectLabel…"
+   },
+   "seeAlso": [
+    "api_types_siegemember",
+    "frontend_src_lib_utils_ts",
+    "pages_memberspage_memberspage",
+    "frontend_src_pages_memberdetailpage_tsx",
+    "lib_utils_cn",
+    "frontend_src_pages_postprioritiespage_tsx",
+    "pages_comparisonpage_comparisonpage",
+    "pages_siegecreatepage_siegecreatepage"
+   ],
+   "citations": [
+    "frontend/src/components/ui/select.tsx L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_autofill_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 13 个符号：_make_group()、_make_sm()、test_preview_endpoint_returns_200()、test_apply_endpoint_returns_200()、test_preview_respects_scroll_count()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_autofill.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_seed_demo_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 19 个符号：session()、_run_seed()、TestSeedDemoMembers、test_creates_25_members()、test_members_have_demo_names()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_seed_demo.py L1"
+   ],
+   "fp": ""
+  },
+  "bot_tests_test_http_api_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 18 个符号：patch_api_key()、_make_mock_bot()、test_version_returns_200()、test_version_bare_semver_in_local_dev()、test_version_includes_build_suffix_when_env_vars_set()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "bot/tests/test_http_api.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_auth_rate_limit_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 18 个符号：reset_rate_limit_state()、_get()、test_login_rate_limit_triggers_429()、test_login_rate_limit_independent_per_ip()、test_callback_rate_limit_triggers_429()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_auth_rate_limit.py L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_components_ui_badge_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 3 个符号：badgeVariants、BadgeProps、Badge()"
+   },
+   "seeAlso": [
+    "frontend_src_pages_siegesettingspage_tsx",
+    "pages_boardpage_boardpage",
+    "pages_postspage_postspage",
+    "frontend_src_lib_utils_ts",
+    "pages_memberspage_memberspage",
+    "lib_utils_cn",
+    "frontend_src_pages_postprioritiespage_tsx",
+    "frontend_src_components_discordsyncmodal_tsx"
+   ],
+   "citations": [
+    "frontend/src/components/ui/badge.tsx L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_attack_day_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 12 个符号：test_preview_attack_day_endpoint_200()、test_apply_attack_day_endpoint_200()、_session_for_siege()、test_heavy_hitters_and_advanced_always_day2()、test_medium_promoted_when_under_10()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_attack_day.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_discord_sync_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 15 个符号：_make_sync_match()、test_preview_returns_exact_match()、test_preview_returns_suggested_match()、test_preview_returns_ambiguous_match()、test_preview_reports_unmatched_clan_members()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_discord_sync.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_config_endpoint_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 8 个符号：override_db()、test_config_returns_auth_disabled_true()、test_config_endpoint_is_public()、TestStartupSessionSecretGuard、test_missing_session_secret_raises_at_startup()…"
+   },
+   "seeAlso": [
+    "app_config_settings"
+   ],
+   "citations": [
+    "backend/tests/test_config_endpoint.py L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_components_ui_dropdown_menu_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 9 个符号：DropdownMenuSubTrigger、DropdownMenuSubContent、DropdownMenuContent、DropdownMenuItem、DropdownMenuCheckboxItem…"
+   },
+   "seeAlso": [
+    "frontend_src_lib_utils_ts",
+    "lib_utils_cn",
+    "frontend_src_components_changelogdropdown_tsx"
+   ],
+   "citations": [
+    "frontend/src/components/ui/dropdown-menu.tsx L1"
+   ],
+   "fp": ""
+  },
+  "backend_app_api_notifications_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 1 个符号：_send_dms()"
+   },
+   "seeAlso": [
+    "frontend_src_api_types_ts",
+    "frontend_src_pages_siegesettingspage_tsx",
+    "api_types_notificationbatchresponse",
+    "api_types_notifyresponse",
+    "frontend_src_api_client_ts",
+    "api_types_generateimagesresponse"
+   ],
+   "citations": [
+    "backend/app/api/notifications.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_app_api_post_suggestions_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，位于 backend/app/api/post_suggestions.py"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/app/api/post_suggestions.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_sieges_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 11 个符号：_make_siege()、test_list_sieges_returns_empty_list()、test_create_siege_returns_201()、test_get_siege_not_found_returns_404()、test_delete_planning_siege_returns_204()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_sieges.py L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_api_board_ts": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 1 个符号：getBoard()"
+   },
+   "seeAlso": [
+    "frontend_src_api_types_ts",
+    "pages_boardpage_boardpage",
+    "pages_postspage_postspage",
+    "e2e_board_spec_poststab",
+    "api_types_boardresponse",
+    "frontend_src_api_client_ts",
+    "api_types_positionresponse"
+   ],
+   "citations": [
+    "frontend/src/api/board.ts L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_lib_usegroupbypreference_ts": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 1 个符号：VALID_MODES"
+   },
+   "seeAlso": [
+    "pages_postspage_postspage",
+    "frontend_src_pages_memberdetailpage_tsx",
+    "frontend_src_pages_postprioritiespage_tsx",
+    "frontend_src_lib_grouppostconditions_ts",
+    "pages_postspage_postrow",
+    "lib_grouppostconditions_groupbymode"
+   ],
+   "citations": [
+    "frontend/src/lib/useGroupByPreference.ts L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_lifecycle_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 10 个符号：test_activate_planning_siege()、test_activate_already_active_returns_400()、test_complete_active_siege()、test_complete_planning_siege_returns_400()、test_clone_siege_returns_201()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_lifecycle.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_seed_canonical_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 12 个符号：_run_canonical_seed()、TestCanonicalSeedPostConditions、test_seeds_36_post_conditions()、test_idempotent_post_conditions()、TestCanonicalSeedBuildingTypeConfig…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_seed_canonical.py L1"
+   ],
+   "fp": ""
+  },
+  "bot_tests_test_get_guild_member_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 11 个符号：patch_guild_id()、_make_mock_member()、_make_mock_bot_with_guild()、test_get_guild_member_found_returns_200_with_member_data()、test_get_guild_member_roles_exclude_everyone()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "bot/tests/test_get_guild_member.py L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_main_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 1 个符号：queryClient"
+   },
+   "seeAlso": [
+    "frontend_src_app_tsx",
+    "frontend_src_context_authcontext_tsx",
+    "context_authcontext_authprovider"
+   ],
+   "citations": [
+    "frontend/src/main.tsx L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_lib_buildingcolors_ts": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 2 个符号：BuildingColorClass、BUILDING_LABELS"
+   },
+   "seeAlso": [
+    "frontend_src_api_types_ts",
+    "frontend_src_pages_siegesettingspage_tsx",
+    "pages_boardpage_boardpage",
+    "api_types_buildingtype"
+   ],
+   "citations": [
+    "frontend/src/lib/buildingColors.ts L1"
+   ],
+   "fp": ""
+  },
+  "backend_app_api_auth_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 9 个符号：AuthError、_exchange_code_for_token()、_get_discord_user()、_check_guild_membership()、login()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/app/api/auth.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_buildings_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 9 个符号：_make_config()、_make_post_priority_config()、_scalars_all()、_scalars_first()、_scalar_one_or_none()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_buildings.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_comparison_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 10 个符号：test_compare_returns_404_when_no_completed_siege()、test_compare_with_specific_endpoint_200()、_build_siege_assignments()、test_compare_added_positions()、test_compare_removed_positions()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_comparison.py L1"
+   ],
+   "fp": ""
+  },
+  "frontend_e2e_board_spec_ts": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 11 个符号：apiCreateSiege()、apiAddBuilding()、apiCreateMember()、buildingsTab、postsTab…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "frontend/e2e/board.spec.ts L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_test_handlers_ts": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 1 个符号：handlers"
+   },
+   "seeAlso": [
+    "frontend_src_api_types_ts",
+    "frontend_src_test_server_ts",
+    "api_types_buildingtypeinfo"
+   ],
+   "citations": [
+    "frontend/src/test/handlers.ts L1"
+   ],
+   "fp": ""
+  },
+  "backend_app_api_board_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 1 个符号：bulk_update_positions()"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/app/api/board.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_bot_client_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 11 个符号：_make_ok_response()、_async_client_that_raises()、_async_client_that_returns()、test_notify_returns_false_on_http_error()、test_post_message_returns_false_on_http_error()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_bot_client.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_lifecycle_integration_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 2 个符号：_build_valid_siege_graph()、test_full_siege_lifecycle()"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_lifecycle_integration.py L1"
+   ],
+   "fp": ""
+  },
+  "bot_app_http_api_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 10 个符号：set_bot()、_get_bot()、verify_api_key()、NotifyRequest、PostMessageRequest…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "bot/app/http_api.py L1"
+   ],
+   "fp": ""
+  },
+  "bot_tests_test_discord_client_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 10 个符号：_make_bot()、_make_text_channel()、_make_guild()、test_send_dm_finds_member_and_sends()、test_send_dm_case_insensitive()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "bot/tests/test_discord_client.py L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_components_ui_input_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 2 个符号：InputProps、Input"
+   },
+   "seeAlso": [
+    "frontend_src_pages_siegesettingspage_tsx",
+    "pages_boardpage_boardpage",
+    "pages_postspage_postspage",
+    "frontend_src_lib_utils_ts",
+    "frontend_src_pages_memberdetailpage_tsx",
+    "lib_utils_cn",
+    "frontend_src_pages_postprioritiespage_tsx",
+    "pages_siegecreatepage_siegecreatepage"
+   ],
+   "citations": [
+    "frontend/src/components/ui/input.tsx L1"
+   ],
+   "fp": ""
+  },
+  "backend_app_api_buildings_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 4 个符号：list_buildings()、add_building()、add_group()、delete_group()"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/app/api/buildings.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_app_models_building_type_config_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，引用 BuildingType、TestCanonicalSeedBuildingTypeConfig、TestCanonicalSeedPostConditions、TestCanonicalSeedPostPriorityConfig 等 4 个模块"
+   },
+   "seeAlso": [
+    "api_types_buildingtype",
+    "base",
+    "tests_test_seed_canonical_testcanonicalseedpostconditions",
+    "tests_test_seed_canonical_testcanonicalseedpostpriorityconfig",
+    "tests_test_seed_canonical_testcanonicalseedbuildingtypeconfig"
+   ],
+   "citations": [
+    "backend/app/models/building_type_config.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_app_models_notification_batch_result_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，引用 notifySiegeMembers()、NotificationBatchResponse、NotificationResultItem、NotifyResponse 等 4 个模块"
+   },
+   "seeAlso": [
+    "base",
+    "api_types_notificationbatchresponse",
+    "api_types_notifyresponse",
+    "api_types_notificationresultitem",
+    "api_notifications_notifysiegemembers"
+   ],
+   "citations": [
+    "backend/app/models/notification_batch_result.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_post_suggestions_integration_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 7 个符号：engine()、session_factory()、test_preview_loads_m2m_relations_without_greenlet_error()、test_preview_overwrite_stores_second_preview_in_db()、test_apply_persists_matched_condition_id_to_db()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_post_suggestions_integration.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_version_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 10 个符号：_reload_version_module()、test_read_backend_version_semver_only()、test_read_backend_version_with_build_info()、test_read_backend_version_missing_version_file()、test_read_backend_version_build_info_with_missing_file()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_version.py L1"
+   ],
+   "fp": ""
+  },
+  "bot_app_main_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 3 个符号：run_http_server()、run_discord_client()、main()"
+   },
+   "seeAlso": [],
+   "citations": [
+    "bot/app/main.py L1"
+   ],
+   "fp": ""
+  },
+  "frontend_e2e_siege_lifecycle_spec_ts": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 6 个符号：dateInput、url、tabStrip、boardLink、activeBadge…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "frontend/e2e/siege-lifecycle.spec.ts L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_components_ui_label_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 1 个符号：Label"
+   },
+   "seeAlso": [
+    "frontend_src_pages_siegesettingspage_tsx",
+    "pages_postspage_postspage",
+    "frontend_src_lib_utils_ts",
+    "pages_memberspage_memberspage",
+    "frontend_src_pages_memberdetailpage_tsx",
+    "lib_utils_cn",
+    "pages_comparisonpage_comparisonpage",
+    "pages_siegecreatepage_siegecreatepage"
+   ],
+   "citations": [
+    "frontend/src/components/ui/label.tsx L1"
+   ],
+   "fp": ""
+  },
+  "backend_app_models_member_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，位于 backend/app/models/member.py"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/app/models/member.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_changelog_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 6 个符号：test_get_status_fresh_user_returns_null()、test_mark_seen_then_get_status_returns_timestamp()、test_mark_seen_twice_is_idempotent()、test_get_status_no_auth_returns_401()、test_post_mark_seen_no_auth_returns_401()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_changelog.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_app_api_comparison_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 2 个符号：compare_with_most_recent()、compare_with_specific()"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/app/api/comparison.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_schema_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 8 个符号：_enable_sqlite_fk()、db_session()、test_member_name_unique()、test_position_reserve_and_member_constraint_defined()、test_building_group_slot_count_bounds()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_schema.py L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_api_config_ts": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 2 个符号：AppConfig、fetchConfig()"
+   },
+   "seeAlso": [
+    "frontend_src_components_layout_tsx",
+    "frontend_src_api_client_ts"
+   ],
+   "citations": [
+    "frontend/src/api/config.ts L1"
+   ],
+   "fp": ""
+  },
+  "backend_app_services_notification_message_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 7 个符号：PositionInfo、_position_sort_key()、_position_label()、_positions_to_key_set()、_positions_from_keys()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/app/services/notification_message.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_config_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 21 个符号：TestSettingsDefaults、._make_settings()、.test_discord_client_id_defaults_to_empty()、.test_discord_client_secret_defaults_to_empty()、.test_discord_redirect_uri_defaults_to_empty()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_config.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_members_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 5 个符号：test_list_members_returns_empty_list()、test_create_member_returns_201()、test_create_member_duplicate_name_returns_409()、test_get_member_not_found_returns_404()、test_delete_member_returns_204()"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_members.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_posts_py": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 6 个符号：_make_building()、_make_post()、test_list_posts_returns_list()、test_update_post_priority()、test_set_post_conditions_too_many_returns_400()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_posts.py L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_components_requireauth_tsx": {
+   "kind": "file",
+   "tier": 2,
+   "intent": {
+    "summary": "文件，包含 1 个符号：RequireAuth()"
+   },
+   "seeAlso": [
+    "frontend_src_app_tsx",
+    "frontend_src_context_authcontext_tsx",
+    "context_authcontext_useauth"
+   ],
+   "citations": [
+    "frontend/src/components/RequireAuth.tsx L1"
+   ],
+   "fp": ""
+  },
+  "backend_app_api_attack_day_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，位于 backend/app/api/attack_day.py"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/app/api/attack_day.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_app_api_members_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，包含 3 个符号：list_members()、get_member()、delete_member()"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/app/api/members.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_app_api_sieges_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，包含 3 个符号：list_sieges()、get_siege()、delete_siege()"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/app/api/sieges.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_app_services_image_gen_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，包含 6 个符号：SiegeMemberWithName、_build_assignments_html()、_build_reserves_html()、_render_html_to_png()、generate_assignments_image()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/app/services/image_gen.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_board_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，包含 6 个符号：_make_position()、client()、test_get_board_returns_nested_structure()、test_update_position_assign_member()、test_update_position_invalid_state_reserve_with_member()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_board.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_cors_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，包含 21 个符号：_make_app()、_cors_headers()、TestAllowedOriginsParsingIntegration、.test_single_origin_is_allowed()、.test_first_of_two_origins_is_allowed()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_cors.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_member_changelog_column_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，包含 6 个符号：test_last_seen_changelog_at_column_exists()、test_last_seen_changelog_at_column_is_nullable()、test_last_seen_changelog_at_has_no_server_default()、test_last_seen_changelog_at_column_type_is_datetime()、test_last_seen_changelog_at_accepts_none_at_python_level()…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_member_changelog_column.py L1"
+   ],
+   "fp": ""
+  },
+  "bot_tests_conftest_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，包含 6 个符号：_FakeClient、.__init__()、_FakeTextChannel、_FakeHTTPException、_FakeNotFound…"
+   },
+   "seeAlso": [],
+   "citations": [
+    "bot/tests/conftest.py L1"
+   ],
+   "fp": ""
+  },
+  "frontend_vitest_config_ts": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，被 vite.config.ts 等 1 处引用"
+   },
+   "seeAlso": [
+    "frontend_vite_config_ts"
+   ],
+   "citations": [
+    "frontend/vitest.config.ts L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_lib_post_priority_ts": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，包含 2 个符号：priorityLabel()、priorityBadgeColor()"
+   },
+   "seeAlso": [
+    "e2e_board_spec_poststab"
+   ],
+   "citations": [
+    "frontend/src/lib/post-priority.ts L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_test_components_groupbytoggle_test_tsx": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，包含 1 个符号：onChange"
+   },
+   "seeAlso": [
+    "components_groupbytoggle_groupbytoggle"
+   ],
+   "citations": [
+    "frontend/src/test/components/GroupByToggle.test.tsx L1"
+   ],
+   "fp": ""
+  },
+  "backend_app_api_autofill_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，位于 backend/app/api/autofill.py"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/app/api/autofill.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_app_api_changelog_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，包含 2 个符号：_require_member_session()、get_changelog_status()"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/app/api/changelog.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_app_api_posts_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，包含 2 个符号：_serialize_post()、list_posts()"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/app/api/posts.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_scripts_seed_demo_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，包含 5 个符号：get_or_create_members()、get_or_create_demo_siege()、seed_buildings_and_positions()、get_or_create_second_siege()、seed_siege_members()"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/scripts/seed_demo.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_tests_test_reference_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，包含 4 个符号：_make_post_condition()、test_get_post_conditions_returns_list()、test_get_building_types_returns_list()、test_get_member_roles_returns_four_roles()"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/tests/test_reference.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_app_rate_limit_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，包含 4 个符号：_get_client_ip()、_rate_limit_key()、_parse_retry_after_seconds()、rate_limit_exceeded_handler()"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/app/rate_limit.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_app_models_enums_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，包含 2 个符号：PowerLevel、NotificationBatchStatus"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/app/models/enums.py L1"
+   ],
+   "fp": ""
+  },
+  "bot_tests_test_telemetry_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，位于 bot/tests/test_telemetry.py"
+   },
+   "seeAlso": [],
+   "citations": [
+    "bot/tests/test_telemetry.py L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_api_changelog_ts": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，包含 3 个符号：ChangelogStatus、fetchChangelogStatus()、markChangelogSeen()"
+   },
+   "seeAlso": [
+    "frontend_src_api_client_ts",
+    "frontend_src_components_changelogdropdown_tsx"
+   ],
+   "citations": [
+    "frontend/src/api/changelog.ts L1"
+   ],
+   "fp": ""
+  },
+  "backend_alembic_env_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，包含 4 个符号：run_migrations_offline()、do_run_migrations()、run_async_migrations()、run_migrations_online()"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/alembic/env.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_app_api_discord_sync_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，位于 backend/app/api/discord_sync.py"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/app/api/discord_sync.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_app_api_lifecycle_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，位于 backend/app/api/lifecycle.py"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/app/api/lifecycle.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_app_db_seeds_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，包含 3 个符号：seed_post_conditions()、seed_building_type_config()、seed_post_priority_config()"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/app/db/seeds.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_app_models_post_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，位于 backend/app/models/post.py"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/app/models/post.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_app_models_siege_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，位于 backend/app/models/siege.py"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/app/models/siege.py L1"
+   ],
+   "fp": ""
+  },
+  "frontend_e2e_members_spec_ts": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，包含 3 个符号：ensureMemberSlotsAvailable()、activeCheckbox、editLinks"
+   },
+   "seeAlso": [],
+   "citations": [
+    "frontend/e2e/members.spec.ts L1"
+   ],
+   "fp": ""
+  },
+  "frontend_src_components_ui_textarea_tsx": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，包含 2 个符号：TextareaProps、Textarea"
+   },
+   "seeAlso": [
+    "frontend_src_lib_utils_ts",
+    "lib_utils_cn"
+   ],
+   "citations": [
+    "frontend/src/components/ui/textarea.tsx L1"
+   ],
+   "fp": ""
+  },
+  "backend_alembic_versions_0001_initial_schema_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，包含 2 个符号：upgrade()、downgrade()"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/alembic/versions/0001_initial_schema.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_alembic_versions_0002_add_preview_columns_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，位于 backend/alembic/versions/0002_add_preview_columns.py"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/alembic/versions/0002_add_preview_columns.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_alembic_versions_0003_make_siege_date_nullable_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，位于 backend/alembic/versions/0003_make_siege_date_nullable.py"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/alembic/versions/0003_make_siege_date_nullable.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_alembic_versions_0004_add_post_priority_config_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，位于 backend/alembic/versions/0004_add_post_priority_config.py"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/alembic/versions/0004_add_post_priority_config.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_alembic_versions_0005_add_description_to_post_priority_config_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，位于 backend/alembic/versions/0005_add_description_to_post_priority_config.py"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/alembic/versions/0005_add_description_to_post_priority_config.py L1"
+   ],
+   "fp": ""
+  },
+  "backend_alembic_versions_0006_power_level_and_drop_sort_value_py": {
+   "kind": "file",
+   "tier": 1,
+   "intent": {
+    "summary": "文件，位于 backend/alembic/versions/0006_power_level_and_drop_sort_value.py"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/alembic/versions/0006_power_level_and_drop_sort_value.py L1"
+   ],
+   "fp": ""
+  },
+  "alembic_env_run_migrations_online": {
+   "kind": "function",
+   "tier": 1,
+   "intent": {
+    "summary": "run_migrations_online() 被 run_async_migrations() 使用"
+   },
+   "seeAlso": [
+    "alembic_env_run_async_migrations"
+   ],
+   "citations": [
+    "backend/alembic/env.py L53"
+   ],
+   "fp": ""
+  },
+  "alembic_env_run_async_migrations": {
+   "kind": "function",
+   "tier": 1,
+   "intent": {
+    "summary": "run_async_migrations() 调用 run_migrations_online()"
+   },
+   "seeAlso": [
+    "alembic_env_run_migrations_online"
+   ],
+   "citations": [
+    "backend/alembic/env.py L42"
+   ],
+   "fp": ""
+  },
+  "alembic_env_run_migrations_offline": {
+   "kind": "function",
+   "tier": 1,
+   "intent": {
+    "summary": "function，位于 backend/alembic/env.py"
+   },
+   "seeAlso": [],
+   "citations": [
+    "backend/alembic/env.py L24"
+   ],
+   "fp": ""
+  }
+ }
+}
