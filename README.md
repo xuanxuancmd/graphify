@@ -129,7 +129,9 @@ When the user types `/graphify`, use the installed graphify skill or instruction
 | `/graphify query "<question>" --budget <N>` | 限制输出 token 数（默认 2000） |
 | `/graphify path "<A>" "<B>"` | 两节点间最短路径 |
 | `/graphify explain "<X>"` | 节点的自然语言解释 |
-| `/graphify learn` | 为 graph.html 学习页签生成人读向学习卡片与引导漫游 |
+| `/graphify learn` | 为 graph.html 学习页签生成多视角学习内容（业务流 / 代码架构 / 特性下钻） |
+| `/graphify learn --no-llm` | 纯结构化模式生成学习内容（零 LLM 成本） |
+| `/graphify learn --backend <B>` | 指定 LLM 后端生成中文讲解与叙述增强 |
 
 #### 导出与可视化
 
@@ -255,7 +257,7 @@ When the user types `/graphify`, use the installed graphify skill or instruction
 | `graphify save-result` | 保存 Q&A 结果到 .graph/memory/ | 对外（query 后自动调用） |
 | `graphify reflect` | 聚合 .graph/memory/ 生成 lessons 文档 | 对外 |
 | `graphify label <path>` | 用 LLM 为社区命名 | 对外 |
-| `graphify learn [PATH]` | 为 graph.html 学习页签生成人读向学习卡片 + 引导漫游（`--no-llm` 纯结构化零成本；`--backend` 中文讲解；按源文件指纹增量缓存） | 对外 |
+| `graphify learn [PATH]` | 为 graph.html 学习页签生成多视角学习内容：业务流（时序图+分步讲解）/ 代码架构（目录+特性卡+类图）/ 特性下钻（六节深度分析 MD 文档，落盘 .graph/features/）。`--no-llm` 纯结构化零成本；`--backend` 中文讲解；按源文件指纹增量缓存 | 对外 |
 
 #### Embedding 配置
 
@@ -300,6 +302,8 @@ embed_api_key=any-non-empty-value        # 本地服务器
 **Git hooks**（`graphify hook install`）—— 安装 `post-commit` 和 `post-checkout` hook。每次 commit 后、每次切分支后都会自动重建图谱，不需要额外开一个后台进程。
 
 **Wiki**（`--wiki`）—— 为每个 community 和 god node 生成类似维基百科的 Markdown 文章，并提供 `index.md` 作为入口。任何 agent 只要读 `index.md`，就能通过普通文件导航整个知识库，而不必直接解析 JSON。
+
+**多视角学习**（`/graphify learn`）—— 为 graph.html 的「学习」页签生成面向人类读者的三视角内容，直击 AI 时代"代码写得出来、人读不懂"的问题：**业务流视角**（端点→调用链的 Mermaid 时序图 + 分步讲解 + 代码锚点）、**代码架构视角**（目录结构 + 关键特性卡 + 基础类图）、**特性下钻**（每个特性一篇六节深度分析：概览 / 关键技术点 / 核心实现（焦点行级代码走读）/ 性能设计 / 可靠性设计 / 已知限制与验证）。时序图、类图、代码走读、抛错与 TODO 扫描全部从图谱与源码确定性推导，零 LLM 也能生成完整内容；加 `--backend` 后叙述层由 LLM 中文增强。每篇特性文档同时落盘到 `.graph/features/*.md`（Markdown 源码，可直接评审或入 wiki），学习页签内可随时切换"渲染 / MD 源码"视图。内容按源文件指纹增量缓存，重跑只重新生成变更部分。
 
 ## Worked examples
 

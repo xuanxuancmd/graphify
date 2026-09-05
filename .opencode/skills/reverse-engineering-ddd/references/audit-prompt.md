@@ -168,110 +168,26 @@ task(
 
 ---
 
-## 增量审查变体（模式二：`--changes` 增量刷新）
+## 模式二（增量刷新）审查说明
 
-> 模式二 Step 1/3 每个产物 delta 产出后、Step 4 合并到 baseline 后，派发匿名 subAgent 执行审查。
-> 与全量模式审查对称，但审查对象不同——全量审查 baseline 产物，增量审查 delta 文件 + 合并后 baseline。
+> 模式二 Step 1/3 每个 baseline 产物修改后，派发匿名 subAgent 审查修改后的 baseline 产物。审查标准、提示词模板、PASS/FAIL 门禁与模式一**完全相同**，唯一区别是审查触发时机不同（模式一是从零生成产物后审查，模式二是修改已有产物后审查）。
 
-### 变体 A：Delta 文件审查（Step 1/3 后）
+### 审查对象
 
-审查对象是 `.delta.md` 文件。复制以下内容，替换 `{delta文件路径}` 后派发：
-
-```
-你是 DDD 文档审查员。任务：审查 delta 文件的代码锚点真实性和格式合规性。
-
-## 审查对象
-
-Delta 文件：{delta文件路径}
-
-## 审查标准
-
-1. **代码锚点真实性**：delta 文件中 ADDED 和 MODIFIED 区段的 `<anchor:code>` 列值必须在代码库真实存在
-2. **区段格式合规**：delta 文件使用正确的 ## ADDED / ## MODIFIED / ## REMOVED / ## RENAMED 区段标记
-3. **MODIFIED 完整性**：MODIFIED 区段的表格行包含与 baseline 对应条目相同的所有列（无缺列）
-4. **REMOVED/RENAMED 豁免**：REMOVED 和 RENAMED 区段的表格不校验三标签（只有 ID 列或标识列）
-
-## 审查步骤
-
-### 第 1 步：读取 delta 文件
-读取 `{delta文件路径}` 的完整内容。
-
-### 第 2 步：提取可校验对象
-从 ADDED 和 MODIFIED 区段提取：
-- 所有 `<anchor:code>` 列的值
-- 正文中引用的代码锚点
-
-### 第 3 步：逐个验证存在性
-按全量模式相同的方法验证代码锚点存在性（codegraph 查询 / grep / glob）。
-
-### 第 4 步：检查 MODIFIED 完整性
-读取 baseline 中对应的产物文件。对每个 MODIFIED 条目，确认 delta 中的行包含 baseline 对应行的所有列。
-
-### 第 5 步：输出审查报告
-将审查报告写入 `{delta文件路径所在目录}/audit-{delta文件名}.md`。
-
-报告格式与全量模式相同。
-```
-
-### 变体 B：合并后 baseline 审查（Step 4 后）
-
-审查对象是合并后的 baseline 产物文件。审查重点：delta ADDED/MODIFIED 引入的新锚点是否在代码库真实存在。
-
-复制以下内容，替换 `{合并后baseline文件路径}` 和 `{对应delta文件路径}` 后派发：
-
-```
-你是 DDD 文档审查员。任务：审查合并后 baseline 文件的锚点真实性 + 合并完整性。
-
-## 审查对象
-
-合并后 baseline 文件：{合并后baseline文件路径}
-对应 delta 文件：{对应delta文件路径}
-
-## 审查标准
-
-1. **锚点真实性**：合并后 baseline 中所有 `<anchor:code>` 列值必须在代码库真实存在（同全量模式审查标准）
-2. **合并完整性**：delta 中所有 ADDED 条目已出现在 baseline 中；所有 MODIFIED 条目的内容已更新；所有 REMOVED 条目已从 baseline 消失；所有 RENAMED 条目的术语已更新
-3. **未提及保留**：delta 没提到的 baseline 条目原样保留（顺序不变、内容不变）
-
-## 审查步骤
-
-### 第 1 步：读取合并后 baseline 文件和 delta 文件
-
-### 第 2 步：锚点真实性审查
-按全量模式标准提取所有 `<anchor:code>` 值并验证存在性。
-
-### 第 3 步：合并完整性校验
-对 delta 中的每个操作：
-- ADDED → 确认该条目已在 baseline 中出现
-- MODIFIED → 确认 baseline 中该条目内容已更新为 delta 中的新版本
-- REMOVED → 确认该条目已从 baseline 消失
-- RENAMED → 确认 baseline 中该条目的术语已更新
-
-### 第 4 步：未提及保留校验
-抽查 delta 没提到的条目，确认它们在 baseline 中原样保留。
-
-### 第 5 步：输出审查报告
-将审查报告写入 `{delta文件路径所在目录}/audit-merge-{baseline文件名}.md`。
-
-报告格式与全量模式相同，额外增加"合并完整性校验"章节。
-```
+修改后的 baseline DDD 产物文件（如 `docs/features/<bc>/invariants.md`）。
 
 ### 派发方式
 
-与全量模式相同：
+直接复用模式一的提示词模板，替换 `{产物文件路径}` 为**修改后的 baseline 产物路径**。审查报告写入 `docs/draft/audit-{产物文件名}.md`（与模式一相同位置，Step 4 闭环删除）。
 
-#### OpenCode
+### 与模式一的一致性
 
-```typescript
-task(
-  category="quick",
-  description="审查 {文件名} 真实性",
-  prompt="<替换后的提示词>"
-)
-```
+| 维度 | 模式一 | 模式二 |
+|------|--------|--------|
+| 审查标准 | 代码锚点/文件引用/URL 存在性 | 相同 |
+| 提示词模板 | 本文件上方的模板 | 相同（直接复用） |
+| 报告位置 | `docs/draft/audit-{产物名}.md` | `docs/draft/audit-{产物名}.md`（相同） |
+| 报告命运 | Step 9 闭环删除 | Step 4 闭环删除（相同） |
+| PASS/FAIL 门禁 | FAIL → STOP 修正重审 | 相同 |
 
-### 报告位置
-
-- Delta 审查报告：`{变更目录}/audit-{delta文件名}.md`
-- 合并后 baseline 审查报告：`{变更目录}/audit-merge-{baseline文件名}.md`
-- 报告随 change 归档保留（不删除）
+模式二审查无需单独的提示词变体——直接复用模式一的提示词模板即可。

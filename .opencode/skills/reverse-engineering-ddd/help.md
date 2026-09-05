@@ -153,22 +153,12 @@
 
 ## 增量刷新模式（`--changes`）
 
-当 baseline 知识库已存在，需要随代码变更刷新时，使用 `reverse-engineering-ddd --changes` 进入增量刷新模式。此模式不重写全量产物，而是在变更目录下写 DDD delta（ADDED/MODIFIED/REMOVED/RENAMED），编码后合并 delta 到 baseline 并归档。
-
-### Delta 文件（`.delta.md`）
-
-**意图**：记录本次变更新增/修改/删除/重命名了哪些领域知识条目，不重写整个产物文件。Delta 镜像 baseline 产物的表格结构，用 `## ADDED` / `## MODIFIED` / `## REMOVED` / `## RENAMED` 区段标记操作类型。
-
-**合并规则**：按 RENAMED → REMOVED → MODIFIED → ADDED 顺序应用；delta 没提到的条目原样保留。MODIFIED 必须携带完整行（含未变更列），防止"半截修改"丢数据。
-
-**校验**：`python scripts/check_ddd_anchors.py --delta --single-file {delta文件}` 校验 delta 的表格标签和锚点格式 + 跨区段冲突检测。
-
-**归档**：delta 随 change 归档到 `changes/archive/`，保留审计轨迹（不删除）。
+当 baseline 知识库已存在，需要随代码变更刷新时，使用 `reverse-engineering-ddd --changes` 进入增量刷新模式。此模式从**任意格式的需求文档** + **代码变更记录（git log）** 中提取信息，直接修改 baseline DDD 产物，不产出中间 delta 文件。临时文件（提问记录/假设/审查报告）使用 `docs/draft/`，闭环时删除——与模式一完全一致。
 
 ### 影响分析报告（`impact-analysis.md`）
 
-**意图**：由匿名 subAgent 在隔离上下文中产出，读取变更目录所有文件 + git log，输出结构化影响分析报告（受影响 BC 清单、需刷新产物、刷新范围建议）。主 Agent 只读报告，不碰原始输入文件，避免上下文污染。
+**意图**：由匿名 subAgent 在隔离上下文中产出，读取变更目录所有文件（任意格式需求文档）+ git log，输出结构化影响分析报告（受影响 BC 清单、需修改的 baseline 产物清单、修改范围建议）。主 Agent 只读报告，不碰原始输入文件，避免上下文污染。报告随变更目录归档保留。
 
 ### 变更归档（`changes/archive/`）
 
-**意图**：已合并到 baseline 的变更目录归档于此，保留 proposal/design/tasks/specs/ddd delta/审查报告等全部内容，作为领域知识演进审计轨迹。与模式一的"draft/ 闭环删除"不同，增量模式的变更目录永久保留。
+**意图**：已合并到 baseline 的变更目录归档于此，保留需求文档和 impact-analysis.md，作为领域知识演进审计轨迹。临时文件（draft/）在闭环时已删除，不归档——与模式一完全一致。

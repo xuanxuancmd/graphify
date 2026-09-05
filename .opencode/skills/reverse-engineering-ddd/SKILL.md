@@ -47,12 +47,18 @@ help.md 独立维护，包含所有产物文件的用途、价值、所涉及的
 
 当用户传入 `--changes` 参数时，进入"模式二：增量刷新"，不执行全量逆向流程。
 
+**入参**（两个必选，由主 Agent 提供）：
+
+| 入参 | 说明 | 示例 |
+|------|------|------|
+| **变更目录路径** | 包含本次变更需求文档的目录（任意格式——OpenSpec change 目录、自定义需求文档目录等） | `openspec/changes/add-refund-flow` |
+| **起始 commit ID** | 代码变更的起点 commit，匿名 subAgent 据此运行 `git log/diff {起始commit-id}..HEAD` | `abc123` 或 `HEAD~3` |
+
+主 Agent 负责确定这两个入参的值——可能来自用户直接提供（如 `reverse-engineering-ddd --changes openspec/changes/add-refund-flow --from abc123`），或从上下文推断（如用户说"3 次提交前"→ 主 Agent 转为 `HEAD~3`）。
+
 **前置条件检查**：
 1. baseline 知识库已存在（`docs/context-map.md` + 至少一个 BC 的产物）→ 不存在 → STOP："baseline 不存在，请先运行全量逆向工程"
-2. 从上下文获取两个变量：
-   - **变更目录路径**：用户在命令中提供（如 `reverse-engineering-ddd --changes openspec/changes/add-refund-flow`），或从上下文推断
-   - **起始 commit ID**：用户提供（如 `--from abc123`），或从上下文推断（变更目录首次创建时的 commit）
-   - 两个变量都无法获取 → STOP，一次一问向用户确认
+2. 两个入参都已确定 → 缺任一 → STOP，一次一问向用户确认
 
 **执行入口**：跳转到 [模式二：增量刷新](#模式二增量刷新) 章节。
 
@@ -68,8 +74,9 @@ help.md 独立维护，包含所有产物文件的用途、价值、所涉及的
 ### 模式二：增量刷新（`--changes`）
 
 - baseline 知识库已存在，需要随代码变更刷新
-- 有变更输入目录（OpenSpec change 目录、自定义变更目录等）+ 代码变更记录（git log）
+- 有变更输入目录（任意格式的需求文档——OpenSpec change 目录、自定义需求文档等）+ 代码变更记录（git log）
 - 被要求"回刷文档"、"更新领域知识"、"增量刷新 DDD"
+- skill 的职责是将非 DDD 格式的需求文档 + 代码变更记录翻译成 DDD 知识更新，直接修改 baseline 产物
 
 **判断准则**：baseline 不存在 → 模式一；baseline 已存在 + 有变更输入 → 模式二。
 
@@ -230,7 +237,7 @@ BC 级产物的表格标签遵循**三标签一组原则**：每张表要么三�
 
 ## 模式二：增量刷新
 
-当 baseline 知识库已存在，需要随代码变更刷新时使用。统一采用 OpenSpec 式 delta 中转模式——需求分析阶段在变更目录下写 DDD delta，编码时读 delta 指导编码，编码后用变更文档 + git log 共同回刷补充技术约束 delta，最后合并 delta 到 baseline 并归档。
+当 baseline 知识库已存在，需要随代码变更刷新时使用。输入是**任意格式的需求文档**（不要求是 DDD 格式）+ git log，skill 的职责是将这些非 DDD 格式的输入翻译成 DDD 知识更新，**直接修改 baseline DDD 产物**。不产出 DDD 格式的中间 delta 文件。
 
 ### 前置条件
 
@@ -239,115 +246,110 @@ BC 级产物的表格标签遵循**三标签一组原则**：每张表要么三�
 
 ### 变更目录结构
 
-变更目录下的文件名不固定——必须读取内容判断类型。典型结构（OpenSpec change 目录或自定义）：
+变更目录下的文件名不固定，格式不限——可以是 OpenSpec change 目录、自定义需求文档目录等。必须读取内容判断信息类型。变更目录中只增加一个 skill 产出的影响分析报告：
 
 ```
 {变更目录}/
-├── proposal.md / design.md / tasks.md    # 变更意图（OpenSpec 或自定义）
-├── specs/                                 # 行为规格 delta（OpenSpec 或自定义）
-├── ddd/                                   # ★ DDD delta（本 skill 产出）
-│   ├── context-map.delta.md
-│   ├── impact-analysis.md                 # Step 0 产出（匿名 subAgent 写入）
-│   └── features/<bc>/
-│       ├── invariants.delta.md
-│       ├── contracts.delta.md
-│       ├── domain-events.delta.md
-│       ├── domain-model.delta.md
-│       ├── business-flow.delta.md
-│       └── technical-constraints.delta.md
-└── audit-*.md                             # 审查报告（复用 audit-prompt.md）
+├── proposal.md / design.md / tasks.md    # 任意格式的需求文档（用户提供，非 DDD 格式）
+├── specs/                                 # 任意格式的行为规格（OpenSpec 或自定义）
+└── impact-analysis.md                     # ★ Step 0 产出（匿名 subAgent 写入，唯一写入变更目录的 skill 产物）
+```
+
+临时文件使用 `docs/draft/`（与模式一完全一致）：
+
+```
+docs/draft/
+├── questions-log.md          # 一次一问记录（模式二 Step 1/3 的提问与回答）
+├── assumptions-draft.md       # ASSUME 假设记录
+└── audit-*.md                 # 审查报告（Step 1/3 每个产物修改后派发匿名 subAgent 产出）
 ```
 
 ### Step 0：触发与影响分析
 
-> 目的：在隔离上下文中读取变更输入 + git log，产出结构化影响分析报告。主 Agent 只读报告，不碰原始输入文件。
+> 目的：在隔离上下文中读取变更输入（任意格式需求文档）+ git log，产出结构化影响分析报告，指出哪些 baseline DDD 产物需要修改。主 Agent 只读报告，不碰原始输入文件。
 
 1. **加载匿名 agent 模板**：读 [references/impact-analysis-prompt.md](references/impact-analysis-prompt.md)
-2. **填入变量**：`{变更目录路径}` 和 `{起始commit-id}`
+2. **填入入参**：主 Agent 确定的 `{变更目录路径}` 和 `{起始commit-id}`（见 [--changes 模式](#-changes-模式) 入参）
 3. **派发匿名 subAgent**：
    - OpenCode: `task(category="quick", description="分析变更影响范围", prompt="<替换后的提示词>")`
    - Claude Code: Task 工具
 4. **等待 subAgent 返回**：报告写入 `{变更目录路径}/impact-analysis.md`
-5. **主 Agent 读取 impact-analysis.md**，按"建议的刷新范围"进入 Step 1
+5. **主 Agent 读取 impact-analysis.md**，按"建议的 baseline 修改范围"进入 Step 1
 
-> 匿名 subAgent 在隔离上下文中递归读取变更目录所有文件 + git log/diff + baseline 知识库，产出结构化报告。主上下文只接收报告，不被原始文件内容污染。与 [audit-prompt.md](references/audit-prompt.md) 对称设计。
+> 匿名 subAgent 在隔离上下文中递归读取变更目录所有文件（任意格式）+ git log/diff + baseline 知识库，产出结构化报告，指出哪些 baseline 产物需要修改。主上下文只接收报告，不被原始文件内容污染。与 [audit-prompt.md](references/audit-prompt.md) 对称设计。
 
-### Step 1：编写业务约束 DDD delta（编码前）
+### Step 1：修改 baseline 业务约束产物（编码前）
 
-> 目的：将本次变更的业务约束变更（不变式/契约/事件/聚合/BC 边界/流程主体）写成 DDD delta，编码时 AI 读 delta 指导编码。
+> 目的：将需求文档中的业务约束信息（不变式/契约/事件/聚合/BC 边界/流程主体）翻译成 DDD 知识，直接修改 baseline 产物。复用模式一的全部方法论和产物模板。
 
-复用模式一的 [方法论](references/methodology.md) §1-§3（模型探索漩涡 + 一次一问 + STOP/ASSUME），但范围限定在 impact-analysis.md 标记的受影响产物。
+复用模式一的 [方法论](references/methodology.md) §1-§3（模型探索漩涡 + 一次一问 + STOP/ASSUME），但范围限定在 impact-analysis.md 标记的受影响产物。临时文件使用 `docs/draft/`（与模式一完全一致）。
 
-1. 按 impact-analysis.md 的"受影响 BC 清单"，逐 BC 确定需刷新的产物
+1. 按 impact-analysis.md 的"受影响 BC 清单"，逐 BC 确定需修改的 baseline 产物
 2. 对每个受影响产物：
    - 用 graphify 查询既有代码结构（确认新约束是否与既有代码兼容）
-   - 形成候选业务语义变更（代码信号 + 变更目录中的 proposal/design 意图）
-   - **一次一问**向用户确认（复用 methodology §2 提问格式）
-   - 确认后写入 delta 文件（使用 [templates/delta/](templates/delta/) 模板）
-3. delta 文件落在 `{变更目录}/ddd/features/<bc>/*.delta.md`
-4. 每个产物 delta 产出后，派发匿名 subAgent 审查锚点真实性（复用 [audit-prompt.md](references/audit-prompt.md)）
-5. 运行 `python scripts/check_ddd_anchors.py --delta --single-file {delta文件路径}` 校验格式
+   - 从需求文档中提取业务意图（impact-analysis.md 的"需求文档信息提取"已提供摘要）
+   - 形成候选业务语义变更（需求意图 + 代码信号）
+   - **一次一问**向用户确认（复用 methodology §2 提问格式，提问记录写入 `docs/draft/questions-log.md`）
+   - ASSUME 级假设立即记录到 `docs/draft/assumptions-draft.md`
+   - 确认后**直接修改 baseline 产物文件**（`docs/features/<bc>/*.md` 或 `docs/context-map.md`），使用 [templates/business/](templates/business/) 对应模板保证格式一致
+3. 每个 baseline 产物修改后，派发匿名 subAgent 审查锚点真实性（复用 [audit-prompt.md](references/audit-prompt.md)，审查报告写入 `docs/draft/audit-{产物名}.md`）
+4. 运行 `python scripts/check_ddd_anchors.py --single-file {修改后的baseline产物路径}` 校验格式
 
-**delta 格式规范**：见 [references/incremental-merge.md](references/incremental-merge.md) §1。核心规则：
-- `## ADDED` / `## MODIFIED` / `## REMOVED` / `## RENAMED` 四区段，按需使用
-- MODIFIED 必须携带完整行（含未变更列），防止"半截修改"丢数据
-- 表格表头与 baseline 模板完全一致（三标签位置一致）
+> baseline 产物直接被修改——不产出中间 delta 文件。修改时复用模式一的产物模板（[templates/business/](templates/business/)、[templates/technical/](templates/technical/)）保证表格结构、三标签、代码锚点格式一致。
 
-**此阶段不写技术约束 delta**——技术选型理由需编码后从代码 diff + 用户确认获得，编码前写会臆造（违反核心原则 6"不臆造"）。
+**此阶段不修改技术约束产物**——技术选型理由需编码后从代码 diff + 用户确认获得，编码前写会臆造（违反核心原则 6"不臆造"）。
 
 ### Step 2：编码（不在 skill 范围）
 
-AI 读 `{变更目录}/ddd/` 下的业务约束 delta 指导编码。baseline 此时还是旧的，但 delta 有最新业务约束。
+AI 读修改后的 baseline 业务约束产物指导编码。baseline 此时已是最新业务约束。
 
-> 编码阶段不在本 skill 范围。编码完成后回到 Step 3 回刷。
+> 编码阶段不在本 skill 范围。编码完成后回到 Step 3 回刷技术约束。
 
-### Step 3：回刷——补充技术约束 delta（编码后）
+### Step 3：回刷 baseline 技术约束产物（编码后）
 
-> 目的：用变更文档 + git log 共同回刷，补充技术约束 delta（选型理由/trade-off/编码规范）。
+> 目的：用需求文档中的技术决策 + git log 共同回刷，直接修改 baseline 技术约束产物。
 
-**输入**：变更目录中的 design.md（技术决策意图）+ git diff（实际实现证据）+ graphify 查询（变更后代码结构）。
+**输入**：需求文档中的 design.md / 技术决策部分（技术决策意图）+ git diff（实际实现证据）+ graphify 查询（变更后代码结构）。
 
-1. 主 Agent 读取 impact-analysis.md 的"技术约束类"刷新范围
+1. 主 Agent 读取 impact-analysis.md 的"技术约束类"修改范围
 2. 若范围小（1-2 个 BC）→ 主 Agent 直接处理
 3. 若范围大 → 可再次派发匿名 subAgent 提取技术约束候选（复用 impact-analysis-prompt.md 的输入读取逻辑，但聚焦技术信号）
 4. 对每个需回刷的技术约束：
    - 读 git diff 提取实现证据（用了什么技术、怎么实现的）
-   - 读变更目录中的 design.md 提取技术决策意图
+   - 读需求文档中的技术决策部分提取技术决策意图
    - 结合二者形成候选技术约束（"为什么选这个技术方案"）
-   - **一次一问**向用户确认 Why（复用 methodology §2）
-   - 确认后写入 `{变更目录}/ddd/features/<bc>/technical-constraints.delta.md`
-5. 派发匿名 subAgent 审查锚点真实性（复用 audit-prompt.md）
-6. 运行 `python scripts/check_ddd_anchors.py --delta` 校验格式
+   - **一次一问**向用户确认 Why（复用 methodology §2，提问记录写入 `docs/draft/questions-log.md`）
+   - ASSUME 级假设立即记录到 `docs/draft/assumptions-draft.md`
+   - 确认后**直接修改 baseline 技术约束产物**（`docs/features/<bc>/technical-constraints.md` 或 `docs/technical-constraints.md`），使用 [templates/technical/technical-constraints.md](templates/technical/technical-constraints.md) 模板
+5. 派发匿名 subAgent 审查锚点真实性（复用 audit-prompt.md，审查报告写入 `docs/draft/audit-{产物名}.md`）
+6. 运行 `python scripts/check_ddd_anchors.py --single-file {修改后的baseline产物路径}` 校验格式
 
-> **代码 diff 是"提问素材"不是"结论来源"**（复用核心原则 1）。AI 读代码 diff 形成候选 → 一次一问向用户确认 → 写入 delta。不自动推导技术约束的 Why。
+> **代码 diff 是"提问素材"不是"结论来源"**（复用核心原则 1）。AI 读代码 diff 形成候选 → 一次一问向用户确认 → 直接写入 baseline。不自动推导技术约束的 Why。
 
-### Step 4：合并 DDD delta 到 baseline
+### Step 4：校验、闭环评审与删除 draft
 
-> 目的：将完整 DDD delta（业务约束 + 技术约束）合并到 baseline 知识库。
+> 目的：确认所有修改后的 baseline 产物格式合规、锚点真实，评审假设，删除临时文件。
 
-**合并算法**：见 [references/incremental-merge.md](references/incremental-merge.md)。核心规则：
-1. **固定顺序**：RENAMED → REMOVED → MODIFIED → ADDED
-2. **未提及即保留**：delta 没提到的条目原样保留，顺序不变
-3. **合并前校验**（硬失败）：跨区段冲突、匹配失败、MODIFIED 完整性
-4. **合并后验证**：锚点格式校验 + 锚点真实性审查 + delta 完整性校验
+1. 运行 `python scripts/check_ddd_anchors.py --docs-root docs/` 校验所有 baseline 产物格式
+2. 对 Step 1/3 中未单独审查的产物，派发匿名 subAgent 审查锚点真实性（复用 audit-prompt.md，报告写入 `docs/draft/`）
+3. 评审 `docs/draft/assumptions-draft.md`：每条假设 ✅ 保持 | ✏️ 纠正 | ❌ 拒绝。纠正的假设需回溯到对应 baseline 产物修正
+4. 确认 `docs/draft/questions-log.md` 中所有提问已得到回答且已反映到 baseline 修改
+5. 确认 `docs/draft/audit-*.md` 全部为 PASS
+6. **删除 `docs/draft/` 整个目录**（与模式一完全一致——临时文件闭环即删，baseline 产物成为唯一权威）
+7. 校验失败 → STOP，修正后重验
 
-**执行流程**：
-1. 运行 `python scripts/check_ddd_anchors.py --delta --docs-root {变更目录}/ddd/` 做 delta 格式预校验
-2. Agent 按 incremental-merge.md 的算法执行合并（读 delta + baseline → 按顺序应用 → 重组 baseline）
-3. 合并后运行 `python scripts/check_ddd_anchors.py --docs-root docs/` 校验 baseline 格式
-4. 派发匿名 subAgent 审查合并后 baseline 的锚点真实性（复用 audit-prompt.md）
-5. 校验失败 → STOP，修正后重验
+> 不存在独立的"合并"步骤——Step 1/3 已直接修改 baseline。Step 4 只做最终校验 + 闭环删除 draft。
 
 ### Step 5：归档
 
-> 目的：归档变更，保留审计轨迹，更新图谱。
+> 目的：归档变更输入文档，更新图谱。
 
-1. **合并验证全部通过** → 将 `{变更目录}/` 移到 `{变更目录的父目录}/archive/YYYY-MM-DD-{变更名}/`
-2. **graphify 增量更新**：运行 `graphify update .`（AST-only，无 API 成本），让图谱反映新的 anchor 节点
+1. **校验全部通过且 draft 已删除** → 将 `{变更目录}/` 移到 `{变更目录的父目录}/archive/YYYY-MM-DD-{变更名}/`
+2. **graphify 增量更新**：运行 `graphify update .`（AST-only，无 API 成本），让图谱反映修改后的 anchor 节点
 3. **更新受影响 BC 的 `index.md`**：刷新工件摘要（如 N 个用例 → N+1 个用例）
-4. **归档不删除**：与模式一的"draft/ 闭环删除"不同，变更目录随 change 归档永久保留，作为领域知识演进审计轨迹
+4. **归档内容**：变更目录（含需求文档 + impact-analysis.md）随 change 归档永久保留，作为领域知识演进审计轨迹。临时文件已在 Step 4 闭环删除，不归档
 
-**检查点**："所有 DDD delta 已合并到 baseline。锚点校验通过。匿名审查通过。变更目录已归档。graphify 已更新。受影响 index.md 已更新。"
+**检查点**："所有受影响 baseline 产物已修改。锚点校验通过。匿名审查通过。draft 已闭环删除。变更目录已归档。graphify 已更新。受影响 index.md 已更新。"
 
 ---
 
@@ -481,12 +483,13 @@ skill 闭环时自动在项目根目录的 `AGENTS.md` 中追加知识库指引�
 
 ### 模式二（增量刷新）恢复
 
-1. 检查变更目录下是否有 `impact-analysis.md`
+1. 检查变更目录下是否有 `impact-analysis.md` + `docs/draft/` 是否存在
 2. **无 impact-analysis.md** → Step 0 未完成，从头开始（派发匿名 subAgent）
-3. **有 impact-analysis.md 但无 ddd/ delta** → Step 1 未开始，读 impact-analysis.md 进入 Step 1
-4. **有部分 ddd/ delta** → 读已有 delta 确认进度，继续未完成的产物
-5. **ddd/ delta 齐全但 baseline 未合并** → Step 4 未完成，执行合并
-6. **baseline 已合并但未归档** → Step 5 未完成，执行归档
+3. **有 impact-analysis.md 但 baseline 未修改** → Step 1 未开始，读 impact-analysis.md 进入 Step 1
+4. **baseline 部分修改 + draft/ 存在** → 读 `docs/draft/questions-log.md` 确认对话进度，继续未完成的产物
+5. **baseline 业务约束已改但技术约束未回刷** → Step 3 未完成（编码后阶段）
+6. **baseline 全部修改完 + draft/ 仍存在** → Step 4 未完成，执行校验 + 闭环删除 draft 后归档
+7. **baseline 全部修改完 + draft/ 已删除 + 变更目录未归档** → Step 5 未完成，执行归档
 
 ---
 
@@ -509,10 +512,14 @@ skill 闭环时自动在项目根目录的 `AGENTS.md` 中追加知识库指引�
 
 ### 模式二（增量刷新）自检项
 
-13. **影响分析报告存在**（Step 0 后）：`{变更目录}/impact-analysis.md` 已由匿名 subAgent 产出，包含受影响 BC 清单和刷新范围建议
-14. **delta 格式合规**（Step 1/3 后）：每个 `.delta.md` 文件已通过 `python scripts/check_ddd_anchors.py --delta --single-file {文件路径}` 校验——表格标签完整、锚点格式合规、区段标记（ADDED/MODIFIED/REMOVED/RENAMED）正确
-15. **delta 完整性**（Step 4 合并前）：MODIFIED 条目携带完整行（含所有列，含未变更列）；无跨区段冲突（同一 ID 不同时出现在 ADDED+MODIFIED 等）
-16. **合并后验证通过**（Step 4 后）：baseline 已通过 `check_ddd_anchors.py` 格式校验 + 匿名 subAgent 锚点真实性审查 + delta 完整性校验（ADDED 已在 baseline、REMOVED 已消失、RENAMED 已更新）
-17. **归档完整**（Step 5 后）：变更目录已移到 archive/；graphify 已更新；受影响 BC 的 index.md 已刷新
+> **模式二修改的 baseline 产物同样须满足上述自检项 1-5、9、11 中的产物要求**（产物干净/临时留痕/一次一问/无虚泛/无通用常识/表格优先/表格标签）。自检项 6-8、10 为模式一特定步骤的校准项，模式二不适用。以下为模式二特有的补充自检项。
+
+13. **影响分析报告存在**（Step 0 后）：`{变更目录}/impact-analysis.md` 已由匿名 subAgent 产出，包含受影响 BC 清单和 baseline 修改范围建议
+14. **baseline 产物格式合规**（Step 1/3 每个产物修改后）：修改后的 baseline 产物已通过 `python scripts/check_ddd_anchors.py --single-file {文件路径}` 校验——表格标签完整、锚点格式合规
+15. **匿名审查通过**（Step 1/3 每个产物修改后）：修改后的 baseline 产物已派发给匿名 subAgent 审查（见 [references/audit-prompt.md](references/audit-prompt.md)），审查报告写入 `docs/draft/audit-{产物名}.md`，结论为 PASS（❌ 违规数=0）。FAIL（❌>0）→ STOP，修正后重审
+16. **假设评审通过**（Step 4）：`docs/draft/assumptions-draft.md` 中所有条目已评审（✅ 保持 / ✏️ 纠正 / ❌ 拒绝），纠正的假设已回溯修正到 baseline 产物
+17. **draft 已闭环删除**（Step 4 后）：`docs/draft/` 整个目录已删除（含 `questions-log.md`、`assumptions-draft.md`、`audit-*.md`）——与模式一完全一致
+18. **全局校验通过**（Step 4 后）：`python scripts/check_ddd_anchors.py --docs-root docs/` 全部 baseline 产物校验通过
+19. **归档完整**（Step 5 后）：变更目录已移到 archive/；graphify 已更新；受影响 BC 的 index.md 已刷新
 
 **任何检查失败 → STOP。修正。不进入下一步。**

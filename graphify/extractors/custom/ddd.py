@@ -211,16 +211,19 @@ def _build_code_indices(graph_nodes: list[dict]) -> dict[str, dict]:
     return {"fileIndex": file_index, "nameIndex": name_index, "endpointIndex": endpoint_index}
 
 
-def _match_code_anchor(anchor: str, indices: dict) -> list[tuple[dict, str, float]]:
+def _match_code_anchor(anchor: str, indices: dict) -> list[tuple[dict, str, float, str]]:
     """Match a code anchor string against graph indices.
 
-    Returns a list of ``(node, confidence, score)`` tuples — ALL matching
+    Returns a list of ``(node, confidence, score, note)`` tuples — ALL matching
     candidates, not just the first. This lets the caller build an edge to
     every matching node when the anchor is ambiguous (e.g. two classes with
-    the same name).
+    the same name). ``note`` is "" for EXTRACTED matches; for AMBIGUOUS
+    matches it states WHY the match is ambiguous (multi-candidate count,
+    fallback path, method mismatch, ...) so the audit view can show a
+    reviewable reason instead of a bare 0.3 score.
 
-    - Unique match → ``[(..., "EXTRACTED", 1.0)]``
-    - Multiple matches → all candidates with ``("AMBIGUOUS", 0.3)``
+    - Unique match → ``[(..., "EXTRACTED", 1.0, "")]``
+    - Multiple matches → all candidates with ``("AMBIGUOUS", 0.3, note)``
     - No match → ``[]``
 
     Anchor formats (priority order):
@@ -252,9 +255,9 @@ def _match_code_anchor(anchor: str, indices: dict) -> list[tuple[dict, str, floa
             file_nodes = [n for n in candidates if _is_file_node(n)]
             matched = file_nodes if file_nodes else candidates
             if len(matched) == 1:
-                return [(matched[0], "EXTRACTED", 1.0)]
+                return [(matched[0], "EXTRACTED", 1.0, "")]
             elif len(matched) > 1:
-                return [(n, "AMBIGUOUS", 0.3) for n in matched]
+                return [(n, "AMBIGUOUS", 0.3, f"文件名锚点命中 {len(matched)} 个同名节点") for n in matched]
 
     # 1. snake_case file.method
     if SNAKE_DOT_METHOD_REGEX.match(anchor):
@@ -267,15 +270,15 @@ def _match_code_anchor(anchor: str, indices: dict) -> list[tuple[dict, str, floa
                       if _is_function_node(n) and n.get("label") == method_name]
         if fn_matches:
             if len(fn_matches) == 1:
-                return [(fn_matches[0], "EXTRACTED", 1.0)]
-            return [(n, "AMBIGUOUS", 0.3) for n in fn_matches]
+                return [(fn_matches[0], "EXTRACTED", 1.0, "")]
+            return [(n, "AMBIGUOUS", 0.3, f"锚点命中 {len(fn_matches)} 个同名函数") for n in fn_matches]
         # Fallback: file nodes themselves (method not emitted by extractor)
         file_nodes = [n for n in candidates if _is_file_node(n)]
         fb = file_nodes if file_nodes else (candidates[:1] if candidates else [])
         if len(fb) == 1:
-            return [(fb[0], "EXTRACTED", 1.0)]
+            return [(fb[0], "EXTRACTED", 1.0, "")]
         elif len(fb) > 1:
-            return [(n, "AMBIGUOUS", 0.3) for n in fb]
+            return [(n, "AMBIGUOUS", 0.3, f"方法节点未提取，回退命中 {len(fb)} 个文件节点") for n in fb]
 
     # 2. PascalCase.method
     m = PASCAL_DOT_METHOD_REGEX.match(anchor)
@@ -288,7 +291,7 @@ def _match_code_anchor(anchor: str, indices: dict) -> list[tuple[dict, str, floa
             class_nodes = class_candidates[:]
         if not class_nodes:
             return []
-        results: list[tuple[dict, str, float]] = []
+        results: list[tuple[dict, str, float, str]] = []
         for cls in class_nodes:
             fn_candidates = indices["nameIndex"].get(method_name, [])
             fns = [n for n in fn_candidates
@@ -296,21 +299,21 @@ def _match_code_anchor(anchor: str, indices: dict) -> list[tuple[dict, str, floa
                    and n.get("source_file") == cls.get("source_file")]
             if fns:
                 for fn in fns:
-                    results.append((fn, "EXTRACTED", 1.0))
+                    results.append((fn, "EXTRACTED", 1.0, ""))
             else:
                 # Fallback: class node (partial match)
-                results.append((cls, "AMBIGUOUS", 0.3))
+                results.append((cls, "AMBIGUOUS", 0.3, f"方法 '{method_name}' 节点未提取，回退到类节点（部分匹配）"))
         # Dedup by node id (same node may match multiple classes)
         seen_ids: set[str] = set()
-        deduped: list[tuple[dict, str, float]] = []
-        for node, conf, score in results:
+        deduped: list[tuple[dict, str, float, str]] = []
+        for node, conf, score, note in results:
             if node["id"] not in seen_ids:
                 seen_ids.add(node["id"])
-                deduped.append((node, conf, score))
+                deduped.append((node, conf, score, note))
         if len(deduped) == 1:
-            return [(deduped[0][0], "EXTRACTED", 1.0)]
+            return [(deduped[0][0], "EXTRACTED", 1.0, "")]
         elif len(deduped) > 1:
-            return [(n, "AMBIGUOUS", 0.3) for n, _, _ in deduped]
+            return [(n, "AMBIGUOUS", 0.3, f"PascalCase.method 锚点命中 {len(deduped)} 个候选") for n, _, _, _ in deduped]
         return []
 
     # 3. PascalCase class name (SimpleName)
@@ -319,9 +322,9 @@ def _match_code_anchor(anchor: str, indices: dict) -> list[tuple[dict, str, floa
         class_candidates = [n for n in candidates if _is_class_node(n)]
         matched = class_candidates if class_candidates else candidates
         if len(matched) == 1:
-            return [(matched[0], "EXTRACTED", 1.0)]
+            return [(matched[0], "EXTRACTED", 1.0, "")]
         elif len(matched) > 1:
-            return [(n, "AMBIGUOUS", 0.3) for n in matched]
+            return [(n, "AMBIGUOUS", 0.3, f"类名锚点命中 {len(matched)} 个同名符号") for n in matched]
         return []
 
     # 3.5 Qualified name or partial path: com.example.OrderService / module.OrderService
@@ -338,8 +341,8 @@ def _match_code_anchor(anchor: str, indices: dict) -> list[tuple[dict, str, floa
         if not path_hints:
             # Just "module.Name" with single path segment — treat like SimpleName
             if len(candidates) == 1:
-                return [(candidates[0], "EXTRACTED", 1.0)]
-            return [(n, "AMBIGUOUS", 0.3) for n in candidates]
+                return [(candidates[0], "EXTRACTED", 1.0, "")]
+            return [(n, "AMBIGUOUS", 0.3, f"限定名锚点命中 {len(candidates)} 个同名候选") for n in candidates]
         path_str = "/".join(p.lower() for p in path_hints)
         matched_exact: list[dict] = []
         matched_ambiguous: list[dict] = []
@@ -351,10 +354,10 @@ def _match_code_anchor(anchor: str, indices: dict) -> list[tuple[dict, str, floa
                 matched_ambiguous.append(n)
         if matched_exact:
             if len(matched_exact) == 1:
-                return [(matched_exact[0], "EXTRACTED", 1.0)]
-            return [(n, "AMBIGUOUS", 0.3) for n in matched_exact]
+                return [(matched_exact[0], "EXTRACTED", 1.0, "")]
+            return [(n, "AMBIGUOUS", 0.3, f"路径提示命中 {len(matched_exact)} 个候选") for n in matched_exact]
         if matched_ambiguous:
-            return [(n, "AMBIGUOUS", 0.3) for n in matched_ambiguous]
+            return [(n, "AMBIGUOUS", 0.3, f"路径提示 '{path_str}' 未命中任何源文件，回退到 {len(matched_ambiguous)} 个同名候选") for n in matched_ambiguous]
         return []
 
     # 4. URL — HTTP method + space + path
@@ -365,13 +368,11 @@ def _match_code_anchor(anchor: str, indices: dict) -> list[tuple[dict, str, floa
         if not _endpoint:
             _endpoint = indices["endpointIndex"].get(_normalize_path_vars(path))
         if _endpoint:
-            return [(_endpoint, "EXTRACTED", 1.0)]
+            return [(_endpoint, "EXTRACTED", 1.0, "")]
         # Prefix match: anchor /rest matches endpoint /rest/users/{id}
         norm = path.rstrip("/") if len(path) > 1 else path
-        prefix_matches = [(n, "AMBIGUOUS", 0.3)
-                          for ep, n in indices["endpointIndex"].items()
-                          if ep.startswith(norm)]
-        return prefix_matches
+        matched_eps = [(ep, n) for ep, n in indices["endpointIndex"].items() if ep.startswith(norm)]
+        return [(n, "AMBIGUOUS", 0.3, f"URL 前缀匹配到 {len(matched_eps)} 个端点") for _, n in matched_eps]
 
     # 5. URL — HTTP method + colon + path (the canonical anchor format)
     m = HTTP_COLON_URL_REGEX.match(anchor)
@@ -385,7 +386,7 @@ def _match_code_anchor(anchor: str, indices: dict) -> list[tuple[dict, str, floa
             if not _endpoint:
                 _endpoint = indices["endpointIndex"].get(_normalize_path_vars(key))
             if _endpoint:
-                return [(_endpoint, "EXTRACTED", 1.0)]
+                return [(_endpoint, "EXTRACTED", 1.0, "")]
         # Secondary: bare-path key — the path exists, possibly under another
         # method. A method mismatch must NOT produce an EXTRACTED edge (a
         # POST:/x anchor linking to a GET:/x endpoint at confidence 1.0 is a
@@ -397,12 +398,10 @@ def _match_code_anchor(anchor: str, indices: dict) -> list[tuple[dict, str, floa
             if _endpoint:
                 node_method = _endpoint_method(_endpoint)
                 if node_method and node_method != anchor_method:
-                    return [(_endpoint, "AMBIGUOUS", 0.3)]
-                return [(_endpoint, "EXTRACTED", 1.0)]
-        prefix_matches = [(n, "AMBIGUOUS", 0.3)
-                          for ep, n in indices["endpointIndex"].items()
-                          if ep.startswith(norm)]
-        return prefix_matches
+                    return [(_endpoint, "AMBIGUOUS", 0.3, f"端点 HTTP 方法不匹配（锚点 {anchor_method.upper()}，端点 {node_method.upper()}）")]
+                return [(_endpoint, "EXTRACTED", 1.0, "")]
+        matched_eps = [(ep, n) for ep, n in indices["endpointIndex"].items() if ep.startswith(norm)]
+        return [(n, "AMBIGUOUS", 0.3, f"URL 前缀匹配到 {len(matched_eps)} 个端点") for _, n in matched_eps]
 
     # 6. bare path
     if PATH_URL_REGEX.match(anchor):
@@ -411,16 +410,14 @@ def _match_code_anchor(anchor: str, indices: dict) -> list[tuple[dict, str, floa
         if not _endpoint:
             _endpoint = indices["endpointIndex"].get(_normalize_path_vars(norm))
         if _endpoint:
-            return [(_endpoint, "EXTRACTED", 1.0)]
+            return [(_endpoint, "EXTRACTED", 1.0, "")]
         _endpoint = indices["endpointIndex"].get(anchor)
         if not _endpoint:
             _endpoint = indices["endpointIndex"].get(_normalize_path_vars(anchor))
         if _endpoint:
-            return [(_endpoint, "EXTRACTED", 1.0)]
-        prefix_matches = [(n, "AMBIGUOUS", 0.3)
-                          for ep, n in indices["endpointIndex"].items()
-                          if ep.startswith(norm)]
-        return prefix_matches
+            return [(_endpoint, "EXTRACTED", 1.0, "")]
+        matched_eps = [(ep, n) for ep, n in indices["endpointIndex"].items() if ep.startswith(norm)]
+        return [(n, "AMBIGUOUS", 0.3, f"URL 前缀匹配到 {len(matched_eps)} 个端点") for _, n in matched_eps]
 
     return []
 
@@ -570,14 +567,20 @@ def _make_edge(
     *, source: str, target: str, relation: str,
     confidence: str = "EXTRACTED", confidence_score: float = 1.0,
     source_file: str, line_num: int = 0, weight: float = 0.5,
+    reason: str | None = None,
 ) -> dict:
-    return {
+    edge = {
         "source": source, "target": target, "relation": relation,
         "confidence": confidence, "confidence_score": confidence_score,
         "source_file": source_file,
         "source_location": f"L{line_num}" if line_num else None,
         "weight": weight,
     }
+    # Reason only when present: EXTRACTED edges stay lean (no null bloat),
+    # AMBIGUOUS edges carry the human-reviewable why (the audit view shows it).
+    if reason:
+        edge["reason"] = reason
+    return edge
 
 
 # ---------------------------------------------------------------------------
@@ -667,8 +670,8 @@ def _parse_tagged_file(
                         continue
                     candidates = _match_code_anchor(clean_anchor, indices)
                     if candidates:
-                        for matched, conf, score in candidates:
-                            pending_edges.append({
+                        for matched, conf, score, note in candidates:
+                            pe = {
                                 "type": "describes",
                                 "sourceNodeId": node["id"],
                                 "targetNodeId": matched["id"],
@@ -676,7 +679,13 @@ def _parse_tagged_file(
                                 "confidence_score": score,
                                 "weight": 0.8 if conf == "EXTRACTED" else 0.3,
                                 "source_file": doc_path,
-                            })
+                            }
+                            if conf == "AMBIGUOUS":
+                                pe["reason"] = (
+                                    f"锚点 '{clean_anchor}' 非唯一解析（{note}），"
+                                    f"由 DDD 文档锚点提取器标记为 AMBIGUOUS，请人工确认指向"
+                                )
+                            pending_edges.append(pe)
                     else:
                         unmatched.append({
                             "source": "ddd",
@@ -886,8 +895,8 @@ def _parse_technical_constraints(
                         continue
                     candidates = _match_code_anchor(clean_anchor, indices)
                     if candidates:
-                        for matched, conf, score in candidates:
-                            pending_edges.append({
+                        for matched, conf, score, note in candidates:
+                            pe = {
                                 "type": "describes",
                                 "sourceNodeId": current_node["id"],
                                 "targetNodeId": matched["id"],
@@ -895,7 +904,13 @@ def _parse_technical_constraints(
                                 "confidence_score": score,
                                 "weight": 0.8 if conf == "EXTRACTED" else 0.3,
                                 "source_file": doc_path,
-                            })
+                            }
+                            if conf == "AMBIGUOUS":
+                                pe["reason"] = (
+                                    f"锚点 '{clean_anchor}' 非唯一解析（{note}），"
+                                    f"由 DDD 文档锚点提取器标记为 AMBIGUOUS，请人工确认指向"
+                                )
+                            pending_edges.append(pe)
                     else:
                         unmatched.append({
                             "source": "ddd",
@@ -1020,6 +1035,7 @@ def _resolve_pending_edges(all_nodes: list[dict], pending_edges: list[dict]) -> 
                     confidence_score=pe.get("confidence_score", 1.0),
                     source_file=pe.get("source_file", ""),
                     weight=pe.get("weight", 0.5),
+                    reason=pe.get("reason"),
                 ))
 
     return edges

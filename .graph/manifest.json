@@ -138,9 +138,9 @@
     "semantic_hash": ""
   },
   "graphify/exporters/html.py": {
-    "mtime": 1788513746.4220726,
-    "seen": 1788515058.032182,
-    "ast_hash": "0d688960790ecbc992be2ebf2021cb83",
+    "mtime": 1788522400.6825285,
+    "seen": 1788522867.1870494,
+    "ast_hash": "c5805bfd67548f2ba1939c4a95df2a5b",
     "semantic_hash": ""
   },
   "graphify/extract.py": {
@@ -2910,9 +2910,9 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1788514899.9652755,
-    "seen": 1788515058.0850759,
-    "ast_hash": "0fe233b13a1b063ac76ab9121625aa55",
+    "mtime": 1788522792.128728,
+    "seen": 1788522867.2415123,
+    "ast_hash": "5ff206d41b06e076d4f421d9c63fe434",
     "semantic_hash": ""
   },
   "docs/ddd-doc-extractor/plan.md": {
@@ -2994,26 +2994,26 @@
     "semantic_hash": ""
   },
   "graphify/always_on/agents-md.md": {
-    "mtime": 1788513884.2582593,
-    "seen": 1788515058.0869353,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.2440457,
     "ast_hash": "847d195bf795db7537fe951c8a311b21",
     "semantic_hash": ""
   },
   "graphify/always_on/antigravity-rules.md": {
-    "mtime": 1788513884.2582593,
-    "seen": 1788515058.0869372,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.2440479,
     "ast_hash": "029846277ffabaca553202c1571f20a0",
     "semantic_hash": ""
   },
   "graphify/always_on/claude-md.md": {
-    "mtime": 1788513884.2582593,
-    "seen": 1788515058.0869386,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.2440493,
     "ast_hash": "2b0df76c0e3672b2e8c2477811f5d3e3",
     "semantic_hash": ""
   },
   "graphify/always_on/vscode-instructions.md": {
-    "mtime": 1788513884.2582593,
-    "seen": 1788515058.0869434,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.2440553,
     "ast_hash": "003ece4a3c347e7b8afb94d416c62fcb",
     "semantic_hash": ""
   },
@@ -3030,386 +3030,386 @@
     "semantic_hash": ""
   },
   "graphify/skill-agents.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.0871668,
-    "ast_hash": "2be4bc469eedd93255890cdc4b09cc36",
+    "mtime": 1788522813.6325426,
+    "seen": 1788522867.2442682,
+    "ast_hash": "d0dcf7f055ab2cd8790b2629c151d81b",
     "semantic_hash": ""
   },
   "graphify/skill-aider.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.0871685,
+    "mtime": 1788522813.6325426,
+    "seen": 1788522867.24427,
     "ast_hash": "b1ada5063f4251d460041809f7f89b33",
     "semantic_hash": ""
   },
   "graphify/skill-amp.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.087171,
-    "ast_hash": "2be4bc469eedd93255890cdc4b09cc36",
+    "mtime": 1788522813.6325426,
+    "seen": 1788522867.2442722,
+    "ast_hash": "d0dcf7f055ab2cd8790b2629c151d81b",
     "semantic_hash": ""
   },
   "graphify/skill-claw.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.0871727,
-    "ast_hash": "c30507762b9808d94f29b9cdeb040296",
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2442737,
+    "ast_hash": "a4ba1659f75ea2bd5aa2ac973134992b",
     "semantic_hash": ""
   },
   "graphify/skill-codex.md": {
-    "mtime": 1788513884.2209525,
-    "seen": 1788515058.0871742,
-    "ast_hash": "a8681557d62fe654a6809d9bc51e4953",
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.244275,
+    "ast_hash": "f623e958ebe7d25f112a0b50705c35f3",
     "semantic_hash": ""
   },
   "graphify/skill-copilot.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.0871766,
-    "ast_hash": "c30507762b9808d94f29b9cdeb040296",
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2442765,
+    "ast_hash": "a4ba1659f75ea2bd5aa2ac973134992b",
     "semantic_hash": ""
   },
   "graphify/skill-devin.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.0871785,
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.244278,
     "ast_hash": "3837f9f3afdbc5d8cc42c4659c6d5520",
     "semantic_hash": ""
   },
   "graphify/skill-droid.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.0871804,
-    "ast_hash": "2be4bc469eedd93255890cdc4b09cc36",
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.2442799,
+    "ast_hash": "d0dcf7f055ab2cd8790b2629c151d81b",
     "semantic_hash": ""
   },
   "graphify/skill-kilo.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.0871818,
-    "ast_hash": "731788676ee8d079ef0fa843118b0d09",
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.2442813,
+    "ast_hash": "4f34c6c273e78e3d8fdabeb051bc0e51",
     "semantic_hash": ""
   },
   "graphify/skill-kiro.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.087183,
-    "ast_hash": "21e7ae03dc06e430331506cf20ca3b7a",
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.2442832,
+    "ast_hash": "c88552919afa9033af46bb45d8182454",
     "semantic_hash": ""
   },
   "graphify/skill-opencode.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0871844,
-    "ast_hash": "751b1eb8bfd9584c11fdfa4d823b8395",
+    "mtime": 1788522813.6796598,
+    "seen": 1788522867.2442844,
+    "ast_hash": "36a28b72b49067fcb61c013aab465c90",
     "semantic_hash": ""
   },
   "graphify/skill-pi.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.087186,
-    "ast_hash": "21e7ae03dc06e430331506cf20ca3b7a",
+    "mtime": 1788522813.6796598,
+    "seen": 1788522867.2442856,
+    "ast_hash": "c88552919afa9033af46bb45d8182454",
     "semantic_hash": ""
   },
   "graphify/skill-trae.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0871878,
-    "ast_hash": "925a94495abd674fecedee78d208ba8a",
+    "mtime": 1788522813.6796598,
+    "seen": 1788522867.244287,
+    "ast_hash": "fdbcad52d9ee3e0a96ca9416150ddf96",
     "semantic_hash": ""
   },
   "graphify/skill-vscode.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.087189,
-    "ast_hash": "275c91fa40e0768b3fa8b8c7715a2bf6",
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.2442882,
+    "ast_hash": "2cb996678a215bb974286e0d7c04e429",
     "semantic_hash": ""
   },
   "graphify/skill-windows.md": {
-    "mtime": 1788513884.2528565,
-    "seen": 1788515058.0871906,
-    "ast_hash": "037988e53163d296bcb946f541c7d9ab",
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.2442896,
+    "ast_hash": "de5b6a04c26949f365456146ab8293d0",
     "semantic_hash": ""
   },
   "graphify/skill.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.0871925,
-    "ast_hash": "4d5fa5286b725367397dc059218138a0",
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2442908,
+    "ast_hash": "dd25fda42c9e2a0d9dbbb2442ac9bdd8",
     "semantic_hash": ""
   },
   "graphify/skills/agents/references/add-watch.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.0871942,
+    "mtime": 1788522813.6325426,
+    "seen": 1788522867.2442925,
     "ast_hash": "7d76707ff41226fa015c08456fe6d491",
     "semantic_hash": ""
   },
   "graphify/skills/agents/references/exports.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.087196,
+    "mtime": 1788522813.6325426,
+    "seen": 1788522867.244294,
     "ast_hash": "5d7a5e7b68fcaaa14954a0e594b9fb17",
     "semantic_hash": ""
   },
   "graphify/skills/agents/references/extraction-spec.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.0871978,
+    "mtime": 1788522813.6325426,
+    "seen": 1788522867.2442954,
     "ast_hash": "3b1b374ee1117e02980fb65f0c799232",
     "semantic_hash": ""
   },
   "graphify/skills/agents/references/github-and-merge.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.0871992,
+    "mtime": 1788522813.6325426,
+    "seen": 1788522867.2442968,
     "ast_hash": "9255221cbec9721849999c5242e8d9dc",
     "semantic_hash": ""
   },
   "graphify/skills/agents/references/hooks.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.0872009,
+    "mtime": 1788522813.6325426,
+    "seen": 1788522867.2442985,
     "ast_hash": "f1492bb135fcb73feedc6a9859899f05",
     "semantic_hash": ""
   },
   "graphify/skills/agents/references/query.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.0872023,
+    "mtime": 1788522813.6325426,
+    "seen": 1788522867.2443001,
     "ast_hash": "6df4d71404a2cc47cdecb6bda997c16c",
     "semantic_hash": ""
   },
   "graphify/skills/agents/references/transcribe.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.0872035,
+    "mtime": 1788522813.6325426,
+    "seen": 1788522867.2443016,
     "ast_hash": "4211c4ef47f33a5545b082fc2b39b882",
     "semantic_hash": ""
   },
   "graphify/skills/agents/references/update.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.0872054,
+    "mtime": 1788522813.6325426,
+    "seen": 1788522867.2443025,
     "ast_hash": "1ea7cfab6465577d9a3ced0b4497ff4a",
     "semantic_hash": ""
   },
   "graphify/skills/claude/references/add-watch.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.0872192,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2443159,
     "ast_hash": "7d76707ff41226fa015c08456fe6d491",
     "semantic_hash": ""
   },
   "graphify/skills/claude/references/exports.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.0872207,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2443175,
     "ast_hash": "5d7a5e7b68fcaaa14954a0e594b9fb17",
     "semantic_hash": ""
   },
   "graphify/skills/claude/references/extraction-spec.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.087222,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2443187,
     "ast_hash": "3b1b374ee1117e02980fb65f0c799232",
     "semantic_hash": ""
   },
   "graphify/skills/claude/references/github-and-merge.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.087231,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.24432,
     "ast_hash": "9255221cbec9721849999c5242e8d9dc",
     "semantic_hash": ""
   },
   "graphify/skills/claude/references/hooks.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.0872324,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2443213,
     "ast_hash": "3f545db6ce646650bb9de588f5512a27",
     "semantic_hash": ""
   },
   "graphify/skills/claude/references/query.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.0872338,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2443225,
     "ast_hash": "6df4d71404a2cc47cdecb6bda997c16c",
     "semantic_hash": ""
   },
   "graphify/skills/claude/references/transcribe.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.087235,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2443242,
     "ast_hash": "4211c4ef47f33a5545b082fc2b39b882",
     "semantic_hash": ""
   },
   "graphify/skills/claude/references/update.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.0872371,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2443254,
     "ast_hash": "1ea7cfab6465577d9a3ced0b4497ff4a",
     "semantic_hash": ""
   },
   "graphify/skills/opencode/references/add-watch.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0873072,
+    "mtime": 1788522813.6796598,
+    "seen": 1788522867.2443905,
     "ast_hash": "7d76707ff41226fa015c08456fe6d491",
     "semantic_hash": ""
   },
   "graphify/skills/opencode/references/exports.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0873086,
+    "mtime": 1788522813.6796598,
+    "seen": 1788522867.244392,
     "ast_hash": "5d7a5e7b68fcaaa14954a0e594b9fb17",
     "semantic_hash": ""
   },
   "graphify/skills/opencode/references/extraction-spec.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0873096,
+    "mtime": 1788522813.6796598,
+    "seen": 1788522867.2443936,
     "ast_hash": "3b1b374ee1117e02980fb65f0c799232",
     "semantic_hash": ""
   },
   "graphify/skills/opencode/references/github-and-merge.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0873108,
+    "mtime": 1788522813.6796598,
+    "seen": 1788522867.2443948,
     "ast_hash": "9255221cbec9721849999c5242e8d9dc",
     "semantic_hash": ""
   },
   "graphify/skills/opencode/references/hooks.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0873125,
+    "mtime": 1788522813.6796598,
+    "seen": 1788522867.2443957,
     "ast_hash": "558fe057b87ffa5859b5f7d3ebc32d6e",
     "semantic_hash": ""
   },
   "graphify/skills/opencode/references/query.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0873137,
+    "mtime": 1788522813.6796598,
+    "seen": 1788522867.2443972,
     "ast_hash": "6df4d71404a2cc47cdecb6bda997c16c",
     "semantic_hash": ""
   },
   "graphify/skills/opencode/references/transcribe.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0873146,
+    "mtime": 1788522813.6796598,
+    "seen": 1788522867.244398,
     "ast_hash": "4211c4ef47f33a5545b082fc2b39b882",
     "semantic_hash": ""
   },
   "graphify/skills/opencode/references/update.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0873163,
+    "mtime": 1788522813.6796598,
+    "seen": 1788522867.2443993,
     "ast_hash": "1ea7cfab6465577d9a3ced0b4497ff4a",
     "semantic_hash": ""
   },
   "graphify/skills/trae/references/add-watch.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.087329,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.2444127,
     "ast_hash": "7d76707ff41226fa015c08456fe6d491",
     "semantic_hash": ""
   },
   "graphify/skills/trae/references/exports.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0873306,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.2444136,
     "ast_hash": "5d7a5e7b68fcaaa14954a0e594b9fb17",
     "semantic_hash": ""
   },
   "graphify/skills/trae/references/extraction-spec.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0873318,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.244415,
     "ast_hash": "3b1b374ee1117e02980fb65f0c799232",
     "semantic_hash": ""
   },
   "graphify/skills/trae/references/github-and-merge.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0873334,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.244416,
     "ast_hash": "9255221cbec9721849999c5242e8d9dc",
     "semantic_hash": ""
   },
   "graphify/skills/trae/references/hooks.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0873349,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.244417,
     "ast_hash": "4bdcc5ee0f9032e3928ff80c76f62888",
     "semantic_hash": ""
   },
   "graphify/skills/trae/references/query.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0873365,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.2444186,
     "ast_hash": "6df4d71404a2cc47cdecb6bda997c16c",
     "semantic_hash": ""
   },
   "graphify/skills/trae/references/transcribe.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0873377,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.2444196,
     "ast_hash": "4211c4ef47f33a5545b082fc2b39b882",
     "semantic_hash": ""
   },
   "graphify/skills/trae/references/update.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0873394,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.2444205,
     "ast_hash": "1ea7cfab6465577d9a3ced0b4497ff4a",
     "semantic_hash": ""
   },
   "graphify/skills/vscode/references/add-watch.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0873418,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.244422,
     "ast_hash": "7d76707ff41226fa015c08456fe6d491",
     "semantic_hash": ""
   },
   "graphify/skills/vscode/references/exports.md": {
-    "mtime": 1788513884.2528565,
-    "seen": 1788515058.0873432,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.2444232,
     "ast_hash": "5d7a5e7b68fcaaa14954a0e594b9fb17",
     "semantic_hash": ""
   },
   "graphify/skills/vscode/references/extraction-spec.md": {
-    "mtime": 1788513884.2528565,
-    "seen": 1788515058.087345,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.244424,
     "ast_hash": "3b1b374ee1117e02980fb65f0c799232",
     "semantic_hash": ""
   },
   "graphify/skills/vscode/references/github-and-merge.md": {
-    "mtime": 1788513884.2528565,
-    "seen": 1788515058.0873463,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.2444258,
     "ast_hash": "9255221cbec9721849999c5242e8d9dc",
     "semantic_hash": ""
   },
   "graphify/skills/vscode/references/hooks.md": {
-    "mtime": 1788513884.2528565,
-    "seen": 1788515058.0873482,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.244427,
     "ast_hash": "3f545db6ce646650bb9de588f5512a27",
     "semantic_hash": ""
   },
   "graphify/skills/vscode/references/query.md": {
-    "mtime": 1788513884.2528565,
-    "seen": 1788515058.0873497,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.2444284,
     "ast_hash": "6df4d71404a2cc47cdecb6bda997c16c",
     "semantic_hash": ""
   },
   "graphify/skills/vscode/references/transcribe.md": {
-    "mtime": 1788513884.2528565,
-    "seen": 1788515058.0873513,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.2444293,
     "ast_hash": "4211c4ef47f33a5545b082fc2b39b882",
     "semantic_hash": ""
   },
   "graphify/skills/vscode/references/update.md": {
-    "mtime": 1788513884.2528565,
-    "seen": 1788515058.087353,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.2444305,
     "ast_hash": "1ea7cfab6465577d9a3ced0b4497ff4a",
     "semantic_hash": ""
   },
   "graphify/skills/windows/references/add-watch.md": {
-    "mtime": 1788513884.2528565,
-    "seen": 1788515058.0873547,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.2444317,
     "ast_hash": "7d76707ff41226fa015c08456fe6d491",
     "semantic_hash": ""
   },
   "graphify/skills/windows/references/exports.md": {
-    "mtime": 1788513884.2528565,
-    "seen": 1788515058.0873559,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.2444327,
     "ast_hash": "5d7a5e7b68fcaaa14954a0e594b9fb17",
     "semantic_hash": ""
   },
   "graphify/skills/windows/references/extraction-spec.md": {
-    "mtime": 1788513884.2528565,
-    "seen": 1788515058.0873575,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.2444339,
     "ast_hash": "3b1b374ee1117e02980fb65f0c799232",
     "semantic_hash": ""
   },
   "graphify/skills/windows/references/github-and-merge.md": {
-    "mtime": 1788513884.2528565,
-    "seen": 1788515058.087359,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.2444353,
     "ast_hash": "9255221cbec9721849999c5242e8d9dc",
     "semantic_hash": ""
   },
   "graphify/skills/windows/references/hooks.md": {
-    "mtime": 1788513884.2528565,
-    "seen": 1788515058.0873606,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.2444367,
     "ast_hash": "3f545db6ce646650bb9de588f5512a27",
     "semantic_hash": ""
   },
   "graphify/skills/windows/references/query.md": {
-    "mtime": 1788513884.2528565,
-    "seen": 1788515058.0873616,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.2444384,
     "ast_hash": "6df4d71404a2cc47cdecb6bda997c16c",
     "semantic_hash": ""
   },
   "graphify/skills/windows/references/transcribe.md": {
-    "mtime": 1788513884.2582593,
-    "seen": 1788515058.0873628,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.2444398,
     "ast_hash": "4211c4ef47f33a5545b082fc2b39b882",
     "semantic_hash": ""
   },
   "graphify/skills/windows/references/update.md": {
-    "mtime": 1788513884.2582593,
-    "seen": 1788515058.0873644,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.244441,
     "ast_hash": "1ea7cfab6465577d9a3ced0b4497ff4a",
     "semantic_hash": ""
   },
@@ -4374,9 +4374,9 @@
     "semantic_hash": ""
   },
   "tools/skillgen/fragments/core/core.md": {
-    "mtime": 1788513884.0395906,
-    "seen": 1788515058.1036413,
-    "ast_hash": "43929270c75b2b63947fb3eb133f1634",
+    "mtime": 1788522801.8697863,
+    "seen": 1788522867.2638927,
+    "ast_hash": "6dc6861141deea1d8ea443dd716988c5",
     "semantic_hash": ""
   },
   "tools/skillgen/fragments/core/devin.md": {
@@ -4614,9 +4614,9 @@
     "semantic_hash": ""
   },
   "worked/rsl-siege-manager/graph.html": {
-    "mtime": 1788514837.3411732,
-    "seen": 1788515058.108423,
-    "ast_hash": "378e1bad57df5ce45fa12a73dfb16c9b",
+    "mtime": 1788522730.998375,
+    "seen": 1788522867.2690253,
+    "ast_hash": "4954d643293e8e9a081a747fe2026865",
     "semantic_hash": ""
   },
   "worked/rsl-siege-manager/review.md": {
@@ -4746,27 +4746,27 @@
     "semantic_hash": ""
   },
   ".opencode/skills/reverse-engineering-ddd/scripts/check_ddd_anchors.py": {
-    "mtime": 1788507749.6263034,
-    "seen": 1788515058.029989,
-    "ast_hash": "c725731f858e697a5e55f5d4ae8946b2",
+    "mtime": 1788519937.6253881,
+    "seen": 1788522867.184364,
+    "ast_hash": "0364078069e55c9e7388503b385ae0b9",
     "semantic_hash": ""
   },
   ".opencode/skills/reverse-engineering-ddd/SKILL.md": {
-    "mtime": 1788507749.6263034,
-    "seen": 1788515058.0827081,
-    "ast_hash": "504f0c069ca1d279fff1ed2b651c9726",
+    "mtime": 1788519737.0812328,
+    "seen": 1788522867.2394469,
+    "ast_hash": "0554d2dbea62b7deacebf74a422bfa03",
     "semantic_hash": ""
   },
   ".opencode/skills/reverse-engineering-ddd/help.md": {
-    "mtime": 1787821456.5685773,
-    "seen": 1787911788.757086,
-    "ast_hash": "54beff9aa0c75a8fd21f9c7e705105da",
+    "mtime": 1788519907.511583,
+    "seen": 1788522867.239449,
+    "ast_hash": "0d99aaa4abddb3da28511c4f4c569bde",
     "semantic_hash": ""
   },
   ".opencode/skills/reverse-engineering-ddd/references/audit-prompt.md": {
-    "mtime": 1787838401.4773347,
-    "seen": 1787911788.757088,
-    "ast_hash": "73626e97a6419973867833f72ebd2f6f",
+    "mtime": 1788519891.8827517,
+    "seen": 1788522867.2394514,
+    "ast_hash": "74601d882d31c8b09a7c87cde0801c10",
     "semantic_hash": ""
   },
   ".opencode/skills/reverse-engineering-ddd/references/business/ddd.md": {
@@ -4920,14 +4920,14 @@
     "semantic_hash": ""
   },
   "graphify/always_on/gemini-md.md": {
-    "mtime": 1788513884.2582593,
-    "seen": 1788515058.0869408,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.2440515,
     "ast_hash": "2b0df76c0e3672b2e8c2477811f5d3e3",
     "semantic_hash": ""
   },
   "graphify/always_on/kiro-steering.md": {
-    "mtime": 1788513884.2582593,
-    "seen": 1788515058.086942,
+    "mtime": 1788522813.6953895,
+    "seen": 1788522867.2440534,
     "ast_hash": "2c30ea6512ecb0bc913b4afc37f74870",
     "semantic_hash": ""
   },
@@ -4980,386 +4980,386 @@
     "semantic_hash": ""
   },
   "graphify/skills/amp/references/add-watch.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.0872068,
+    "mtime": 1788522813.6325426,
+    "seen": 1788522867.2443044,
     "ast_hash": "7d76707ff41226fa015c08456fe6d491",
     "semantic_hash": ""
   },
   "graphify/skills/amp/references/exports.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.087209,
+    "mtime": 1788522813.6325426,
+    "seen": 1788522867.2443056,
     "ast_hash": "5d7a5e7b68fcaaa14954a0e594b9fb17",
     "semantic_hash": ""
   },
   "graphify/skills/amp/references/extraction-spec.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.0872104,
+    "mtime": 1788522813.6325426,
+    "seen": 1788522867.2443078,
     "ast_hash": "3b1b374ee1117e02980fb65f0c799232",
     "semantic_hash": ""
   },
   "graphify/skills/amp/references/github-and-merge.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.087212,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2443094,
     "ast_hash": "9255221cbec9721849999c5242e8d9dc",
     "semantic_hash": ""
   },
   "graphify/skills/amp/references/hooks.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.0872133,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.244311,
     "ast_hash": "6651bb0182166c6eae41c3ca26bb0179",
     "semantic_hash": ""
   },
   "graphify/skills/amp/references/query.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.087215,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2443123,
     "ast_hash": "6df4d71404a2cc47cdecb6bda997c16c",
     "semantic_hash": ""
   },
   "graphify/skills/amp/references/transcribe.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.0872166,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2443132,
     "ast_hash": "4211c4ef47f33a5545b082fc2b39b882",
     "semantic_hash": ""
   },
   "graphify/skills/amp/references/update.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.0872178,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2443147,
     "ast_hash": "1ea7cfab6465577d9a3ced0b4497ff4a",
     "semantic_hash": ""
   },
   "graphify/skills/claw/references/add-watch.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.087239,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.244327,
     "ast_hash": "7d76707ff41226fa015c08456fe6d491",
     "semantic_hash": ""
   },
   "graphify/skills/claw/references/exports.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.0872402,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2443287,
     "ast_hash": "5d7a5e7b68fcaaa14954a0e594b9fb17",
     "semantic_hash": ""
   },
   "graphify/skills/claw/references/extraction-spec.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.0872416,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.24433,
     "ast_hash": "31f8b3619ce39f463f0b2706c4e0e5ed",
     "semantic_hash": ""
   },
   "graphify/skills/claw/references/github-and-merge.md": {
-    "mtime": 1788513884.2052383,
-    "seen": 1788515058.087243,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2443311,
     "ast_hash": "9255221cbec9721849999c5242e8d9dc",
     "semantic_hash": ""
   },
   "graphify/skills/claw/references/hooks.md": {
-    "mtime": 1788513884.2209525,
-    "seen": 1788515058.0872447,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2443326,
     "ast_hash": "f0c082037aa26bdc53861175bfa8d37c",
     "semantic_hash": ""
   },
   "graphify/skills/claw/references/query.md": {
-    "mtime": 1788513884.2209525,
-    "seen": 1788515058.087247,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2443337,
     "ast_hash": "6df4d71404a2cc47cdecb6bda997c16c",
     "semantic_hash": ""
   },
   "graphify/skills/claw/references/transcribe.md": {
-    "mtime": 1788513884.2209525,
-    "seen": 1788515058.0872483,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.244335,
     "ast_hash": "4211c4ef47f33a5545b082fc2b39b882",
     "semantic_hash": ""
   },
   "graphify/skills/claw/references/update.md": {
-    "mtime": 1788513884.2209525,
-    "seen": 1788515058.08725,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2443361,
     "ast_hash": "1ea7cfab6465577d9a3ced0b4497ff4a",
     "semantic_hash": ""
   },
   "graphify/skills/codex/references/add-watch.md": {
-    "mtime": 1788513884.2209525,
-    "seen": 1788515058.0872514,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2443376,
     "ast_hash": "7d76707ff41226fa015c08456fe6d491",
     "semantic_hash": ""
   },
   "graphify/skills/codex/references/exports.md": {
-    "mtime": 1788513884.2209525,
-    "seen": 1788515058.0872533,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.244339,
     "ast_hash": "5d7a5e7b68fcaaa14954a0e594b9fb17",
     "semantic_hash": ""
   },
   "graphify/skills/codex/references/extraction-spec.md": {
-    "mtime": 1788513884.2209525,
-    "seen": 1788515058.0872545,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.24434,
     "ast_hash": "31f8b3619ce39f463f0b2706c4e0e5ed",
     "semantic_hash": ""
   },
   "graphify/skills/codex/references/github-and-merge.md": {
-    "mtime": 1788513884.2209525,
-    "seen": 1788515058.0872557,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2443416,
     "ast_hash": "9255221cbec9721849999c5242e8d9dc",
     "semantic_hash": ""
   },
   "graphify/skills/codex/references/hooks.md": {
-    "mtime": 1788513884.2209525,
-    "seen": 1788515058.0872571,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2443428,
     "ast_hash": "600e79ae9884480c7176e2413d2fa368",
     "semantic_hash": ""
   },
   "graphify/skills/codex/references/query.md": {
-    "mtime": 1788513884.2209525,
-    "seen": 1788515058.0872583,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2443445,
     "ast_hash": "6df4d71404a2cc47cdecb6bda997c16c",
     "semantic_hash": ""
   },
   "graphify/skills/codex/references/transcribe.md": {
-    "mtime": 1788513884.2209525,
-    "seen": 1788515058.0872595,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2443461,
     "ast_hash": "4211c4ef47f33a5545b082fc2b39b882",
     "semantic_hash": ""
   },
   "graphify/skills/codex/references/update.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.0872612,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2443473,
     "ast_hash": "1ea7cfab6465577d9a3ced0b4497ff4a",
     "semantic_hash": ""
   },
   "graphify/skills/copilot/references/add-watch.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.0872624,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.244349,
     "ast_hash": "7d76707ff41226fa015c08456fe6d491",
     "semantic_hash": ""
   },
   "graphify/skills/copilot/references/exports.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.087264,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2443502,
     "ast_hash": "5d7a5e7b68fcaaa14954a0e594b9fb17",
     "semantic_hash": ""
   },
   "graphify/skills/copilot/references/extraction-spec.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.0872655,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.244352,
     "ast_hash": "3b1b374ee1117e02980fb65f0c799232",
     "semantic_hash": ""
   },
   "graphify/skills/copilot/references/github-and-merge.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.087267,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2443535,
     "ast_hash": "9255221cbec9721849999c5242e8d9dc",
     "semantic_hash": ""
   },
   "graphify/skills/copilot/references/hooks.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.087268,
+    "mtime": 1788522813.648224,
+    "seen": 1788522867.2443547,
     "ast_hash": "c01b44f1977d8151ab405241661fbfd0",
     "semantic_hash": ""
   },
   "graphify/skills/copilot/references/query.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.0872693,
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.244356,
     "ast_hash": "6df4d71404a2cc47cdecb6bda997c16c",
     "semantic_hash": ""
   },
   "graphify/skills/copilot/references/transcribe.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.0872712,
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.244357,
     "ast_hash": "4211c4ef47f33a5545b082fc2b39b882",
     "semantic_hash": ""
   },
   "graphify/skills/copilot/references/update.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.087273,
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.2443583,
     "ast_hash": "1ea7cfab6465577d9a3ced0b4497ff4a",
     "semantic_hash": ""
   },
   "graphify/skills/droid/references/add-watch.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.087275,
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.2443595,
     "ast_hash": "7d76707ff41226fa015c08456fe6d491",
     "semantic_hash": ""
   },
   "graphify/skills/droid/references/exports.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.0872762,
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.2443614,
     "ast_hash": "5d7a5e7b68fcaaa14954a0e594b9fb17",
     "semantic_hash": ""
   },
   "graphify/skills/droid/references/extraction-spec.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.0872774,
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.2443626,
     "ast_hash": "3b1b374ee1117e02980fb65f0c799232",
     "semantic_hash": ""
   },
   "graphify/skills/droid/references/github-and-merge.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.0872786,
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.2443635,
     "ast_hash": "9255221cbec9721849999c5242e8d9dc",
     "semantic_hash": ""
   },
   "graphify/skills/droid/references/hooks.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.08728,
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.2443647,
     "ast_hash": "95e5985a43eff7ae7d29cbac15a4bedf",
     "semantic_hash": ""
   },
   "graphify/skills/droid/references/query.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.087282,
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.244366,
     "ast_hash": "6df4d71404a2cc47cdecb6bda997c16c",
     "semantic_hash": ""
   },
   "graphify/skills/droid/references/transcribe.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.0872836,
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.2443671,
     "ast_hash": "4211c4ef47f33a5545b082fc2b39b882",
     "semantic_hash": ""
   },
   "graphify/skills/droid/references/update.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.087285,
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.2443683,
     "ast_hash": "1ea7cfab6465577d9a3ced0b4497ff4a",
     "semantic_hash": ""
   },
   "graphify/skills/kilo/references/add-watch.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.087286,
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.2443697,
     "ast_hash": "7d76707ff41226fa015c08456fe6d491",
     "semantic_hash": ""
   },
   "graphify/skills/kilo/references/exports.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.0872872,
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.2443707,
     "ast_hash": "5d7a5e7b68fcaaa14954a0e594b9fb17",
     "semantic_hash": ""
   },
   "graphify/skills/kilo/references/extraction-spec.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.0872886,
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.244372,
     "ast_hash": "3b1b374ee1117e02980fb65f0c799232",
     "semantic_hash": ""
   },
   "graphify/skills/kilo/references/github-and-merge.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.08729,
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.2443736,
     "ast_hash": "9255221cbec9721849999c5242e8d9dc",
     "semantic_hash": ""
   },
   "graphify/skills/kilo/references/hooks.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.0872912,
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.2443748,
     "ast_hash": "3f545db6ce646650bb9de588f5512a27",
     "semantic_hash": ""
   },
   "graphify/skills/kilo/references/query.md": {
-    "mtime": 1788513884.2268207,
-    "seen": 1788515058.0872924,
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.2443764,
     "ast_hash": "6df4d71404a2cc47cdecb6bda997c16c",
     "semantic_hash": ""
   },
   "graphify/skills/kilo/references/transcribe.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0872934,
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.244378,
     "ast_hash": "4211c4ef47f33a5545b082fc2b39b882",
     "semantic_hash": ""
   },
   "graphify/skills/kilo/references/update.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.087295,
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.2443793,
     "ast_hash": "1ea7cfab6465577d9a3ced0b4497ff4a",
     "semantic_hash": ""
   },
   "graphify/skills/kiro/references/add-watch.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0872962,
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.2443807,
     "ast_hash": "7d76707ff41226fa015c08456fe6d491",
     "semantic_hash": ""
   },
   "graphify/skills/kiro/references/exports.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0872974,
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.2443817,
     "ast_hash": "5d7a5e7b68fcaaa14954a0e594b9fb17",
     "semantic_hash": ""
   },
   "graphify/skills/kiro/references/extraction-spec.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.087299,
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.2443833,
     "ast_hash": "31f8b3619ce39f463f0b2706c4e0e5ed",
     "semantic_hash": ""
   },
   "graphify/skills/kiro/references/github-and-merge.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0873003,
+    "mtime": 1788522813.6639543,
+    "seen": 1788522867.2443845,
     "ast_hash": "9255221cbec9721849999c5242e8d9dc",
     "semantic_hash": ""
   },
   "graphify/skills/kiro/references/hooks.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0873017,
+    "mtime": 1788522813.6796598,
+    "seen": 1788522867.2443857,
     "ast_hash": "3f545db6ce646650bb9de588f5512a27",
     "semantic_hash": ""
   },
   "graphify/skills/kiro/references/query.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0873032,
+    "mtime": 1788522813.6796598,
+    "seen": 1788522867.2443871,
     "ast_hash": "6df4d71404a2cc47cdecb6bda997c16c",
     "semantic_hash": ""
   },
   "graphify/skills/kiro/references/transcribe.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0873046,
+    "mtime": 1788522813.6796598,
+    "seen": 1788522867.244388,
     "ast_hash": "4211c4ef47f33a5545b082fc2b39b882",
     "semantic_hash": ""
   },
   "graphify/skills/kiro/references/update.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0873058,
+    "mtime": 1788522813.6796598,
+    "seen": 1788522867.244389,
     "ast_hash": "1ea7cfab6465577d9a3ced0b4497ff4a",
     "semantic_hash": ""
   },
   "graphify/skills/pi/references/add-watch.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0873175,
+    "mtime": 1788522813.6796598,
+    "seen": 1788522867.2444007,
     "ast_hash": "7d76707ff41226fa015c08456fe6d491",
     "semantic_hash": ""
   },
   "graphify/skills/pi/references/exports.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0873191,
+    "mtime": 1788522813.6796598,
+    "seen": 1788522867.2444024,
     "ast_hash": "5d7a5e7b68fcaaa14954a0e594b9fb17",
     "semantic_hash": ""
   },
   "graphify/skills/pi/references/extraction-spec.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0873206,
+    "mtime": 1788522813.6796598,
+    "seen": 1788522867.2444046,
     "ast_hash": "31f8b3619ce39f463f0b2706c4e0e5ed",
     "semantic_hash": ""
   },
   "graphify/skills/pi/references/github-and-merge.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.087322,
+    "mtime": 1788522813.6796598,
+    "seen": 1788522867.2444057,
     "ast_hash": "9255221cbec9721849999c5242e8d9dc",
     "semantic_hash": ""
   },
   "graphify/skills/pi/references/hooks.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.087324,
+    "mtime": 1788522813.6796598,
+    "seen": 1788522867.2444067,
     "ast_hash": "3f545db6ce646650bb9de588f5512a27",
     "semantic_hash": ""
   },
   "graphify/skills/pi/references/query.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0873249,
+    "mtime": 1788522813.6796598,
+    "seen": 1788522867.2444081,
     "ast_hash": "6df4d71404a2cc47cdecb6bda997c16c",
     "semantic_hash": ""
   },
   "graphify/skills/pi/references/transcribe.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.0873263,
+    "mtime": 1788522813.6796598,
+    "seen": 1788522867.2444098,
     "ast_hash": "4211c4ef47f33a5545b082fc2b39b882",
     "semantic_hash": ""
   },
   "graphify/skills/pi/references/update.md": {
-    "mtime": 1788513884.2371342,
-    "seen": 1788515058.087328,
+    "mtime": 1788522813.6796598,
+    "seen": 1788522867.2444115,
     "ast_hash": "1ea7cfab6465577d9a3ced0b4497ff4a",
     "semantic_hash": ""
   },
@@ -5382,27 +5382,123 @@
     "semantic_hash": ""
   },
   "graphify/learn.py": {
-    "mtime": 1788514697.367141,
-    "seen": 1788515058.0364084,
-    "ast_hash": "51dee3e5eb717d9fd32ab89e2ed6ec92",
+    "mtime": 1788522663.937818,
+    "seen": 1788522867.1921315,
+    "ast_hash": "61a48349b657908eb4727dec54e15f36",
     "semantic_hash": ""
   },
   "tests/test_learn.py": {
-    "mtime": 1788514721.200199,
-    "seen": 1788515058.068306,
-    "ast_hash": "427f9618730d65e05f07608680748282",
+    "mtime": 1788521422.4849093,
+    "seen": 1788522867.2246463,
+    "ast_hash": "677d8579406e4396590042f3f7c6eda4",
     "semantic_hash": ""
   },
   "worked/rsl-siege-manager/learn.json": {
-    "mtime": 1788514837.2004373,
-    "seen": 1788515058.0821047,
-    "ast_hash": "e903c60ad1c04bd6c0d570d3c7381387",
+    "mtime": 1788522730.8542824,
+    "seen": 1788522867.2389076,
+    "ast_hash": "6677c404d1a84001dea1e64c90d1735e",
     "semantic_hash": ""
   },
   "learn-tab-final.png": {
     "mtime": 1788514766.6576686,
     "seen": 1788515058.109203,
     "ast_hash": "b178aa8a3238ccc139e3a94ca1845762",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/reverse-engineering-ddd/references/impact-analysis-prompt.md": {
+    "mtime": 1788519496.6763387,
+    "seen": 1788522867.239609,
+    "ast_hash": "f1d8e1a0d53f1b1eaea43054621c647c",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/reverse-engineering-ddd/references/incremental-merge.md": {
+    "mtime": 1788519537.5231574,
+    "seen": 1788522867.2396114,
+    "ast_hash": "496b45e4e4a7754e1ad13d97ac3bc3f4",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/reverse-engineering-ddd/templates/delta/context-map.delta.md": {
+    "mtime": 1788519572.5793636,
+    "seen": 1788522867.240653,
+    "ast_hash": "58e5d6ec6f0e10b06374fe52d61ce998",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/reverse-engineering-ddd/templates/delta/features/business-flow.delta.md": {
+    "mtime": 1788519600.989009,
+    "seen": 1788522867.2406552,
+    "ast_hash": "a5bd9701821efab26ac5a70bfb16ff1f",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/reverse-engineering-ddd/templates/delta/features/contracts.delta.md": {
+    "mtime": 1788519584.8346112,
+    "seen": 1788522867.2406564,
+    "ast_hash": "9215655c5a49ba8474c61cdd0f0247db",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/reverse-engineering-ddd/templates/delta/features/domain-events.delta.md": {
+    "mtime": 1788519578.8101797,
+    "seen": 1788522867.2406583,
+    "ast_hash": "afd63a926669e9a83769358196e75090",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/reverse-engineering-ddd/templates/delta/features/domain-model.delta.md": {
+    "mtime": 1788519616.7657168,
+    "seen": 1788522867.2406597,
+    "ast_hash": "4d031f1bc511dc40718e2914bec58e93",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/reverse-engineering-ddd/templates/delta/features/invariants.delta.md": {
+    "mtime": 1788519575.4540033,
+    "seen": 1788522867.240661,
+    "ast_hash": "0f9bbf62e8191563742d61c5e33c96a2",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/reverse-engineering-ddd/templates/delta/features/technical-constraints.delta.md": {
+    "mtime": 1788519623.5583365,
+    "seen": 1788522867.2406623,
+    "ast_hash": "9f454950c7661ceb6817e6981b7efe20",
+    "semantic_hash": ""
+  },
+  ".opencode/skills/reverse-engineering-ddd/templates/delta/impact-analysis.md": {
+    "mtime": 1788519630.1784096,
+    "seen": 1788522867.2406635,
+    "ast_hash": "b14012720232978df6fae3760ce9399f",
+    "semantic_hash": ""
+  },
+  "worked/rsl-siege-manager/features/feat_do_run_migrations_.md": {
+    "mtime": 1788522730.8542824,
+    "seen": 1788522867.269012,
+    "ast_hash": "cb114751d6a404429fef2a62a994cccf",
+    "semantic_hash": ""
+  },
+  "worked/rsl-siege-manager/features/feat_run_async_migrations_.md": {
+    "mtime": 1788522730.8542824,
+    "seen": 1788522867.269015,
+    "ast_hash": "3d37d7e0c1076e79bc289d1156cb62fe",
+    "semantic_hash": ""
+  },
+  "worked/rsl-siege-manager/features/feat_run_discord_client_.md": {
+    "mtime": 1788522730.8542824,
+    "seen": 1788522867.2690184,
+    "ast_hash": "1a413ea1f34f732fd8670c82f5c44ef6",
+    "semantic_hash": ""
+  },
+  "worked/rsl-siege-manager/features/feat_run_http_server_.md": {
+    "mtime": 1788522730.8542824,
+    "seen": 1788522867.2690198,
+    "ast_hash": "078940d493a24657085b9c8851b058ff",
+    "semantic_hash": ""
+  },
+  "worked/rsl-siege-manager/features/feat_run_migrations_offline_.md": {
+    "mtime": 1788522730.8542824,
+    "seen": 1788522867.2690213,
+    "ast_hash": "91b2d822279aa7ed7b7ee5a28d95650d",
+    "semantic_hash": ""
+  },
+  "worked/rsl-siege-manager/features/feat_run_migrations_online_.md": {
+    "mtime": 1788522730.8542824,
+    "seen": 1788522867.2690225,
+    "ast_hash": "4ec6bf56e3bcf6541d82504c4e716dc7",
     "semantic_hash": ""
   }
 }

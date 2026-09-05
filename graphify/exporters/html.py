@@ -226,7 +226,7 @@ def _html_styles() -> str:
   /* 学习视图容器 */
   .lview { flex:1; display:none; min-width:0; overflow:hidden; animation:learnViewIn 240ms ease-out; }
   .lview.active { display:flex; }
-  @keyframes learnViewIn {{ from {{ opacity:0; transform:translateY(6px); }} to {{ opacity:1; transform:translateY(0); }} }}
+  @keyframes learnViewIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
 
   /* 业务流视角 */
   .stage { flex:1; display:flex; flex-direction:column; min-width:0; }
@@ -266,75 +266,143 @@ def _html_styles() -> str:
   .ctx-intent { font-size:0.75rem; line-height:1.6; color:var(--gf-text-secondary); margin:8px 0; }
   .learn-lbl { font-size:0.5625rem; color:var(--gf-text-muted); text-transform:uppercase; letter-spacing:0.06em; font-weight:600; display:block; margin-bottom:4px; }
   .anchor-chip { display:inline-flex; align-items:center; gap:3px; font-family:var(--gf-font-mono); font-size:0.5625rem; padding:2px 7px; margin:0 3px 3px 0; border-radius:4px; border:1px solid var(--gf-border-medium); background:var(--gf-panel); color:var(--gf-text-secondary); cursor:pointer; transition:all var(--gf-transition); }
-  .anchor-chip:hover {{ border-color:var(--gf-accent); color:var(--gf-accent-bright); }}
-  .anchor-chip::before {{ content:''; width:4px; height:4px; border-radius:50%; background:var(--gf-accent); }}
-  .rf-item { display:flex; align-items:center; gap:8px; padding:8px 12px; margin-bottom:8px; background:var(--gf-panel); border:1px solid var(--gf-border-subtle); border-radius:8px; cursor:pointer; font-size:0.75rem; color:var(--gf-text-secondary); width:100%; text-align:left; font-family:var(--gf-font-body); transition:all var(--gf-transition); }}
-  .rf-item:hover {{ background:var(--gf-elevated); }}
-  .rf-item .go {{ margin-left:auto; color:var(--gf-text-faint); }}
-  .ctx-div {{ height:1px; background:var(--gf-border-subtle); margin:12px 0; }}
+  .anchor-chip:hover { border-color:var(--gf-accent); color:var(--gf-accent-bright); }
+  .anchor-chip::before { content:''; width:4px; height:4px; border-radius:50%; background:var(--gf-accent); }
+  .rf-item { display:flex; align-items:center; gap:8px; padding:8px 12px; margin-bottom:8px; background:var(--gf-panel); border:1px solid var(--gf-border-subtle); border-radius:8px; cursor:pointer; font-size:0.75rem; color:var(--gf-text-secondary); width:100%; text-align:left; font-family:var(--gf-font-body); transition:all var(--gf-transition); }
+  .rf-item:hover { background:var(--gf-elevated); }
+  .rf-item .go { margin-left:auto; color:var(--gf-text-faint); }
+  .ctx-div { height:1px; background:var(--gf-border-subtle); margin:12px 0; }
 
   /* 代码架构视角 */
-  .arch-center {{ flex:1; overflow-y:auto; padding:20px 24px; display:flex; flex-direction:column; gap:20px; }}
-  .arch-card {{ background:var(--gf-surface); border:1px solid var(--gf-border-subtle); border-radius:12px; padding:16px; }}
-  .arch-card h3 {{ font-family:var(--gf-font-heading); font-size:0.875rem; font-weight:600; margin-bottom:12px; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }}
-  .arch-card h3 .cnt {{ font-family:var(--gf-font-mono); font-size:0.5625rem; color:var(--gf-text-faint); font-weight:400; }}
-  .dir-tree {{ font-family:var(--gf-font-mono); font-size:0.75rem; line-height:1.9; color:var(--gf-text-secondary); }}
-  .dir-tree .dir {{ color:var(--gf-accent-bright); font-weight:600; }}
-  .dir-tree .row {{ display:flex; gap:8px; padding:0 6px; margin:0 -2px; border-radius:4px; cursor:pointer; }}
-  .dir-tree .row::before {{ content:''; width:5px; height:5px; border-radius:2px; background:var(--gf-border-strong); flex-shrink:0; margin-top:8px; }}
-  .dir-tree .row.dir-row::before {{ border-radius:50%; background:var(--gf-accent-dim); }}
-  .dir-tree .row:hover {{ background:var(--gf-elevated); }}
-  .dir-tree .ncnt {{ margin-left:auto; color:var(--gf-text-faint); font-size:0.5625rem; white-space:nowrap; }}
-  .feat-grid {{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }}
-  .feat-card {{ background:var(--gf-panel); border:1px solid var(--gf-border-subtle); border-radius:8px; padding:12px; cursor:pointer; transition:all var(--gf-transition); }}
-  .feat-card:hover {{ transform:translateY(-1px); box-shadow:var(--gf-shadow-md); border-color:rgba(78,121,167,0.4); }}
-  .feat-name {{ font-size:0.75rem; font-weight:600; color:var(--gf-text-primary); display:flex; align-items:center; gap:6px; }}
-  .feat-name .go {{ margin-left:auto; color:var(--gf-accent); font-size:0.625rem; opacity:0; transition:opacity var(--gf-transition); }}
-  .feat-card:hover .feat-name .go {{ opacity:1; }}
-  .feat-desc {{ font-size:0.625rem; color:var(--gf-text-muted); margin:4px 0; line-height:1.5; }}
-  .feat-meta {{ font-family:var(--gf-font-mono); font-size:0.5625rem; color:var(--gf-text-faint); }}
-  .arch-right {{ width:42%; flex-shrink:0; border-left:1px solid var(--gf-border-subtle); display:flex; flex-direction:column; background:var(--gf-root); }}
-  .arch-right .panel-head {{ padding:12px 16px; border-bottom:1px solid var(--gf-border-subtle); background:var(--gf-surface); }}
-  .arch-right .diagram-scroll {{ flex:1; overflow:auto; padding:16px; }}
-  .arch-right .cap {{ padding:8px 16px; font-family:var(--gf-font-mono); font-size:0.5625rem; color:var(--gf-text-muted); border-top:1px solid var(--gf-border-subtle); background:var(--gf-surface); }}
+  .arch-center { flex:1; overflow-y:auto; padding:20px 24px; display:flex; flex-direction:column; gap:20px; }
+  .arch-card { background:var(--gf-surface); border:1px solid var(--gf-border-subtle); border-radius:12px; padding:16px; }
+  .arch-card h3 { font-family:var(--gf-font-heading); font-size:0.875rem; font-weight:600; margin-bottom:12px; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+  .arch-card h3 .cnt { font-family:var(--gf-font-mono); font-size:0.5625rem; color:var(--gf-text-faint); font-weight:400; }
+  .dir-tree { font-family:var(--gf-font-mono); font-size:0.75rem; line-height:1.9; color:var(--gf-text-secondary); }
+  .dir-tree .dir { color:var(--gf-accent-bright); font-weight:600; }
+  .dir-tree .row { display:flex; gap:8px; padding:0 6px; margin:0 -2px; border-radius:4px; cursor:pointer; }
+  .dir-tree .row::before { content:''; width:5px; height:5px; border-radius:2px; background:var(--gf-border-strong); flex-shrink:0; margin-top:8px; }
+  .dir-tree .row.dir-row::before { border-radius:50%; background:var(--gf-accent-dim); }
+  .dir-tree .row:hover { background:var(--gf-elevated); }
+  .dir-tree .ncnt { margin-left:auto; color:var(--gf-text-faint); font-size:0.5625rem; white-space:nowrap; }
+  .feat-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+  .feat-card { background:var(--gf-panel); border:1px solid var(--gf-border-subtle); border-radius:8px; padding:12px; cursor:pointer; transition:all var(--gf-transition); }
+  .feat-card:hover { transform:translateY(-1px); box-shadow:var(--gf-shadow-md); border-color:rgba(78,121,167,0.4); }
+  .feat-name { font-size:0.75rem; font-weight:600; color:var(--gf-text-primary); display:flex; align-items:center; gap:6px; }
+  .feat-name .go { margin-left:auto; color:var(--gf-accent); font-size:0.625rem; opacity:0; transition:opacity var(--gf-transition); }
+  .feat-card:hover .feat-name .go { opacity:1; }
+  .feat-desc { font-size:0.625rem; color:var(--gf-text-muted); margin:4px 0; line-height:1.5; }
+  .feat-meta { font-family:var(--gf-font-mono); font-size:0.5625rem; color:var(--gf-text-faint); }
+  .arch-right { width:42%; flex-shrink:0; border-left:1px solid var(--gf-border-subtle); display:flex; flex-direction:column; background:var(--gf-root); }
+  .arch-right .panel-head { padding:12px 16px; border-bottom:1px solid var(--gf-border-subtle); background:var(--gf-surface); }
+  .arch-right .diagram-scroll { flex:1; overflow:auto; padding:16px; }
+  .arch-right .cap { padding:8px 16px; font-family:var(--gf-font-mono); font-size:0.5625rem; color:var(--gf-text-muted); border-top:1px solid var(--gf-border-subtle); background:var(--gf-surface); }
 
   /* 特性下钻视角 */
-  .doc-scroll {{ flex:1; overflow-y:auto; }}
-  .doc {{ max-width:820px; margin:0 auto; padding:24px 24px 140px; }}
-  .doc-header {{ display:flex; align-items:center; gap:12px; margin-bottom:8px; }}
-  .doc-header h1 {{ font-family:var(--gf-font-heading); font-size:1.75rem; font-weight:700; }}
-  .md-toggle {{ margin-left:auto; display:flex; background:var(--gf-panel); border-radius:8px; padding:2px; }}
-  .md-toggle button {{ border:none; background:transparent; padding:4px 12px; font-family:var(--gf-font-mono); font-size:0.625rem; color:var(--gf-text-muted); border-radius:6px; cursor:pointer; }}
-  .md-toggle button.active {{ background:var(--gf-surface); color:var(--gf-accent-bright); box-shadow:var(--gf-shadow-sm); }}
-  .doc-meta {{ display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }}
-  .doc h2 {{ font-family:var(--gf-font-heading); font-size:1.0625rem; font-weight:600; margin:24px 0 8px; display:flex; align-items:baseline; gap:8px; }}
-  .doc h2 .no {{ font-family:var(--gf-font-mono); font-size:0.625rem; color:var(--gf-accent); }}
-  .doc p {{ font-size:0.8125rem; line-height:1.7; color:var(--gf-text-secondary); margin-bottom:12px; }}
-  .doc ul {{ margin:0 0 12px 16px; }}
-  .doc li {{ font-size:0.8125rem; line-height:1.7; color:var(--gf-text-secondary); margin-bottom:8px; }}
-  .tp-list {{ display:flex; flex-direction:column; gap:8px; margin:12px 0; }}
-  .tp-item {{ background:var(--gf-surface); border:1px solid var(--gf-border-subtle); border-radius:8px; padding:12px 16px; transition:border-color var(--gf-transition); }}
-  .tp-item:hover {{ border-color:rgba(78,121,167,0.35); }}
-  .tp-name {{ font-size:0.75rem; font-weight:600; color:var(--gf-text-primary); }}
-  .tp-why {{ font-size:0.75rem; color:var(--gf-text-secondary); line-height:1.6; margin:3px 0 6px; }}
-  .code-block {{ background:var(--gf-panel); border:1px solid var(--gf-border-subtle); border-radius:8px; overflow:hidden; margin:12px 0; }}
-  .code-block .cb-head {{ display:flex; align-items:center; padding:6px 12px; border-bottom:1px solid var(--gf-border-subtle); font-family:var(--gf-font-mono); font-size:0.5625rem; color:var(--gf-text-muted); background:var(--gf-surface); gap:6px; }}
-  .code-block .cb-head .fn {{ color:var(--gf-accent-bright); }}
-  .code-block .cb-head .tier {{ font-size:0.5rem; padding:1px 6px; border-radius:99px; background:var(--gf-status-ambiguous-bg); color:var(--gf-status-ambiguous); margin-left:auto; }}
-  .code-block pre {{ font-family:var(--gf-font-mono); font-size:0.6875rem; line-height:1.7; padding:8px 0; overflow-x:auto; color:var(--gf-text-secondary); margin:0; }}
-  .cl {{ display:flex; gap:12px; padding:0 12px; white-space:pre; }}
-  .cl .ln {{ color:var(--gf-text-faint); width:24px; text-align:right; flex-shrink:0; user-select:none; }}
-  .cl.focal {{ background:rgba(78,121,167,0.08); box-shadow:inset 2px 0 0 var(--gf-accent); }}
-  .cl.focal .ln {{ color:var(--gf-accent-bright); font-weight:600; }}
-  .cl .note {{ color:var(--gf-status-ambiguous); font-style:italic; }}
-  .doc .mermaid {{ background:var(--gf-panel); border:1px solid var(--gf-border-subtle); border-radius:12px; padding:12px; margin:12px 0; display:flex; justify-content:center; overflow-x:auto; }}
-  .md-src {{ display:none; font-family:var(--gf-font-mono); font-size:0.6875rem; line-height:1.7; color:var(--gf-text-secondary); white-space:pre-wrap; background:var(--gf-panel); border:1px solid var(--gf-border-subtle); border-radius:12px; padding:16px; }}
-  .doc-wrap.show-src .doc-render {{ display:none; }}
-  .doc-wrap.show-src .md-src {{ display:block; }}
-  .doc-rail {{ width:280px; flex-shrink:0; border-left:1px solid var(--gf-border-subtle); background:var(--gf-surface); overflow-y:auto; padding:16px; }}
-  .rail-item {{ display:flex; align-items:center; gap:8px; padding:4px 8px; font-size:0.6875rem; color:var(--gf-text-secondary); border-radius:4px; cursor:pointer; border:none; border-left:2px solid transparent; background:transparent; width:100%; text-align:left; font-family:var(--gf-font-body); transition:all var(--gf-transition); }}
-  .rail-item:hover {{ background:var(--gf-elevated); border-left-color:var(--gf-accent); }}
-  .rail-item .no {{ font-family:var(--gf-font-mono); font-size:0.5625rem; color:var(--gf-accent); width:16px; }}
+  .doc-scroll { flex:1; overflow-y:auto; }
+  .doc { max-width:820px; margin:0 auto; padding:24px 24px 140px; }
+  .doc-header { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
+  .doc-header h1 { font-family:var(--gf-font-heading); font-size:1.75rem; font-weight:700; }
+  .md-toggle { margin-left:auto; display:flex; background:var(--gf-panel); border-radius:8px; padding:2px; }
+  .md-toggle button { border:none; background:transparent; padding:4px 12px; font-family:var(--gf-font-mono); font-size:0.625rem; color:var(--gf-text-muted); border-radius:6px; cursor:pointer; }
+  .md-toggle button.active { background:var(--gf-surface); color:var(--gf-accent-bright); box-shadow:var(--gf-shadow-sm); }
+  .doc-meta { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
+  .doc h2 { font-family:var(--gf-font-heading); font-size:1.0625rem; font-weight:600; margin:24px 0 8px; display:flex; align-items:baseline; gap:8px; }
+  .doc h2 .no { font-family:var(--gf-font-mono); font-size:0.625rem; color:var(--gf-accent); }
+  .doc p { font-size:0.8125rem; line-height:1.7; color:var(--gf-text-secondary); margin-bottom:12px; }
+  .doc ul { margin:0 0 12px 16px; }
+  .doc li { font-size:0.8125rem; line-height:1.7; color:var(--gf-text-secondary); margin-bottom:8px; }
+  .tp-list { display:flex; flex-direction:column; gap:8px; margin:12px 0; }
+  .tp-item { background:var(--gf-surface); border:1px solid var(--gf-border-subtle); border-radius:8px; padding:12px 16px; transition:border-color var(--gf-transition); }
+  .tp-item:hover { border-color:rgba(78,121,167,0.35); }
+  .tp-name { font-size:0.75rem; font-weight:600; color:var(--gf-text-primary); }
+  .tp-why { font-size:0.75rem; color:var(--gf-text-secondary); line-height:1.6; margin:3px 0 6px; }
+  .code-block { background:var(--gf-panel); border:1px solid var(--gf-border-subtle); border-radius:8px; overflow:hidden; margin:12px 0; }
+  .code-block .cb-head { display:flex; align-items:center; padding:6px 12px; border-bottom:1px solid var(--gf-border-subtle); font-family:var(--gf-font-mono); font-size:0.5625rem; color:var(--gf-text-muted); background:var(--gf-surface); gap:6px; }
+  .code-block .cb-head .fn { color:var(--gf-accent-bright); }
+  .code-block .cb-head .tier { font-size:0.5rem; padding:1px 6px; border-radius:99px; background:var(--gf-status-ambiguous-bg); color:var(--gf-status-ambiguous); margin-left:auto; }
+  .code-block pre { font-family:var(--gf-font-mono); font-size:0.6875rem; line-height:1.7; padding:8px 0; overflow-x:auto; color:var(--gf-text-secondary); margin:0; }
+  .cl { display:flex; gap:12px; padding:0 12px; white-space:pre; }
+  .cl .ln { color:var(--gf-text-faint); width:24px; text-align:right; flex-shrink:0; user-select:none; }
+  .cl.focal { background:rgba(78,121,167,0.08); box-shadow:inset 2px 0 0 var(--gf-accent); }
+  .cl.focal .ln { color:var(--gf-accent-bright); font-weight:600; }
+  .cl .note { color:var(--gf-status-ambiguous); font-style:italic; }
+  .doc .mermaid { background:var(--gf-panel); border:1px solid var(--gf-border-subtle); border-radius:12px; padding:12px; margin:12px 0; display:flex; justify-content:center; overflow-x:auto; }
+  .md-src { display:none; font-family:var(--gf-font-mono); font-size:0.6875rem; line-height:1.7; color:var(--gf-text-secondary); white-space:pre-wrap; background:var(--gf-panel); border:1px solid var(--gf-border-subtle); border-radius:12px; padding:16px; }
+  .doc-wrap.show-src .doc-render { display:none; }
+  .doc-wrap.show-src .md-src { display:block; }
+  .doc-rail { width:280px; flex-shrink:0; border-left:1px solid var(--gf-border-subtle); background:var(--gf-surface); overflow-y:auto; padding:16px; }
+  .rail-item { display:flex; align-items:center; gap:8px; padding:4px 8px; font-size:0.6875rem; color:var(--gf-text-secondary); border-radius:4px; cursor:pointer; border:none; border-left:2px solid transparent; background:transparent; width:100%; text-align:left; font-family:var(--gf-font-body); transition:all var(--gf-transition); }
+  .rail-item:hover { background:var(--gf-elevated); border-left-color:var(--gf-accent); }
+  .rail-item .no { font-family:var(--gf-font-mono); font-size:0.5625rem; color:var(--gf-accent); width:16px; }
+
+  /* Learn v3: 图谱 / 项目导览 / 业务领域 新视角 */
+ .project-summary { padding:12px 16px; border-bottom:1px solid var(--gf-border-subtle); }
+ .project-summary .ps-title { font-family:var(--gf-font-heading); font-size:0.8125rem; font-weight:600; color:var(--gf-text-primary); }
+ .graph-hint { padding:16px 24px; background:var(--gf-elevated); border-bottom:1px solid var(--gf-border-subtle); font-size:0.75rem; color:var(--gf-text-secondary); line-height:1.6; display:flex; align-items:center; gap:8px; }
+ .graph-hint::before { content:''; width:6px; height:6px; border-radius:50%; background:var(--gf-accent); flex-shrink:0; }
+ /* 图谱视图切换按钮（学习页右上角） */
+ .learn-graph-toggle { position:absolute; top:8px; right:12px; z-index:10; display:flex; align-items:center; gap:5px; padding:5px 10px; border:1px solid var(--gf-border-medium); background:var(--gf-surface); color:var(--gf-text-secondary); border-radius:6px; font-size:0.6875rem; font-weight:500; cursor:pointer; transition:all var(--gf-transition); }
+ .learn-graph-toggle:hover { background:var(--gf-elevated); color:var(--gf-accent-bright); border-color:var(--gf-accent-dim); }
+ /* 图谱视图覆盖层 */
+ .learn-graph-overlay { position:absolute; top:0; left:0; right:0; bottom:0; z-index:20; background:var(--gf-root); display:flex; flex-direction:column; }
+ .lgo-header { display:flex; align-items:center; gap:12px; padding:8px 16px; border-bottom:1px solid var(--gf-border-medium); background:var(--gf-surface); flex-shrink:0; }
+ .lgo-title { font-family:var(--gf-font-heading); font-size:0.8125rem; font-weight:600; color:var(--gf-text-primary); }
+ .lgo-search { flex:1; max-width:300px; padding:4px 8px; border:1px solid var(--gf-border-medium); border-radius:4px; font-size:0.75rem; background:var(--gf-surface); color:var(--gf-text-primary); }
+ .lgo-close { padding:4px 10px; border:1px solid var(--gf-border-medium); background:var(--gf-surface); color:var(--gf-text-secondary); border-radius:4px; font-size:0.6875rem; cursor:pointer; }
+ .lgo-close:hover { background:var(--gf-elevated); color:var(--gf-text-primary); }
+ .lgo-body { flex:1; display:flex; overflow:hidden; }
+ .lgo-canvas { flex:1; overflow:hidden; background:var(--gf-root); }
+ .lgo-detail { width:280px; border-left:1px solid var(--gf-border-medium); background:var(--gf-surface); overflow-y:auto; padding:16px; flex-shrink:0; }
+ .lgo-detail-hint { font-size:0.75rem; color:var(--gf-text-muted); text-align:center; padding:40px 0; }
+ .lgo-detail-header { font-family:var(--gf-font-heading); font-size:0.875rem; font-weight:600; color:var(--gf-text-primary); margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--gf-border-subtle); }
+ .lgo-detail-row { display:flex; flex-direction:column; gap:2px; margin-bottom:10px; }
+ .lgo-detail-row .lgo-label { font-size:0.625rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--gf-text-faint); font-weight:600; }
+ .lgo-detail-row span:last-child { font-size:0.75rem; color:var(--gf-text-secondary); line-height:1.5; }
+ .lgo-detail-row.lgo-note { background:rgba(78,121,167,0.06); border-radius:6px; padding:8px; }
+ .lgo-detail-row.lgo-note .lgo-label { color:var(--gf-accent); }
+  .persp-search { margin:12px 16px; }
+  .persp-search input { width:100%; padding:6px 10px; border:1px solid var(--gf-border-medium); border-radius:8px; background:var(--gf-panel); font-size:0.75rem; color:var(--gf-text-primary); outline:none; font-family:var(--gf-font-body); }
+  .persp-search input:focus { border-color:var(--gf-accent); box-shadow:0 0 0 2px var(--gf-accent-glow); }
+  .node-search-list { flex:1; overflow-y:auto; padding:0 8px 8px; }
+  .node-search-item { display:flex; align-items:center; gap:8px; padding:5px 10px; border-radius:6px; cursor:pointer; font-size:0.75rem; color:var(--gf-text-secondary); transition:background var(--gf-transition); border:none; background:transparent; width:100%; text-align:left; font-family:var(--gf-font-body); }
+  .node-search-item:hover { background:var(--gf-elevated); color:var(--gf-accent-bright); }
+  .node-search-item .ns-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+  .node-search-item .ns-label { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .node-search-item .ns-meta { font-family:var(--gf-font-mono); font-size:0.5625rem; color:var(--gf-text-faint); }
+  .difficulty-badge { display:inline-flex; align-items:center; font-family:var(--gf-font-mono); font-size:0.5625rem; font-weight:600; padding:2px 8px; border-radius:99px; margin-left:8px; vertical-align:middle; }
+  .difficulty-simple { background:var(--gf-status-extracted-bg); color:var(--gf-status-extracted); }
+  .difficulty-standard { background:var(--gf-status-inferred-bg); color:var(--gf-status-inferred); }
+  .difficulty-complex { background:var(--gf-status-ambiguous-bg); color:var(--gf-status-ambiguous); }
+  .entry-point-item { display:flex; align-items:center; gap:10px; padding:8px 12px; margin-bottom:6px; background:var(--gf-panel); border:1px solid var(--gf-border-subtle); border-radius:8px; cursor:pointer; transition:border-color var(--gf-transition); }
+  .entry-point-item:hover { border-color:rgba(78,121,167,0.4); }
+  .entry-point-item .ep-type { font-family:var(--gf-font-mono); font-size:0.5625rem; font-weight:600; padding:2px 7px; border-radius:4px; background:var(--gf-status-inferred-bg); color:var(--gf-status-inferred); text-transform:uppercase; flex-shrink:0; }
+  .entry-point-item .ep-handler { font-family:var(--gf-font-mono); font-size:0.75rem; color:var(--gf-text-primary); font-weight:600; }
+  .entry-point-item .ep-path { font-family:var(--gf-font-mono); font-size:0.5625rem; color:var(--gf-text-muted); margin-left:auto; }
+  .tech-stack-pill { display:inline-flex; align-items:center; font-family:var(--gf-font-mono); font-size:0.625rem; font-weight:500; padding:3px 10px; border-radius:99px; border:1px solid var(--gf-border-medium); background:var(--gf-panel); color:var(--gf-text-secondary); margin:0 4px 4px 0; }
+  .domain-card { background:var(--gf-surface); border:1px solid var(--gf-border-subtle); border-radius:12px; padding:16px; margin-bottom:12px; }
+  .domain-card h3 { font-family:var(--gf-font-heading); font-size:0.9375rem; font-weight:600; margin-bottom:8px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .domain-card .dom-meta { font-family:var(--gf-font-mono); font-size:0.5625rem; color:var(--gf-text-faint); }
+  .domain-card .dom-desc { font-size:0.75rem; line-height:1.6; color:var(--gf-text-secondary); margin-bottom:8px; }
+  .domain-card .dom-section { margin-top:8px; }
+  .domain-card .dom-files, .domain-card .dom-symbols { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
+  .domain-card .dom-file, .domain-card .dom-sym { font-family:var(--gf-font-mono); font-size:0.5625rem; padding:2px 6px; border-radius:4px; background:var(--gf-panel); color:var(--gf-text-secondary); border:1px solid var(--gf-border-subtle); cursor:pointer; }
+  .domain-card .dom-file:hover, .domain-card .dom-sym:hover { border-color:var(--gf-accent); color:var(--gf-accent-bright); }
+  .tour-step { display:flex; gap:12px; padding:10px 12px; margin-bottom:6px; background:var(--gf-panel); border:1px solid var(--gf-border-subtle); border-radius:8px; cursor:pointer; transition:border-color var(--gf-transition); }
+  .tour-step:hover { border-color:rgba(78,121,167,0.4); }
+  .tour-step .ts-idx { font-family:var(--gf-font-mono); font-size:0.875rem; font-weight:600; color:var(--gf-accent-bright); width:24px; flex-shrink:0; }
+  .tour-step .ts-title { font-size:0.75rem; font-weight:600; color:var(--gf-text-primary); }
+  .tour-step .ts-desc { font-size:0.6875rem; color:var(--gf-text-muted); margin-top:2px; line-height:1.5; }
+  .tour-step .ts-nodes { display:flex; flex-wrap:wrap; gap:3px; margin-top:4px; }
+  .tour-step .ts-node { font-family:var(--gf-font-mono); font-size:0.5rem; padding:1px 5px; border-radius:3px; background:var(--gf-elevated); color:var(--gf-text-secondary); border:1px solid var(--gf-border-subtle); cursor:pointer; }
+  .tour-step .ts-node:hover { border-color:var(--gf-accent); color:var(--gf-accent-bright); }
+  .tour-progress-bar { height:4px; background:var(--gf-panel); border-radius:2px; overflow:hidden; margin-bottom:12px; }
+  .tour-progress-fill { height:100%; background:var(--gf-accent); border-radius:2px; transition:width 200ms ease-out; }
+  .node-note { margin:6px 0; padding:8px 10px; background:rgba(78,121,167,0.06); border-left:3px solid var(--gf-accent); border-radius:0 6px 6px 0; font-size:0.6875rem; line-height:1.6; color:var(--gf-text-secondary); }
+  .node-note .nn-label { font-size:0.5625rem; color:var(--gf-accent-bright); text-transform:uppercase; letter-spacing:0.06em; font-weight:600; display:block; margin-bottom:2px; }
+  .arch-tree-toggle { display:inline-flex; align-items:center; gap:4px; font-family:var(--gf-font-mono); font-size:0.5625rem; padding:2px 8px; border:1px solid var(--gf-border-medium); border-radius:6px; background:var(--gf-panel); color:var(--gf-text-muted); cursor:pointer; margin-left:auto; }
+  .arch-tree-toggle:hover { border-color:var(--gf-accent); color:var(--gf-accent-bright); }
+  .dir-tree.collapsed .row:nth-child(n+8) { display:none; }
 
   /* Overview tab content */
   .overview-page { flex:1; overflow-y:auto; padding:24px 32px; background:var(--gf-root); }
@@ -403,8 +471,8 @@ def _html_styles() -> str:
   .ovw-hero-stat-lbl { font-size:0.6875rem; color:var(--gf-text-muted); text-transform:uppercase; letter-spacing:0.08em; font-weight:600; }
 
   /* Tab pages visibility */
-  .tab-page { display:none; flex:1; min-height:0; }
-  .tab-page.active { display:flex; }
+ .tab-page { display:none; flex:1; min-height:0; position:relative; }
+ .tab-page.active { display:flex; }
 
   /* Scrollbar */
   ::-webkit-scrollbar { width:6px; height:6px; }
@@ -654,6 +722,9 @@ function showInfo(nodeId) {{
   // Check if this node is in the review queue (low-confidence)
   const reviewItem = REVIEW.find(r => r.node_id === nodeId || r.endpointId === nodeId);
   const isLowConf = !!reviewItem;
+  // Follow the detail panel: whichever review item (if any) the shown node
+  // belongs to is the current 跳过/提交修正 target.
+  _currentReviewItem = reviewItem || null;
 
   // Determine confidence badge
   let confBadge = '';
@@ -668,6 +739,11 @@ function showInfo(nodeId) {{
   const detailBody = document.getElementById('detail-body');
   const detailHeader = document.getElementById('detail-header-content');
   const editSection = document.getElementById('edit-section');
+
+  // Teaching annotation from LEARN.node_notes (v3)
+  const nodeNotes = (LEARN && LEARN.node_notes && LEARN.node_notes.notes) || {{}};
+  const nodeNote = nodeNotes[nodeId];
+  const nodeNoteHtml = nodeNote ? `<div class="node-note"><span class="nn-label">\u6559\u5b66\u6ce8\u89e3</span>${{esc(String(nodeNote).slice(0, 500))}}</div>` : '';
 
   // Audit provenance section: extraction reason / evidence quote / evaluation
   // verdict for nodes implicated in the review queue (parity with edges).
@@ -693,6 +769,7 @@ function showInfo(nodeId) {{
     <div class="detail-field"><span class="detail-field-label">连接数</span><span class="detail-field-value">${{n._degree}}</span></div>
     ${{tagsHtml}}
     ${{auditHtml}}
+    ${{nodeNoteHtml}}
     <div style="padding:8px 0"><button class="sidebar-toggle" style="width:auto;padding:4px 10px;border:1px solid var(--gf-border-medium);background:var(--gf-surface);font-size:0.6875rem;font-weight:600;color:var(--gf-text-muted);border-radius:6px" onclick="showAllProps('${{esc(nodeId)}}')">全部属性</button></div>
     ${{neighborIds.length ? `<div class="detail-field" style="border-bottom:none;padding-top:8px"><span class="detail-field-label">相邻节点 (${{neighborIds.length}})</span></div><div id="neighbors-list">${{neighborItems}}</div>` : ''}}
   `;
@@ -718,6 +795,12 @@ let _currentEdge = null;
 function showEdgeInfo(from, to, item) {{
   const e = findEdge(from, to);
   if (!e && !item) return;
+  // Track the review item this edge belongs to (for 跳过/提交修正), whether
+  // opened from the review list (item passed) or from a canvas edge click
+  // (resolved from the queue by edge identity). Non-review edges reset it.
+  _currentReviewItem = item
+    || REVIEW.find(r => r.edge && r.edge.from === from && r.edge.to === to)
+    || null;
   const src = e ? e.from : from, tgt = e ? e.to : to;
   const sN = nodesDS.get(src), tN = nodesDS.get(tgt);
   const sLabel = sN ? sN.label : src, tLabel = tN ? tN.label : tgt;
@@ -1022,6 +1105,10 @@ const REVIEW_META = {{
 }};
 // Temporary "已查看" tracking (session only, not persisted)
 const REVIEW_SEEN = new Set();
+// The review item currently shown in the detail/edit panel. Gray-out
+// (seen + strikethrough) fires ONLY from explicit actions — 跳过 / 提交修正
+// / 标记已查看 — never from merely opening an item in the list.
+let _currentReviewItem = null;
 
 function reviewTypeOf(item) {{
   if (item.type) return item.type;
@@ -1140,8 +1227,10 @@ function renderNodeList() {{
       // Click on item -> edge items open the EDGE detail panel (parity with
       // node clicks); node items focus the node (rich detail + edit panel);
       // unresolvable items (islands without a node) fall back to the minimal
-      // review view.
+      // review view. Opening an item does NOT mark it seen — gray-out happens
+      // only via the explicit 跳过 / 提交修正 / 标记已查看 actions.
       el.addEventListener('click', () => {{
+        _currentReviewItem = item;
         if (item.edge && findEdge(item.edge.from, item.edge.to)) {{
           showEdgeInfo(item.edge.from, item.edge.to, item);
         }} else if (nodeId && nodesDS.get(nodeId)) {{
@@ -1149,9 +1238,6 @@ function renderNodeList() {{
         }} else {{
           showReviewEdit(item);
         }}
-        // Mark as seen
-        REVIEW_SEEN.add(itemKey);
-        renderNodeList();
       }});
       list.appendChild(el);
     }});
@@ -1174,6 +1260,7 @@ function renderNodeList() {{
 
 // Show edit panel for a review item (independent of node focus)
 function showReviewEdit(item) {{
+  _currentReviewItem = item;
   const editSection = document.getElementById('edit-section');
   if (!editSection) return;
   editSection.style.display = 'block';
@@ -1202,6 +1289,39 @@ function showReviewEdit(item) {{
   const filePath = document.getElementById('edit-file-path');
   if (filePath && file) filePath.textContent = '\u2192 ' + file;
 }}
+
+// == Review actions: 跳过 / 提交修正 ==
+// These are the ONLY ways (besides the per-item 标记已查看 button) an item
+// becomes "seen" (gray + strikethrough). Static HTML cannot write to
+// .graph/error-report/, so 提交修正 records the correction for this session
+// and clears the form; the graph itself is corrected via the normal flow.
+function _reviewItemKey(item) {{
+  return item ? (item.node_id || item.title) : null;
+}}
+function _markCurrentReviewed(actionLabel, extra) {{
+  const item = _currentReviewItem;
+  const note = document.getElementById('edit-file-path');
+  if (!item) {{
+    if (note) note.textContent = '\u2192 请先在左侧审核列表中选择一项';
+    return;
+  }}
+  const key = _reviewItemKey(item);
+  if (key) REVIEW_SEEN.add(key);
+  renderNodeList();
+  if (note) note.textContent = '\u2192 已' + actionLabel + '：' + (item.title || key || '') + (extra || '');
+  const ta = document.getElementById('edit-textarea');
+  if (ta) ta.value = '';
+}}
+(function() {{
+  const skipBtn = document.getElementById('edit-skip');
+  if (skipBtn) skipBtn.addEventListener('click', () => _markCurrentReviewed('跳过'));
+  const submitBtn = document.getElementById('edit-submit');
+  if (submitBtn) submitBtn.addEventListener('click', () => {{
+    const ta = document.getElementById('edit-textarea');
+    const txt = ta ? (ta.value || '').trim() : '';
+    _markCurrentReviewed('提交修正', txt ? '（修正 ' + txt.length + ' 字，已记录到本次会话）' : '');
+  }});
+}})();
 
 // == Edit tab switching ==
 document.addEventListener('click', e => {{
@@ -1580,7 +1700,7 @@ function toggleDetail(tab) {{
 
 // == Learn tab v2: 多视角（业务流 / 代码架构 / 特性下钻）==
 const learnShell = document.getElementById('learn-shell');
-const LEARN_OK = !!(LEARN && LEARN.version === 2);
+const LEARN_OK = !!(LEARN && (LEARN.version === 3 || LEARN.version === 2));
 
 // Mermaid：CDN 失败（离线）时降级为源码展示。
 window._gfMermaidOk = (typeof mermaid !== 'undefined');
@@ -1623,9 +1743,16 @@ function learnMermaid(container, src) {{
 function learnAnchorChips(anchors) {{
   return (anchors || []).map(a => {{
     const file = String(a).split(' L')[0];
-    return '<span class="anchor-chip" title="打开源文件" onclick="window.open(\'../../\' + decodeURIComponent(\'' + encodeURIComponent(file) + '\'), \'_blank\')">' + esc(a) + '</span>';
+    return '<span class="anchor-chip" data-file="' + esc(file) + '" title="打开源文件">' + esc(a) + '</span>';
   }}).join('');
 }}
+
+// 锚点点击：data 属性 + 委托监听（同 neighbor-link 的 #1838 修复模式，
+// 避免 inline onclick 的引号转义与注入面）。
+document.addEventListener('click', e => {{
+  const el = e.target.closest('.anchor-chip');
+  if (el && el.dataset.file) window.open('../../' + el.dataset.file, '_blank');
+}});
 
 function learnBlockHtml(b) {{
   if (b.type === 'p') {{
@@ -1656,7 +1783,7 @@ function learnBlockHtml(b) {{
   return '';
 }}
 
-let learnCur = {{ persp: 'flow', idx: 0 }};
+let learnCur = {{ persp: 'graph', idx: 0 }};
 
 function switchLearn(persp, idx) {{
   learnCur = {{ persp: persp, idx: idx || 0 }};
@@ -1671,6 +1798,8 @@ function switchLearn(persp, idx) {{
   const view = document.getElementById('lview-' + persp);
   if (view) {{
     view.classList.add('active');
+    if (persp === 'project') renderLearnProject();
+    if (persp === 'domain') renderLearnDomain(learnCur.idx);
     if (persp === 'flow') renderLearnFlow(learnCur.idx);
     if (persp === 'arch') renderLearnArch();
     if (persp === 'feature') renderLearnFeature(learnCur.idx);
@@ -1678,14 +1807,36 @@ function switchLearn(persp, idx) {{
 }}
 window.switchLearn = switchLearn;
 
+// 视角跳转 / 大纲滚动：data 属性 + 委托监听（避免 inline onclick 的
+// 引号转义问题，同 #1838 修复模式）。
+document.addEventListener('click', e => {{
+  const go = e.target.closest('[data-goto]');
+  if (go) {{
+    const parts = go.dataset.goto.split(':');
+    switchLearn(parts[0], parseInt(parts[1], 10) || 0);
+    return;
+  }}
+  const sc = e.target.closest('[data-scroll]');
+  if (sc) {{
+    const t = document.getElementById(sc.dataset.scroll);
+    if (t) t.scrollIntoView({{ behavior: 'smooth', block: 'start' }});
+  }}
+}});
+
 function initLearn() {{
   if (!learnShell) return;
   if (!LEARN_OK) {{
-    learnShell.innerHTML = '<div class="learn-guide">暂无学习内容。运行 <code>/graphify learn</code>（或 CLI <code>graphify learn</code>）生成多视角学习内容 —— 业务流 / 代码架构 / 特性下钻。纯结构化模式零 LLM 成本，加 <code>--backend</code> 可获得中文讲解。</div>';
+    learnShell.innerHTML = '<div class="learn-guide">暂无学习内容。运行 <code>/graphify learn</code>（或 CLI <code>graphify learn</code>）生成多视角学习内容 —— 图谱 / 项目导览 / 业务领域 / 业务流 / 代码架构 / 特性下钻。纯结构化模式零 LLM 成本，加 <code>--backend</code> 可获得中文讲解。</div>';
     return;
   }}
+  const isV3 = LEARN.version === 3;
   const flows = LEARN.flows || [];
   const feats = LEARN.features || [];
+  const tour = isV3 ? (LEARN.tour || []) : [];
+  const domains = isV3 ? (LEARN.domains || []) : [];
+  const pov = isV3 ? (LEARN.project_overview || {{}}) : {{}};
+  // 业务流视角
+  // 业务领域视角
   let items1 = flows.map((f, i) =>
     '<button class="persp-item' + (i === 0 ? ' active' : '') + '" data-persp="flow" data-idx="' + i + '">' +
     esc(f.name) + '<span class="meta">' + esc(f.meta || '') + '</span></button>').join('');
@@ -1694,19 +1845,22 @@ function initLearn() {{
     '<button class="persp-item" data-persp="feature" data-idx="' + i + '">' +
     esc(f.name) + '<span class="md-badge">MD</span></button>').join('');
   if (!items3) items3 = '<div style="padding:4px 24px;font-size:0.6875rem;color:var(--gf-text-faint)">暂无特性文档</div>';
+  let domainItems = domains.map((d, i) =>
+    '<button class="persp-item" data-persp="domain" data-idx="' + i + '">' +
+    esc(d.name || d.id) + '<span class="meta">' + (d.node_count || 0) + ' 节点</span></button>').join('');
+  if (!domainItems) domainItems = '<div style="padding:4px 24px;font-size:0.6875rem;color:var(--gf-text-faint)">' + (isV3 ? '未识别到领域' : 'v2 不支持') + '</div>';
   learnShell.innerHTML =
     '<aside class="persp-nav">' +
-      '<div style="padding:12px 16px;border-bottom:1px solid var(--gf-border-subtle)">' +
-        '<div style="font-family:var(--gf-font-heading);font-size:0.8125rem;font-weight:600">' + esc(LEARN.project_summary ? String(LEARN.project_summary).slice(0, 120) : '学习') + '</div>' +
-      '</div>' +
-      '<div class="persp-group open" id="pg-flow"><div class="persp-head"><span class="chev">\u25b6</span><div><div class="persp-title">业务流视角</div><div class="persp-sub">从请求到响应的调用路径</div></div></div><div class="persp-items">' + items1 + '</div></div>' +
-      '<div class="persp-group" id="pg-arch"><div class="persp-head"><span class="chev">\u25b6</span><div><div class="persp-title">代码架构视角</div><div class="persp-sub">目录 · 关键特性 · 基础类图</div></div></div><div class="persp-items"><button class="persp-item" data-persp="arch" data-idx="0">系统总览</button></div></div>' +
+      '<div class="persp-group open" id="pg-project"><div class="persp-head"><span class="chev">\u25b6</span><div><div class="persp-title">项目导览</div><div class="persp-sub">目录 \u00b7 入口 \u00b7 技术栈 \u00b7 导览步骤</div></div></div><div class="persp-items"><button class="persp-item active" data-persp="project" data-idx="0">项目概览</button></div></div>' +
+      '<div class="persp-group" id="pg-domain"><div class="persp-head"><span class="chev">\u25b6</span><div><div class="persp-title">业务领域</div><div class="persp-sub">领域边界 \u00b7 跨域关系</div></div></div><div class="persp-items">' + domainItems + '</div></div>' +
+      '<div class="persp-group" id="pg-flow"><div class="persp-head"><span class="chev">\u25b6</span><div><div class="persp-title">业务流视角</div><div class="persp-sub">从请求到响应的调用路径</div></div></div><div class="persp-items">' + items1 + '</div></div>' +
+      '<div class="persp-group" id="pg-arch"><div class="persp-head"><span class="chev">\u25b6</span><div><div class="persp-title">代码架构视角</div><div class="persp-sub">目录 \u00b7 关键特性 \u00b7 基础类图</div></div></div><div class="persp-items"><button class="persp-item" data-persp="arch" data-idx="0">系统总览</button></div></div>' +
       '<div class="persp-group" id="pg-feature"><div class="persp-head"><span class="chev">\u25b6</span><div><div class="persp-title">特性下钻</div><div class="persp-sub">逐特性的深度分析文档（MD）</div></div></div><div class="persp-items">' + items3 + '</div></div>' +
-      '<div class="learn-footer"><span class="b b1">结构化</span>' +
-      (LEARN.backend && LEARN.backend !== 'none' ? '<span class="b b2">' + esc(LEARN.backend) + '</span>' : '') +
-      '<span>' + flows.length + ' 流 \u00b7 ' + feats.length + ' 文档</span></div>' +
+      '<div class="learn-footer"><span>' + tour.length + ' 步导览 \u00b7 ' + flows.length + ' 流 \u00b7 ' + feats.length + ' 文档</span></div>' +
     '</aside>' +
-    '<main class="lview active" id="lview-flow"></main>' +
+    '<main class="lview active" id="lview-project"></main>' +
+    '<main class="lview" id="lview-domain"></main>' +
+    '<main class="lview" id="lview-flow"></main>' +
     '<main class="lview" id="lview-arch"></main>' +
     '<main class="lview" id="lview-feature"></main>';
   learnShell.querySelectorAll('.persp-head').forEach(h => {{
@@ -1719,7 +1873,36 @@ function initLearn() {{
   learnShell.querySelectorAll('.persp-item').forEach(it => {{
     it.addEventListener('click', () => switchLearn(it.dataset.persp, parseInt(it.dataset.idx, 10) || 0));
   }});
-  renderLearnFlow(0);
+  // 图谱视图切换按钮（右上角）
+  const learnPage = document.getElementById('page-learn');
+  if (learnPage && !document.getElementById('learn-graph-btn')) {{
+    const btn = document.createElement('button');
+    btn.id = 'learn-graph-btn';
+    btn.className = 'learn-graph-toggle';
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="2"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><line x1="12" y1="12" x2="5" y2="5"/><line x1="12" y1="12" x2="19" y2="5"/><line x1="12" y1="12" x2="5" y2="19"/><line x1="12" y1="12" x2="19" y2="19"/></svg>图谱视图';
+    btn.addEventListener('click', toggleLearnGraph);
+    learnPage.appendChild(btn);
+  }}
+  // 图谱视图覆盖层
+  if (learnPage && !document.getElementById('learn-graph-overlay')) {{
+    const overlay = document.createElement('div');
+    overlay.id = 'learn-graph-overlay';
+    overlay.className = 'learn-graph-overlay';
+    overlay.style.display = 'none';
+    overlay.innerHTML =
+      '<div class="lgo-header">' +
+        '<span class="lgo-title">代码图谱</span>' +
+        '<input type="text" class="lgo-search" id="lgo-search" placeholder="搜索节点..." autocomplete="off">' +
+        '<button class="lgo-close" id="lgo-close">\u2715 关闭</button>' +
+      '</div>' +
+      '<div class="lgo-body">' +
+        '<div class="lgo-canvas" id="lgo-canvas"></div>' +
+        '<aside class="lgo-detail" id="lgo-detail"><div class="lgo-detail-hint">点击节点查看详情</div></aside>' +
+      '</div>';
+    learnPage.appendChild(overlay);
+    document.getElementById('lgo-close').addEventListener('click', toggleLearnGraph);
+  }}
+  renderLearnProject();
 }}
 
 function renderLearnFlow(idx) {{
@@ -1729,7 +1912,7 @@ function renderLearnFlow(idx) {{
   const chips = (f.participants || []).map(p => '<span class="member-chip">' + esc(p) + '</span>').join('');
   el.innerHTML =
     '<div class="stage">' +
-      '<div class="stage-crumb">user-project / <span class="here">' + esc(f.name) + '</span><span class="prov">' + esc(f.provenance || '') + '</span></div>' +
+      '<div class="stage-crumb">' + esc(document.title || 'project') + ' / <span class="here">' + esc(f.name) + '</span></div>' +
       '<div class="stage-scroll">' +
         '<div class="stage-title-row"><h1>' + esc(f.name) + '</h1><div style="display:flex;gap:4px;flex-wrap:wrap">' + chips + '</div></div>' +
         '<div class="diagram-frame" id="lf-diagram"></div>' +
@@ -1749,12 +1932,12 @@ function renderLearnFlow(idx) {{
         '<span class="learn-lbl">代码锚点</span><div>' + learnAnchorChips(f.context && f.context.anchors) + '</div>' +
         '<div class="ctx-div"></div>' +
         '<span class="learn-lbl">深入</span>' +
-        '<button class="rf-item" onclick="switchLearn(\'feature\', ' + Math.max(0, (LEARN.features || []).findIndex(x => x.flow_id === f.id)) + ')">' + esc(f.name) + ' \u00b7 特性下钻文档<span class="go">\u2192</span></button>' +
+        '<button class="rf-item" data-goto="feature:' + Math.max(0, (LEARN.features || []).findIndex(x => x.flow_id === f.id)) + '">' + esc(f.name) + ' \u00b7 特性下钻文档<span class="go">\u2192</span></button>' +
       '</div>' +
     '</aside>';
   learnMermaid(document.getElementById('lf-diagram'), f.mermaid || '');
-  // 分步讲解
-  const steps = f.steps || [];
+  // 分步讲解 — 过滤末尾纯导航项（无 msg/desc 的伪步骤）
+  const steps = (f.steps || []).filter(s => s && (s.msg || s.desc));
   let cur = 0;
   const track = document.getElementById('lf-track');
   steps.forEach((_, i) => {{
@@ -1789,20 +1972,29 @@ function renderLearnArch() {{
     '<div class="row' + (r.kind === 'dir' ? ' dir-row' : '') + '"><span class="' + (r.kind === 'dir' ? 'dir' : '') + '">' + esc(r.label) + '</span>' +
     (r.note ? '<span class="ncnt">' + esc(r.note) + '</span>' : '') + '</div>').join('');
   const cards = (a.features || []).map((c, i) =>
-    '<div class="feat-card" onclick="switchLearn(\'feature\', ' + i + ')">' +
+    '<div class="feat-card" data-goto="feature:' + i + '">' +
     '<div class="feat-name">' + esc(c.name) + '<span class="go">下钻 \u2192</span></div>' +
     '<div class="feat-desc">' + esc(c.desc || '') + '</div>' +
     '<div class="feat-meta">' + esc(c.modules || '') + '</div></div>').join('');
   const hasClass = !!(a.class_diagram);
   el.innerHTML =
     '<div class="arch-center">' +
-      '<div class="arch-card"><h3>目录结构 <span class="cnt">' + (a.tree || []).length + ' 行</span></h3><div class="dir-tree">' + rows + '</div></div>' +
+      '<div class="arch-card"><h3>目录结构 <span class="cnt">' + (a.tree || []).length + ' 行</span><span class="arch-tree-toggle" id="la-tree-toggle">\u5c55\u5f00</span></h3><div class="dir-tree collapsed" id="la-tree">' + rows + '</div></div>' +
       '<div class="arch-card"><h3>关键特性 <span class="cnt">点击进入特性下钻</span></h3><div class="feat-grid">' + (cards || '<div style="font-size:0.6875rem;color:var(--gf-text-faint)">暂无</div>') + '</div></div>' +
     '</div>' +
     (hasClass ?
-      '<aside class="arch-right"><div class="panel-head"><span class="learn-lbl" style="margin:0">基础类图</span><div style="font-size:0.625rem;color:var(--gf-text-muted);margin-top:2px">领域结构层 · 特性行为见下钻文档</div></div><div class="diagram-scroll" id="la-diagram"></div><div class="cap">来源：AST 类/方法提取 · contains + calls 边</div></aside>'
+      '<aside class="arch-right"><div class="panel-head"><span class="learn-lbl" style="margin:0">\u57fa\u7840\u7c7b\u56fe\uff08AST \u63d0\u53d6\uff0c\u4ec5\u4f9b\u53c2\u8003\uff09</span><div style="font-size:0.625rem;color:var(--gf-text-muted);margin-top:2px">\u9886\u57df\u7ed3\u6784\u5c42 \u00b7 \u7279\u6027\u884c\u4e3a\u89c1\u4e0b\u94bb\u6587\u6863</div></div><div class="diagram-scroll" id="la-diagram"></div><div class="cap">\u6765\u6e90\uff1aAST \u7c7b/\u65b9\u6cd5\u63d0\u53d6 \u00b7 contains + calls \u8fb9</div></aside>'
       : '');
   if (hasClass) learnMermaid(document.getElementById('la-diagram'), a.class_diagram);
+  // 目录树展开/折叠
+  const archTreeToggle = document.getElementById('la-tree-toggle');
+  const archTreeEl = document.getElementById('la-tree');
+  if (archTreeToggle && archTreeEl) {{
+    archTreeToggle.addEventListener('click', () => {{
+      const collapsed = archTreeEl.classList.toggle('collapsed');
+      archTreeToggle.textContent = collapsed ? '\u5c55\u5f00' : '\u6298\u53e0';
+    }});
+  }}
 }}
 
 function renderLearnFeature(idx) {{
@@ -1818,13 +2010,23 @@ function renderLearnFeature(idx) {{
         blocks += learnBlockHtml(b);
       }}
     }});
-    return '<h2 id="fsec-' + s.no + '"><span class="no">' + esc(s.no) + '</span>' + esc(s.title) + '</h2>' + blocks;
+    let secTitle = esc(s.title);
+    if (s.title && (s.title.indexOf('\u6027\u80fd') >= 0 || s.title.indexOf('\u53ef\u9760') >= 0)) {{
+      secTitle += '<span style="font-size:0.5625rem;color:var(--gf-text-faint);font-weight:400">\uff08\u542f\u53d1\u5f0f\u5206\u6790\uff09</span>';
+    }}
+    return '<h2 id="fsec-' + s.no + '"><span class="no">' + esc(s.no) + '</span>' + secTitle + '</h2>' + blocks;
   }}).join('');
   const outline = (f.outline || []).map(o =>
-    '<button class="rail-item" onclick="document.getElementById(\'fsec-' + o.no + '\').scrollIntoView({{behavior:\'smooth\',block:\'start\'}})"><span class="no">' + esc(o.no) + '</span>' + esc(o.title) + '</button>').join('');
+    '<button class="rail-item" data-scroll="fsec-' + o.no + '"><span class="no">' + esc(o.no) + '</span>' + esc(o.title) + '</button>').join('');
   el.innerHTML =
     '<div class="doc-scroll"><div class="doc doc-wrap" id="lf-doc">' +
       '<div class="doc-header"><h1>' + esc(f.name) + '</h1>' +
+      (function() {{
+        const diff = f.difficulty;
+        if (!diff) return '';
+        const labels = {{simple: '\u7b80\u5355', standard: '\u6807\u51c6', complex: '\u590d\u6742'}};
+        return '<span class="difficulty-badge difficulty-' + esc(diff) + '">' + (labels[diff] || esc(diff)) + '</span>';
+      }}()) +
       '<div class="md-toggle"><button class="active" id="lf-render">渲染</button><button id="lf-src">MD 源码</button></div></div>' +
       '<div class="doc-meta"><span class="accent-pill">特性下钻</span><span class="accent-pill">' + (f.outline || []).length + ' 节</span>' +
       '<span class="accent-pill">' + (f.backend || LEARN.backend || '结构化') + '</span></div>' +
@@ -1837,8 +2039,8 @@ function renderLearnFeature(idx) {{
       '<span class="learn-lbl">代码锚点（' + (f.anchors || []).length + '）</span><div>' + learnAnchorChips(f.anchors) + '</div>' +
       '<div class="ctx-div"></div>' +
       '<span class="learn-lbl">关联视角</span>' +
-      '<button class="rf-item" onclick="switchLearn(\'flow\', 0)">业务流视角<span class="go">\u2192</span></button>' +
-      '<button class="rf-item" onclick="switchLearn(\'arch\', 0)">基础类图 \u00b7 架构视角<span class="go">\u2192</span></button>' +
+      '<button class="rf-item" data-goto="flow:0">业务流视角<span class="go">\u2192</span></button>' +
+      '<button class="rf-item" data-goto="arch:0">基础类图 \u00b7 架构视角<span class="go">\u2192</span></button>' +
     '</aside>';
   // mermaid 块懒渲染（视图已激活，容器可见，测量正确）。
   el.querySelectorAll('.mermaid-holder').forEach(h => {{
@@ -1854,6 +2056,231 @@ function renderLearnFeature(idx) {{
     wrap.classList.add('show-src');
     document.getElementById('lf-src').classList.add('active');
     document.getElementById('lf-render').classList.remove('active');
+  }});
+}}
+
+// == 图谱视角：复用审核页 vis.js network ==
+// == 图谱视图覆盖层：独立的 vis.Network 实例 + 精简详情面板 ==
+function toggleLearnGraph() {{
+  const overlay = document.getElementById('learn-graph-overlay');
+  if (!overlay) return;
+  const isVisible = overlay.style.display !== 'none';
+  if (isVisible) {{
+    overlay.style.display = 'none';
+    if (window._learnNetwork) {{
+      try {{ window._learnNetwork.destroy(); }} catch (e) {{}}
+      window._learnNetwork = null;
+    }}
+    return;
+  }}
+  overlay.style.display = 'flex';
+  // 延迟创建，等容器可见后 vis.Network 才能正确测量尺寸
+  setTimeout(initLearnGraph, 50);
+}}
+
+function initLearnGraph() {{
+  const container = document.getElementById('lgo-canvas');
+  if (!container || window._learnNetwork) return;
+  if (typeof vis === 'undefined' || !RAW_NODES || !RAW_NODES.length) {{
+    container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--gf-text-muted)">图谱数据不可用。</div>';
+    return;
+  }}
+  const learnNodes = new vis.DataSet(RAW_NODES.map(n => ({{
+    id: n.id, label: n.label, color: n.color, size: n.size,
+    font: n.font, title: n.title, community: n.community,
+    source_file: n.source_file, file_type: n.file_type, desc: n.desc,
+    degree: n.degree, node_kind: n.node_kind,
+  }})));
+  const learnEdges = new vis.DataSet(RAW_EDGES.map(e => ({{
+    from: e.from, to: e.to, label: e.label, dashes: e.dashes,
+    width: e.width, color: e.color, title: e.title,
+  }})));
+  window._learnNetwork = new vis.Network(container, {{ nodes: learnNodes, edges: learnEdges }}, {{
+    physics: {{ enabled: true, solver: 'forceAtlas2Based',
+      forceAtlas2Based: {{ gravitationalConstant: -30, springLength: 80, springConstant: 0.08, damping: 0.4 }},
+      stabilization: {{ iterations: 80 }}
+    }},
+    interaction: {{ hover: true, tooltipDelay: 200, navigationButtons: false }},
+    nodes: {{ shape: 'dot', scaling: {{ min: 8, max: 30 }} }},
+  }});
+  window._learnNetwork.on('click', (params) => {{
+    if (params.nodes.length > 0) {{
+      showLearnNodeDetail(params.nodes[0]);
+    }}
+  }});
+  // 搜索框
+  const searchInput = document.getElementById('lgo-search');
+  if (searchInput) {{
+    searchInput.addEventListener('input', () => {{
+      const q = searchInput.value.toLowerCase().trim();
+      if (!q) return;
+      const match = RAW_NODES.find(n => (n.label || '').toLowerCase().includes(q));
+      if (match) {{
+        window._learnNetwork.focus(match.id, {{ scale: 1.3, animation: {{ duration: 500 }} }});
+        window._learnNetwork.selectNodes([match.id]);
+        showLearnNodeDetail(match.id);
+      }}
+    }});
+  }}
+}}
+
+function showLearnNodeDetail(nid) {{
+  const node = RAW_NODES.find(n => n.id === nid);
+  if (!node) return;
+  const detail = document.getElementById('lgo-detail');
+  if (!detail) return;
+  const notes = (LEARN && LEARN.node_notes && LEARN.node_notes.notes) || {{}};
+  const note = notes[nid] || '';
+  detail.innerHTML =
+    '<div class="lgo-detail-header">' + esc(node.label || nid) + '</div>' +
+    (node.file_type ? '<div class="lgo-detail-row"><span class="lgo-label">类型</span><span>' + esc(node.file_type) + '</span></div>' : '') +
+    (node.source_file ? '<div class="lgo-detail-row"><span class="lgo-label">文件</span><span style="font-family:var(--gf-font-mono);font-size:0.625rem">' + esc(node.source_file) + '</span></div>' : '') +
+    (node.desc ? '<div class="lgo-detail-row"><span class="lgo-label">描述</span><span>' + esc(node.desc) + '</span></div>' : '') +
+    (node.degree !== undefined ? '<div class="lgo-detail-row"><span class="lgo-label">度数</span><span>' + node.degree + '</span></div>' : '') +
+    (note ? '<div class="lgo-detail-row lgo-note"><span class="lgo-label">教学注解</span><span>' + esc(note) + '</span></div>' : '');
+}}
+
+// == 项目导览视角：project_overview + tour ==
+function renderLearnProject() {{
+  const el = document.getElementById('lview-project');
+  if (!el) return;
+  const isV3 = LEARN.version === 3;
+  if (!isV3) {{
+    el.innerHTML = '<div class="learn-guide">v2 学习内容不支持项目导览视角。请运行 <code>/graphify learn</code> 重新生成 v3 学习内容。</div>';
+    return;
+  }}
+  const pov = LEARN.project_overview || {{}};
+  const tour = LEARN.tour || [];
+  // 目录结构
+  const treeRows = (pov.dir_structure || []).map(r =>
+    '<div class="row' + (r.kind === 'dir' ? ' dir-row' : '') + '"><span class="' + (r.kind === 'dir' ? 'dir' : '') + '">' + esc(r.label) + '</span>' +
+    (r.note ? '<span class="ncnt">' + esc(r.note) + '</span>' : '') + '</div>').join('');
+  // 入口点
+  const epItems = (pov.entry_points || []).map(ep =>
+    '<div class="entry-point-item" data-file="' + esc((ep.path || '').split(' L')[0]) + '">' +
+    '<span class="ep-type">' + esc(ep.type || '') + '</span>' +
+    '<span class="ep-handler">' + esc(ep.handler || '') + '</span>' +
+    '<span class="ep-path">' + esc(ep.path || '') + '</span>' +
+    '</div>').join('');
+  // 技术栈
+  const tsPills = (pov.tech_stack || []).map(t => '<span class="tech-stack-pill">' + esc(t) + '</span>').join('');
+  // tour 进度
+  const tourProgress = tour.length ? Math.round(tour.length * 100 / Math.max(tour.length, 1)) : 0;
+  const tourSteps = tour.map(s =>
+    '<div class="tour-step" data-cid="' + esc(s.community_id !== undefined ? String(s.community_id) : '') + '">' +
+    '<div class="ts-idx">' + esc(String(s.order || '')) + '</div>' +
+    '<div style="flex:1"><div class="ts-title">' + esc(s.title || '') + '</div>' +
+    '<div class="ts-desc">' + esc(s.desc || '') + '</div>' +
+    '<div class="ts-nodes">' + (s.nodeIds || []).slice(0, 8).map(nid =>
+      '<span class="ts-node" data-nid="' + esc(String(nid)) + '">' + esc(String(nid).slice(0, 24)) + '</span>'
+    ).join('') + '</div></div></div>'
+  ).join('');
+  el.innerHTML =
+    '<div class="arch-center">' +
+      '<div class="arch-card"><h3>功能介绍</h3><p style="font-size:0.8125rem;line-height:1.7;color:var(--gf-text-secondary)">' + esc(pov.feature_intro || LEARN.project_summary || '') + '</p></div>' +
+      (treeRows ? '<div class="arch-card"><h3>目录结构 <span class="cnt">' + (pov.dir_structure || []).length + ' 行</span></h3><div class="dir-tree collapsed" id="lp-tree">' + treeRows + '</div>' +
+        '<button class="arch-tree-toggle" id="lp-tree-toggle">展开</button></div>' : '') +
+      (epItems ? '<div class="arch-card"><h3>核心入口点 <span class="cnt">' + (pov.entry_points || []).length + ' 个</span></h3>' + epItems + '</div>' : '') +
+      (tsPills ? '<div class="arch-card"><h3>技术栈</h3><div style="display:flex;flex-wrap:wrap">' + tsPills + '</div></div>' : '') +
+      (tourSteps ? '<div class="arch-card"><h3>导览步骤 <span class="cnt">' + tour.length + ' 步</span></h3>' +
+        '<div class="tour-progress-bar"><div class="tour-progress-fill" style="width:100%"></div></div>' + tourSteps + '</div>' : '') +
+    '</div>';
+  // 目录树展开/折叠
+  const treeToggle = document.getElementById('lp-tree-toggle');
+  const treeEl = document.getElementById('lp-tree');
+  if (treeToggle && treeEl) {{
+    treeToggle.addEventListener('click', () => {{
+      const collapsed = treeEl.classList.toggle('collapsed');
+      treeToggle.textContent = collapsed ? '展开' : '折叠';
+    }});
+  }}
+  // 入口点点击 → 打开源文件
+  el.querySelectorAll('.entry-point-item').forEach(item => {{
+    item.addEventListener('click', () => {{
+      const f = item.dataset.file;
+      if (f) window.open('../../' + f, '_blank');
+    }});
+  }});
+  // tour 步骤节点点击 → 图谱聚焦
+  el.querySelectorAll('.ts-node').forEach(node => {{
+    node.addEventListener('click', () => {{
+      const nid = node.dataset.nid;
+      moveToTab('review');
+      setTimeout(() => {{
+        try {{ network.focus(nid, {{ scale: 1.3, animation: {{ duration: 500 }} }}); network.selectNodes([nid]); }} catch (e) {{}}
+        showInfo(nid);
+      }}, 120);
+    }});
+  }});
+}}
+
+// == 业务领域视角：domains + cross-domain mermaid ==
+function renderLearnDomain(idx) {{
+  const el = document.getElementById('lview-domain');
+  if (!el) return;
+  const isV3 = LEARN.version === 3;
+  if (!isV3) {{
+    el.innerHTML = '<div class="learn-guide">v2 学习内容不支持业务领域视角。请运行 <code>/graphify learn</code> 重新生成 v3 学习内容。</div>';
+    return;
+  }}
+  const domains = LEARN.domains || [];
+  if (!domains.length) {{
+    el.innerHTML = '<div class="learn-guide">未识别到业务领域。</div>';
+    return;
+  }}
+  const d = domains[idx] || domains[0];
+  // cross-domain mermaid: graph LR
+  let mermaidSrc = 'graph LR\\n';
+  const myId = d.id || ('domain_' + idx);
+  domains.forEach((dom, i) => {{
+    if (i === idx) return;
+    const did = dom.id || ('domain_' + i);
+    mermaidSrc += '  ' + did + '["' + (dom.name || did).replace(/"/g, "'") + '"]\\n';
+  }});
+  (d.cross_domain || []).forEach((cd, ci) => {{
+    mermaidSrc += '  ' + myId + ' --> ' + esc(cd.target || '') + '\\n';
+    mermaidSrc += '  linkStyle ' + ci + ' stroke:#4E79A7\\n';
+  }});
+  if (!d.cross_domain || !d.cross_domain.length) {{
+    mermaidSrc += '  ' + myId + '["' + (d.name || myId).replace(/"/g, "'") + '"]\\n';
+  }}
+  // key_files / key_symbols
+  const fileChips = (d.key_files || []).map(f =>
+    '<span class="dom-file" data-file="' + esc(f) + '">' + esc(f) + '</span>').join('');
+  const symChips = (d.key_symbols || []).map(s =>
+    '<span class="dom-sym" data-sym="' + esc(s) + '">' + esc(s) + '</span>').join('');
+  // cross_domain list
+  const cdList = (d.cross_domain || []).map(cd =>
+    '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:0.6875rem;color:var(--gf-text-secondary)">' +
+    '<span style="font-family:var(--gf-font-mono);font-size:0.5625rem;color:var(--gf-text-faint)">' + esc(cd.via || '') + '</span>' +
+    '<span>\u2192 ' + esc(cd.target || '') + '</span>' +
+    '<span style="margin-left:auto;font-family:var(--gf-font-mono);font-size:0.5625rem;color:var(--gf-text-faint)">' + (cd.count || 0) + ' 边</span>' +
+    '</div>').join('');
+  el.innerHTML =
+    '<div class="arch-center">' +
+      '<div class="domain-card">' +
+        '<h3>' + esc(d.name || d.id) + '<span class="dom-meta">' + (d.node_count || 0) + ' 节点 \u00b7 ' + esc(d.source || '') + '</span></h3>' +
+        (d.desc ? '<div class="dom-desc">' + esc(d.desc) + '</div>' : '') +
+        (fileChips ? '<div class="dom-section"><span class="learn-lbl">关键文件</span><div class="dom-files">' + fileChips + '</div></div>' : '') +
+        (symChips ? '<div class="dom-section"><span class="learn-lbl">关键符号</span><div class="dom-symbols">' + symChips + '</div></div>' : '') +
+        (cdList ? '<div class="dom-section"><span class="learn-lbl">跨域关系</span>' + cdList + '</div>' : '') +
+      '</div>' +
+      '<div class="arch-card"><h3>领域关系图</h3><div class="diagram-frame" id="ld-diagram"></div></div>' +
+    '</div>';
+  learnMermaid(document.getElementById('ld-diagram'), mermaidSrc);
+  // key_file / key_symbol 点击 → 图谱聚焦
+  el.querySelectorAll('.dom-file, .dom-sym').forEach(chip => {{
+    chip.addEventListener('click', () => {{
+      const label = chip.dataset.file || chip.dataset.sym || '';
+      const found = RAW_NODES.find(n => n.label === label || n.id === label);
+      if (found) {{
+        moveToTab('review');
+        setTimeout(() => {{
+          try {{ network.focus(found.id, {{ scale: 1.3, animation: {{ duration: 500 }} }}); network.selectNodes([found.id]); }} catch (e) {{}}
+          showInfo(found.id);
+        }}, 120);
+      }}
+    }});
   }});
 }}
 
@@ -2787,7 +3214,7 @@ def to_html(
           <div class="edit-field"><label class="edit-label">关系类型</label><select class="edit-select"><option>calls</option><option>imports</option><option>uses</option><option>defines</option><option>semantically_similar_to</option></select></div>
           <div class="edit-field"><label class="edit-label">置信度</label><select class="edit-select"><option>EXTRACTED</option><option>AMBIGUOUS</option><option>INFERRED</option></select></div>
           <div class="edit-field"><label class="edit-label">修正说明（写入错误报告）</label><textarea class="edit-textarea" id="edit-textarea" placeholder="描述问题与期望的修正..."></textarea></div>
-          <div class="edit-actions"><button class="btn btn-ghost">跳过</button><button class="btn btn-primary">提交修正</button></div>
+          <div class="edit-actions"><button class="btn btn-ghost" id="edit-skip">跳过</button><button class="btn btn-primary" id="edit-submit">提交修正</button></div>
           <div class="edit-note" id="edit-file-path">→ .graph/error-report/</div>
         </div>
       </div>

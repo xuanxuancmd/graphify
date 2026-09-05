@@ -286,10 +286,16 @@ def _write_reasons_sidecar(
     nodes: dict,
     live_edge_keys: set,
     live_node_ids: set,
-) -> None:
+) -> dict:
     """Merge freshly stripped reasons into the temp sidecar, prune dead entries.
 
     Best-effort by design: a sidecar failure must never fail the graph export.
+
+    Returns an incremental diff dict ``{"added": {...}, "modified": {...}}``
+    comparing the freshly stripped ``edges`` against the previous sidecar
+    contents.  Callers can use this to produce an incremental review file
+    without re-reading the sidecar after the write.  An empty dict means no
+    new/changed reasons.
     """
     sidecar = _reasons_sidecar_path(output_path)
     old_edges: dict = {}
@@ -304,6 +310,20 @@ def _write_reasons_sidecar(
                     old_nodes = _prev["nodes"]
     except (OSError, ValueError):
         old_edges, old_nodes = {}, {}
+
+    # Incremental diff: which reason entries are genuinely new or changed?
+    # ``edges`` carries only the reasons stripped from the current graph's
+    # links — on an incremental rebuild those are exactly the re-extracted
+    # files' reasons, because unchanged edges lost their reason on the
+    # previous to_json() round-trip (graph.json is reason-free).  So a diff
+    # against the prior sidecar correctly isolates the incremental set.
+    _diff: dict = {"added": {}, "modified": {}}
+    for k, v in edges.items():
+        if k not in old_edges:
+            _diff["added"][k] = v
+        elif old_edges[k] != v:
+            _diff["modified"][k] = {"old": old_edges[k], "new": v}
+
     merged_edges = {
         k: v for k, v in {**old_edges, **edges}.items() if k in live_edge_keys
     }
@@ -314,7 +334,7 @@ def _write_reasons_sidecar(
         if not merged_edges and not merged_nodes:
             if sidecar.exists():
                 sidecar.unlink()
-            return
+            return _diff
         sidecar.parent.mkdir(parents=True, exist_ok=True)
         from graphify.paths import write_json_atomic
         write_json_atomic(
@@ -331,6 +351,179 @@ def _write_reasons_sidecar(
             f"[graphify] WARNING: could not write reasons sidecar {sidecar}: {exc}",
             file=sys.stderr,
         )
+    return _diff
+
+
+# Low-confidence threshold: INFERRED edges below this score appear in the
+# "High Priority" section of the incremental review file.
+_REVIEW_LOW_CONFIDENCE_THRESHOLD = 0.5
+# Maximum number of review files to retain; older ones are pruned.
+_REVIEW_MAX_FILES = 10
+
+
+def _write_incremental_review(
+    output_path: "str | Path",
+    diff: dict,
+    edge_meta: dict,
+) -> None:
+    """Write an incremental reason review Markdown file for human audit.
+
+    Called after :func:`_write_reasons_sidecar` when the diff is non-empty.
+    Produces ``.graph/review/incremental-{timestamp}.md`` listing only the
+    newly added or modified reasons for non-EXTRACTED edges (INFERRED /
+    AMBIGUOUS), sorted by confidence (lowest first).
+
+    Best-effort: a failure here is logged but never fails the graph export.
+    """
+    added = diff.get("added", {})
+    modified = diff.get("modified", {})
+    if not added and not modified:
+        return
+
+    # Filter: only non-EXTRACTED edges belong in the review file.
+    def _reviewable(key: str) -> bool:
+        meta = edge_meta.get(key)
+        if not meta:
+            return True  # no metadata → include defensively
+        return meta.get("confidence", "EXTRACTED") != "EXTRACTED"
+
+    review_added = {k: v for k, v in added.items() if _reviewable(k)}
+    review_modified = {k: v for k, v in modified.items() if _reviewable(k)}
+    if not review_added and not review_modified:
+        return
+
+    review_dir = Path(output_path).parent / "review"
+    try:
+        review_dir.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        return
+
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
+    review_path = review_dir / f"incremental-{timestamp}.md"
+
+    # Sort keys by confidence_score ascending (lowest / most uncertain first).
+    def _sort_key(key: str) -> tuple:
+        meta = edge_meta.get(key, {})
+        score = meta.get("confidence_score", 1.0)
+        try:
+            return (float(score), key)
+        except (TypeError, ValueError):
+            return (1.0, key)
+
+    lines: list[str] = []
+    lines.append(f"# Incremental Reason Review — {timestamp}")
+    lines.append("")
+    lines.append("## Summary")
+    lines.append(f"- New reasons to review: {len(review_added)}")
+    lines.append(f"- Modified reasons: {len(review_modified)}")
+    lines.append("")
+
+    if review_added:
+        low = {
+            k: v for k, v in review_added.items()
+            if _edge_meta_low(edge_meta, k)
+        }
+        high = {
+            k: v for k, v in review_added.items()
+            if not _edge_meta_low(edge_meta, k)
+        }
+        if low:
+            lines.append(f"## High Priority (confidence < {_REVIEW_LOW_CONFIDENCE_THRESHOLD})")
+            lines.append("")
+            for k in sorted(low, key=_sort_key):
+                _append_reason_entry(lines, k, low[k], edge_meta)
+        if high:
+            lines.append("## Standard Priority")
+            lines.append("")
+            for k in sorted(high, key=_sort_key):
+                _append_reason_entry(lines, k, high[k], edge_meta)
+
+    if review_modified:
+        lines.append("## Modified Reasons")
+        lines.append("")
+        for k in sorted(review_modified, key=_sort_key):
+            entry = review_modified[k]
+            meta = edge_meta.get(k, {})
+            lines.append(f"### {_format_edge_label(meta)}")
+            lines.append(
+                f"- Confidence: {meta.get('confidence', '?')} "
+                f"({meta.get('confidence_score', '?')})"
+            )
+            if meta.get("source_file"):
+                lines.append(f"- Source file: {meta['source_file']}")
+            old_reason = entry.get("old", {}).get("reason", "—")
+            new_reason = entry.get("new", {}).get("reason", "—")
+            lines.append(f"- Old reason: {old_reason}")
+            lines.append(f"- New reason: {new_reason}")
+            lines.append("")
+
+    try:
+        review_path.write_text("\n".join(lines), encoding="utf-8")
+        # Prune old review files beyond the retention limit.
+        _prune_old_reviews(review_dir)
+        total = len(review_added) + len(review_modified)
+        print(
+            f"[graphify] Incremental review: {review_path} "
+            f"({total} reason{'s' if total != 1 else ''} to review)"
+        )
+    except OSError as exc:
+        print(
+            f"[graphify] WARNING: could not write incremental review {review_path}: {exc}",
+            file=sys.stderr,
+        )
+
+
+def _edge_meta_low(edge_meta: dict, key: str) -> bool:
+    """Return True if the edge's confidence_score is below the low threshold."""
+    meta = edge_meta.get(key, {})
+    score = meta.get("confidence_score", 1.0)
+    try:
+        return float(score) < _REVIEW_LOW_CONFIDENCE_THRESHOLD
+    except (TypeError, ValueError):
+        return False
+
+
+def _format_edge_label(meta: dict) -> str:
+    """Format an edge as 'source → target (relation)' for display."""
+    src = meta.get("source", "?")
+    tgt = meta.get("target", "?")
+    rel = meta.get("relation", "")
+    if rel:
+        return f"{src} → {tgt} ({rel})"
+    return f"{src} → {tgt}"
+
+
+def _append_reason_entry(lines: list, key: str, entry: dict, edge_meta: dict) -> None:
+    """Append a single reason entry to the Markdown lines list."""
+    meta = edge_meta.get(key, {})
+    lines.append(f"### {_format_edge_label(meta)}")
+    lines.append(
+        f"- Confidence: {meta.get('confidence', '?')} "
+        f"({meta.get('confidence_score', '?')})"
+    )
+    if meta.get("source_file"):
+        lines.append(f"- Source file: {meta['source_file']}")
+    lines.append(f"- Reason: {entry.get('reason', '—')}")
+    quote = entry.get("evidence_quote")
+    if quote:
+        lines.append(f"- Evidence: {quote}")
+    lines.append("")
+
+
+def _prune_old_reviews(review_dir: Path) -> None:
+    """Keep only the most recent _REVIEW_MAX_FILES review files."""
+    try:
+        files = sorted(
+            (f for f in review_dir.iterdir()
+             if f.name.startswith("incremental-") and f.suffix == ".md"),
+            key=lambda f: f.name,
+            reverse=True,
+        )
+        for old in files[_REVIEW_MAX_FILES:]:
+            old.unlink(missing_ok=True)
+    except OSError:
+        pass
 
 
 def to_json(G: nx.Graph, communities: dict[int, list[str]], output_path: str, *, force: bool = False, built_at_commit: str | None = None, community_labels: dict[int, str] | None = None) -> bool:
@@ -406,6 +599,10 @@ def to_json(G: nx.Graph, communities: dict[int, list[str]], output_path: str, *,
     _new_reason_edges: dict = {}
     _new_reason_nodes: dict = {}
     _live_edge_keys: set = set()
+    # Edge metadata for incremental review: confidence/score/source_file are
+    # read BEFORE they get popped below, so the review file can classify
+    # low-confidence INFERRED/AMBIGUOUS edges without re-reading graph.json.
+    _edge_meta: dict = {}
 
     for node in data["nodes"]:
         _n_reason = node.pop("reason", None)
@@ -437,6 +634,16 @@ def to_json(G: nx.Graph, communities: dict[int, list[str]], output_path: str, *,
         # re-billing the LLM extraction.
         _edge_key = f"{link['source']}|{link['target']}|{link.get('relation', '')}"
         _live_edge_keys.add(_edge_key)
+        # Capture confidence metadata before popping reason — needed by the
+        # incremental review to classify edges by confidence tier.
+        _edge_meta[_edge_key] = {
+            "confidence": link.get("confidence", "EXTRACTED"),
+            "confidence_score": link.get("confidence_score", 1.0),
+            "source": link["source"],
+            "target": link["target"],
+            "relation": link.get("relation", ""),
+            "source_file": link.get("source_file", ""),
+        }
         _reason = link.pop("reason", None)
         _quote = link.pop("evidence_quote", None)
         if _reason is not None or _quote is not None:
@@ -502,13 +709,24 @@ def to_json(G: nx.Graph, communities: dict[int, list[str]], output_path: str, *,
     from graphify.paths import write_json_atomic
     # Atomic write: a crash/ENOSPC mid-write must not truncate a good graph.json.
     write_json_atomic(output_path, data, indent=2)
-    _write_reasons_sidecar(
+    _reason_diff = _write_reasons_sidecar(
         output_path,
         edges=_new_reason_edges,
         nodes=_new_reason_nodes,
         live_edge_keys=_live_edge_keys,
         live_node_ids={n.get("id") for n in data["nodes"]},
     )
+    # Incremental review: produce a human-auditable Markdown file listing
+    # only the newly added or modified non-EXTRACTED reasons.  Mirrors how
+    # graph.json itself is built incrementally (only changed files
+    # re-extracted, build_merge replaces their nodes) — the reasons sidecar
+    # is updated the same way, and this review file surfaces just the diff.
+    if _reason_diff and (_reason_diff.get("added") or _reason_diff.get("modified")):
+        _write_incremental_review(
+            output_path,
+            diff=_reason_diff,
+            edge_meta=_edge_meta,
+        )
     return True
 
 

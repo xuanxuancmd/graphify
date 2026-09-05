@@ -1,22 +1,29 @@
-"""学习模式内容生成（learn.json sidecar v2 —— 多视角）。
+"""学习模式内容生成（learn.json sidecar v3 —— 多视角 + 难度分层 + 导览）。
 
 graph.html「学习」页签的数据源，面向**人类读者**：AI 生成或遗留的代码
-让人看不懂、无法检视和维护。v2 按「多视角」组织内容：
+让人看不懂、无法检视和维护。v3 在 v2 多视角基础上增加：
 
+  难度分层      确定性信号（调用深度 / 跨模块数 / 控制流密度 / 异常密度）
+               → 难度等级（simple/standard/complex）→ 特性文档按需生成节。
+  项目导览      社区依赖 DAG 的 Kahn 拓扑排序 → 步骤式导览。
+  领域视角      三层降级：DDD doc-anchor > 社区聚类 > LLM 增强。
+  节点注解      LLM 为 top-N 高分节点附语言/模式教学注解（可选）。
+
+v3 视角组织：
   业务流视角    从入口沿调用链走出的主路径：Mermaid 时序图 + 分步讲解
                + 当前步骤的符号上下文与代码锚点。
   代码架构视角  目录结构（按文件/目录聚合）+ 关键特性卡 + 基础类图。
-  特性下钻视角  每个特性一篇深度分析文档（六节：概览 / 关键技术点 /
-               核心实现 / 性能设计 / 可靠性设计 / 已知限制与验证），
-               全部锚到代码；结构化渲染 + 可切换的 MD 源码。
+  特性下钻视角  每个特性一篇深度分析文档（按难度分层：简单 2 节 / 标准 4 节
+               / 复杂 6 节 + 按需 UML），全部锚到代码。
 
 管线遵循 Swimm 式「先确定性、后生成」：时序图、类图、目录树、调用
 统计、焦点行、抛错点、TODO 扫描全部从 graph.json + 源码确定性推导；
 LLM（可选）只做最后的散文化（流程讲解、技术点命名、性能/可靠性叙
 述、焦点行注释）。零 LLM 时输出纯结构化内容 —— 仍然完整可用。
 
-增量缓存：业务流/特性按涉及文件 SHA256 指纹缓存，未变更不重生成。
-CLI（run_learn）额外把每篇特性文档落盘到 .graph/features/<id>.md。
+增量缓存：业务流/特性/难度判定/领域描述/节点注解按涉及文件 SHA256
+指纹缓存，未变更不重生成。CLI（run_learn）额外把每篇特性文档落盘
+到 .graph/features/<id>.md。
 """
 
 from __future__ import annotations
@@ -29,7 +36,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 LEARN_SIDECAR_NAME = "learn.json"
-LEARN_VERSION = 2
+LEARN_VERSION = 3
 FEATURES_DIR_NAME = "features"
 
 # 表达 "A 依赖 B" 的关系类型。
@@ -60,7 +67,8 @@ _ENTRY_FUNC_RE = re.compile(r"^(handle|on|do|run|serve)[A-Z_]")
 def load_learn_sidecar(graph_html_path: Path) -> dict:
     """加载 graph.html 同目录的 learn.json。Best-effort，任何错误返回 {}。
 
-    只认 v2（多视角 schema）；v1 或损坏数据一律视为空，前端提示重新生成。
+    只认 v3（多视角 + 难度分层 schema）；v1/v2 或损坏数据一律视为空，
+    前端提示重新生成。
     """
     sidecar = Path(graph_html_path).parent / LEARN_SIDECAR_NAME
     try:
@@ -109,7 +117,7 @@ def _kind_of(data: dict) -> str:
         return "class"
     if node_type in {"module", "file", "package", "namespace"}:
         return "file"
-    if node_type in {"endpoint", "route", "api", "handler", "controller"}:
+    if node_type in {"endpoint", "rest_endpoint", "route", "api", "handler", "controller"}:
         return "function"
     if label[:1].isupper() and not label.endswith("()"):
         return "class"
@@ -291,7 +299,7 @@ def _flow_seeds(G, callers, callees, scores) -> list[str]:
     for nid, data in G.nodes(data=True):
         if not isinstance(data, dict) or _kind_of(data) not in ("function", "concept"):
             continue
-        if str(data.get("node_kind") or "") == "endpoint" or re.match(r"^(GET|POST|PUT|DELETE|PATCH):", str(data.get("label") or "")):
+        if str(data.get("node_kind") or "") in ("endpoint", "rest_endpoint") or re.match(r"^(GET|POST|PUT|DELETE|PATCH):", str(data.get("label") or "")):
             endpoints.append(nid)
         elif _ENTRY_FUNC_RE.match(str(data.get("label") or "")) and len(callers.get(nid, ())) <= 2:
             handlers.append(nid)
@@ -322,32 +330,67 @@ def _mermaid_safe(s: str) -> str:
 
 
 def _build_flow(G, seed: str, callers, callees, scores, root: Path) -> dict | None:
-    """从 seed 沿调用链贪心走主路径，产出时序图 + 步骤 + 上下文。"""
+    """从 seed 沿调用链贪心走主路径，产出时序图 + 步骤 + 上下文。
+
+    端点种子（REST endpoint）的第一跳走 ``references`` 边找 handler，
+    之后回到 calls/uses 调用链。
+    """
     data = G.nodes[seed]
     label = str(data.get("label") or seed)
-    is_endpoint = str(data.get("node_kind") or "") == "endpoint" or re.match(r"^(GET|POST|PUT|DELETE|PATCH):", label)
+    node_kind = str(data.get("node_kind") or data.get("node_type") or "").lower()
+    is_endpoint = node_kind in ("endpoint", "rest_endpoint") or bool(re.match(r"^(GET|POST|PUT|DELETE|PATCH):", label))
 
-    # 主路径：每步走分数最高的未访问 callee。
+    # 首跳邻接：端点 → references 指向的符号（优先函数；类无调用出边，
+    # 会截断走链）；普通种子直接用调用链。
+    first_callees: set[str] = set()
+    if is_endpoint:
+        fn_refs: set[str] = set()
+        other_refs: set[str] = set()
+        for u, v, edata in G.edges(seed, data=True):
+            tgt = str(edata.get("_tgt", v)) if str(edata.get("_src", u)) == str(seed) else str(edata.get("_src", u))
+            if edata.get("relation") == "references" and tgt in G:
+                if _kind_of(G.nodes[tgt]) == "function":
+                    fn_refs.add(tgt)
+                elif _kind_of(G.nodes[tgt]) in ("function", "class"):
+                    other_refs.add(tgt)
+        first_callees = fn_refs or other_refs
+    if not first_callees:
+        first_callees = set(callees.get(seed, ()))
+
+    # 主路径：每步走分数最高的未访问 callee；装配/入口类文件
+    # （config/app/main/index/server/routes）降权，让叙述留在领域层。
+    def _walk_penalty(nid: str) -> int:
+        sf = str(G.nodes[nid].get("source_file") or "").lower()
+        return 1 if any(k in sf for k in ("config", "app.", "main.", "index.", "server", "routes")) else 0
+
     path: list[str] = [seed]
     visited = {seed}
     cur = seed
+    first = True
     while len(path) <= _MAX_FLOW_MESSAGES:
-        nexts = [c for c in callees.get(cur, ()) if c in G and c not in visited and _kind_of(G.nodes[c]) in ("function", "class")]
+        pool = first_callees if first else {c for c in callees.get(cur, ()) if c in G}
+        nexts = [c for c in pool if c not in visited and _kind_of(G.nodes[c]) in ("function", "class")]
+        first = False
         if not nexts:
             break
-        nexts.sort(key=lambda n: -scores.get(n, 0.0))
+        nexts.sort(key=lambda n: (_walk_penalty(n), -scores.get(n, 0.0), str(G.nodes[n].get("label") or n)))
         cur = nexts[0]
         visited.add(cur)
         path.append(cur)
 
+    # 运行时路径：端点种子自身（API spec）不作为参与者，从 handler 起。
+    rt_path = path[1:] if is_endpoint and len(path) > 1 else path
+
     # 参与者：按文件聚合（同文件多函数折叠为一个 participant）。
     participants: list[str] = []
     part_of: dict[str, str] = {}
-    for nid in path:
+    for nid in rt_path:
         stem = _stem(str(G.nodes[nid].get("source_file") or ""))
         if stem not in part_of:
             part_of[stem] = stem
             participants.append(stem)
+    if not participants:
+        return None
 
     # mermaid 时序图。
     lines = ["sequenceDiagram", "    autonumber"]
@@ -356,12 +399,13 @@ def _build_flow(G, seed: str, callers, callees, scores, root: Path) -> dict | No
     entry_txt = label.replace(":", " ") if is_endpoint else f"调用 {label}()"
     lines.append(f"    Client ->> P1: {_mermaid_safe(entry_txt)}")
     prev_p = 1
-    for nid in path:
+    for nid in rt_path:
         stem = _stem(str(G.nodes[nid].get("source_file") or ""))
         pi = participants.index(stem) + 1
         fn_label = str(G.nodes[nid].get("label") or "")
+        fn_name = fn_label[:-2] if fn_label.endswith("()") else fn_label
         if pi != prev_p:
-            lines.append(f"    P{prev_p} ->> P{pi}: {_mermaid_safe(fn_label)}()")
+            lines.append(f"    P{prev_p} ->> P{pi}: {_mermaid_safe(fn_name)}()")
         prev_p = pi
     mermaid = "\n".join(lines)
 
@@ -370,11 +414,12 @@ def _build_flow(G, seed: str, callers, callees, scores, root: Path) -> dict | No
     edge_count = 0
     prev_p = 1
     prev_nid = None
-    for nid in path:
+    for nid in rt_path:
         ndata = G.nodes[nid]
         stem = _stem(str(ndata.get("source_file") or ""))
         pi = participants.index(stem) + 1
         fn_label = str(ndata.get("label") or "")
+        fn_name = fn_label[:-2] if fn_label.endswith("()") else fn_label
         cite_sf = str(ndata.get("source_file") or "")
         cite_ln = _line_of(ndata)
         cite = f"{cite_sf} L{cite_ln}" if cite_sf and cite_ln else cite_sf
@@ -386,9 +431,9 @@ def _build_flow(G, seed: str, callers, callees, scores, root: Path) -> dict | No
             })
         else:
             edge_count += 1
-            desc = _first_desc_line(ndata) or f"{fn_label} 被调用。"
+            desc = _first_desc_line(ndata) or f"{fn_name} 被调用。"
             steps.append({
-                "msg": f"{participants[prev_p - 1]} → {stem} · {fn_label}()",
+                "msg": f"{participants[prev_p - 1]} → {stem} · {fn_name}()",
                 "desc": desc,
                 "cite": cite,
             })
@@ -509,6 +554,12 @@ def _build_tree(G, scores) -> list[dict]:
     return rows
 
 
+def _mermaid_ident(s: str) -> str:
+    """classDiagram 标识符清洗：仅字母数字下划线（点号会导致解析失败）。"""
+    ident = re.sub(r"[^A-Za-z0-9_]", "_", str(s or "").strip(". "))
+    return ident.strip("_")[:40] or "X"
+
+
 def _build_class_diagram(G, scores, callers, callees) -> str:
     """基础类图：类 + 方法（同文件归属）+ 类间调用关系。"""
     classes = []
@@ -544,20 +595,26 @@ def _build_class_diagram(G, scores, callers, callees) -> str:
 
     lines = ["classDiagram"]
     for c in classes:
-        name = _mermaid_safe(str(G.nodes[c].get("label") or "Cls"))
-        lines.append(f"    class {name} {{")
+        name = _mermaid_ident(str(G.nodes[c].get("label") or "Cls"))
+        method_lines = []
         shown = 0
         for m in methods_of.get(c, []):
             if shown >= _MAX_METHODS_PER_CLASS:
                 break
-            lines.append(f"        +{_mermaid_safe(str(G.nodes[m].get('label') or 'm'))}()")
+            method_lines.append(f"        +{_mermaid_ident(str(G.nodes[m].get('label') or 'm'))}()")
             shown += 1
-        lines.append("    }")
+        if method_lines:
+            lines.append(f"    class {name} {{")
+            lines.extend(method_lines)
+            lines.append("    }")
+        else:
+            # 空类体 `class X {}` 是 classDiagram 语法错误 —— 无方法时省略花括号。
+            lines.append(f"    class {name}")
 
     # 类间关系：A 的方法调用 B 的方法 → A --> B。
     class_by_file: dict[str, str] = {}
     for c in classes:
-        class_by_file[str(G.nodes[c].get("source_file") or "")] = _mermaid_safe(str(G.nodes[c].get("label") or "Cls"))
+        class_by_file[str(G.nodes[c].get("source_file") or "")] = _mermaid_ident(str(G.nodes[c].get("label") or "Cls"))
     rels: set[tuple[str, str]] = set()
     for src, tgts in callees.items():
         src_sf = str(G.nodes.get(src, {}).get("source_file") or "")
@@ -592,8 +649,12 @@ def _build_architecture(G, communities, community_labels, scores, flows) -> dict
 # 特性下钻
 # ---------------------------------------------------------------------------
 
-def _symbol_span_map(G) -> dict[str, tuple[str, int, int]]:
-    """function/class 节点 → (source_file, start_line, 近似跨度)。"""
+def _symbol_span_map(G, root: Path) -> dict[str, tuple[str, int, int]]:
+    """function/class 节点 → (source_file, start_line, 近似跨度)。
+
+    跨度 = 下一符号声明行 - 当前行；文件最后一个符号回退为文件总行数
+    （可读时），保证抛错/TODO 扫描能覆盖函数体到文件尾。
+    """
     by_file: dict[str, list[tuple[int, str]]] = {}
     for nid, data in G.nodes(data=True):
         if not isinstance(data, dict) or _kind_of(data) not in ("function", "class"):
@@ -602,11 +663,16 @@ def _symbol_span_map(G) -> dict[str, tuple[str, int, int]]:
         ln = _line_of(data)
         if sf and ln > 0:
             by_file.setdefault(sf, []).append((ln, nid))
+    file_len: dict[str, int] = {}
+    for sf in by_file:
+        lines = _read_lines(root, sf)
+        if lines is not None:
+            file_len[sf] = len(lines)
     out: dict[str, tuple[str, int, int]] = {}
     for sf, items in by_file.items():
         items.sort()
         for i, (ln, nid) in enumerate(items):
-            nxt = items[i + 1][0] if i + 1 < len(items) else ln + 12
+            nxt = items[i + 1][0] if i + 1 < len(items) else file_len.get(sf, ln + 12)
             out[nid] = (sf, ln, max(1, nxt - ln))
     return out
 
@@ -616,8 +682,174 @@ def _simple_inline(s: str) -> str:
     return _clean_str(s, 800)
 
 
-def _build_feature_doc(G, flow: dict, root: Path, spans: dict, scores) -> dict | None:
-    """确定性组装特性下钻六节。"""
+# ---------------------------------------------------------------------------
+# 难度信号收集（零 LLM，纯确定性）
+# ---------------------------------------------------------------------------
+
+_ENTRY_TYPE_PATTERNS = [
+    (re.compile(r"^(GET|POST|PUT|DELETE|PATCH):", re.I), "http"),
+    (re.compile(r"^(GET|POST|PUT|DELETE|PATCH)\s+/", re.I), "http"),
+    (re.compile(r"\b(cli|command|cmd)\b", re.I), "cli"),
+    (re.compile(r"\b(event|listen|on_)\b", re.I), "event"),
+    (re.compile(r"\b(cron|schedule|job)\b", re.I), "cron"),
+]
+
+
+def _infer_entry_type(entry: str) -> str:
+    """从 flow entry 字符串推断入口类型。"""
+    for pat, etype in _ENTRY_TYPE_PATTERNS:
+        if pat.search(entry):
+            return etype
+    return "manual"
+
+
+def _collect_difficulty_signals(G, flow: dict, spans: dict, scores: dict, root: Path) -> dict:
+    """收集难度信号（零 LLM，纯确定性）。
+
+    返回 ``{"score": float, "signals": {...}}``，score 归一化到 0-100。
+    """
+    path = flow.get("path") or []
+    if not path:
+        return {"score": 0.0, "signals": {"entry_type": _infer_entry_type(flow.get("entry", ""))}}
+
+    call_depth = len(path)
+    cross_modules = len(flow.get("participants", []))
+
+    # control_flow_density: 对 path 中每个符号统计 if/for/while/switch/case/match/try/except/catch/throw/raise 关键词密度
+    total_keywords = 0
+    total_code_lines = 0
+    for nid in path:
+        if nid not in spans:
+            continue
+        sf, ln, span = spans[nid]
+        lines = _read_lines(root, sf)
+        if lines is None:
+            continue
+        end = min(len(lines), ln - 1 + max(span, 1))
+        for idx in range(ln - 1, end):
+            text = lines[idx]
+            stripped = text.strip()
+            if not stripped:
+                continue
+            total_code_lines += 1
+            padded = " " + stripped + " "
+            for kw in _FOCUS_KEYWORDS:
+                total_keywords += 2 * (padded.count(f" {kw} ") + padded.count(f" {kw}("))
+    control_flow_density = total_keywords / max(total_code_lines, 1)
+
+    # exception_density: throw/raise 行数总和 ÷ 总代码跨度
+    total_throw = 0
+    total_span = 0
+    for nid in path:
+        if nid not in spans:
+            continue
+        sf, ln, span = spans[nid]
+        total_span += span
+        for hit in _scan_throw_lines(root, sf, ln, span, cap=999):
+            total_throw += 1
+    exception_density = total_throw / max(total_span, 1)
+
+    # code_lines: path 中所有符号的代码跨度总和
+    code_lines = sum(spans[nid][2] for nid in path if nid in spans)
+
+    # focal_line_count: 对 path 中每个符号调 _structural_focal_lines，统计命中总数
+    focal_line_count = 0
+    for nid in path:
+        if nid not in spans:
+            continue
+        sf, ln, span = spans[nid]
+        focal_line_count += len(_structural_focal_lines(root, sf, ln, span))
+
+    entry_type = _infer_entry_type(flow.get("entry", ""))
+
+    signals = {
+        "call_depth": call_depth,
+        "cross_modules": cross_modules,
+        "control_flow_density": round(control_flow_density, 4),
+        "exception_density": round(exception_density, 4),
+        "code_lines": code_lines,
+        "focal_line_count": focal_line_count,
+        "entry_type": entry_type,
+    }
+
+    raw = (
+        call_depth * 0.25
+        + cross_modules * 0.25
+        + control_flow_density * 10
+        + exception_density * 10
+    )
+    score = min(100.0, max(0.0, raw))
+    return {"score": round(score, 2), "signals": signals}
+
+
+def _build_uml_block(uml_type: str, G, flow: dict, path: list, participants: list, spans: dict, root: Path) -> str:
+    """按 UML 类型生成对应的 mermaid 源码。"""
+    if uml_type == "sequence":
+        return flow.get("mermaid", "")
+    if uml_type == "class":
+        lines = ["classDiagram"]
+        classes = [nid for nid in path if _kind_of(G.nodes.get(nid, {})) == "class"]
+        if not classes:
+            return ""
+        for nid in classes[:5]:
+            name = _mermaid_ident(str(G.nodes[nid].get("label") or "Cls"))
+            lines.append(f"    class {name}")
+        return "\n".join(lines)
+    if uml_type == "module_dep":
+        lines = ["graph LR"]
+        seen: set[str] = set()
+        for p in participants:
+            ident = _mermaid_ident(p)
+            if ident not in seen:
+                seen.add(ident)
+                lines.append(f"    {ident}({p})")
+        for i in range(len(path) - 1):
+            src = _stem(str(G.nodes[path[i]].get("source_file") or ""))
+            tgt = _stem(str(G.nodes[path[i + 1]].get("source_file") or ""))
+            if src != tgt:
+                lines.append(f"    {_mermaid_ident(src)} --> {_mermaid_ident(tgt)}")
+        return "\n".join(lines)
+    if uml_type == "state":
+        lines = ["stateDiagram-v2"]
+        lines.append("    [*] --> Normal")
+        has_error = False
+        for nid in path:
+            if nid not in spans:
+                continue
+            sf, ln, span = spans[nid]
+            if _scan_throw_lines(root, sf, ln, span, cap=1):
+                has_error = True
+                break
+        if has_error:
+            lines.append("    Normal --> Error: 异常条件触发")
+            lines.append("    Error --> [*]: 捕获/传播")
+        else:
+            lines.append("    Normal --> [*]")
+        return "\n".join(lines)
+    if uml_type == "flowchart":
+        lines = ["flowchart TD"]
+        lines.append("    Start([开始])")
+        for i, nid in enumerate(path):
+            label = _mermaid_safe(str(G.nodes[nid].get("label") or f"step{i}"))
+            lines.append(f"    S{i}[{label}]")
+        lines.append("    End([结束])")
+        lines.append("    Start --> S0")
+        for i in range(len(path) - 1):
+            lines.append(f"    S{i} --> S{i + 1}")
+        if path:
+            lines.append(f"    S{len(path) - 1} --> End")
+        return "\n".join(lines)
+    return ""
+
+
+def _build_feature_doc(G, flow: dict, root: Path, spans: dict, scores, *, difficulty: str | None = None, uml_needed: list | None = None) -> dict | None:
+    """确定性组装特性下钻文档。
+
+    difficulty/uml_needed 可选，默认 None 时退化为当前行为（生成全部六节）。
+    - simple: 01 概览 + 06 已知限制
+    - standard: 01 + 02 + 03（时序图按需）+ 06
+    - complex: 完整 01-06 + 按需 UML 组合
+    """
     path = flow.get("path") or []
     if not path:
         return None
@@ -632,6 +864,19 @@ def _build_feature_doc(G, flow: dict, root: Path, spans: dict, scores) -> dict |
         ln = _line_of(G.nodes[nid])
         if sf:
             anchors.append(f"{sf} L{ln}" if ln else sf)
+
+    uml_list = list(uml_needed) if uml_needed else []
+    cross_modules = len(participants)
+
+    # 确定要构建的节
+    if difficulty is None:
+        build_set = {"01", "02", "03", "04", "05", "06"}
+    elif difficulty == "simple":
+        build_set = {"01", "06"}
+    elif difficulty == "standard":
+        build_set = {"01", "02", "03", "06"}
+    else:  # complex
+        build_set = {"01", "02", "03", "04", "05", "06"}
 
     # ── 01 概览 ──
     overview_p = (
@@ -666,11 +911,34 @@ def _build_feature_doc(G, flow: dict, root: Path, spans: dict, scores) -> dict |
     sec2_blocks = [{"type": "techpoints", "items": tp_items[:4]}] if tp_items else []
 
     # ── 03 核心实现 ──
-    sec3_blocks = [{"type": "mermaid", "src": flow["mermaid"]}]
-    core = max(path, key=lambda n: scores.get(n, 0.0))
+    sec3_blocks: list[dict] = []
+    # 时序图：默认包含；standard 仅当 uml_needed 含 sequence 或 cross_modules>=2 时才加
+    include_sequence = (
+        difficulty is None
+        or difficulty == "complex"
+        or "sequence" in uml_list
+        or cross_modules >= 2
+    )
+    if include_sequence:
+        sec3_blocks.append({"type": "mermaid", "src": flow["mermaid"]})
+    # 代码走读对象：优先选有焦点行（关键算法信号）的符号，否则最高分。
+    core = None
+    core_focal: list[dict] = []
+    for cand in sorted(path, key=lambda n: -scores.get(n, 0.0))[:3]:
+        if cand not in spans:
+            continue
+        csf, cln, cspan = spans[cand]
+        focal = _structural_focal_lines(root, csf, cln, cspan)
+        if focal:
+            core, core_focal = cand, focal
+            break
+        if core is None:
+            core = cand
+    if core is None:
+        core = max(path, key=lambda n: scores.get(n, 0.0))
     if core in spans:
         sf, ln, span = spans[core]
-        focal = _structural_focal_lines(root, sf, ln, span)
+        focal = core_focal or _structural_focal_lines(root, sf, ln, span)
         excerpt = _code_excerpt(root, sf, ln, span, focal)
         if excerpt:
             sec3_blocks.append({
@@ -679,6 +947,14 @@ def _build_feature_doc(G, flow: dict, root: Path, spans: dict, scores) -> dict |
                 "lines": excerpt["lines"],
                 "fn": str(G.nodes[core].get("label") or core),
             })
+    # 复杂难度：按需追加 UML 块
+    if difficulty == "complex":
+        for utype in uml_list:
+            if utype == "sequence":
+                continue  # 已在上方加入
+            uml_src = _build_uml_block(utype, G, flow, path, participants, spans, root)
+            if uml_src:
+                sec3_blocks.append({"type": "mermaid", "src": uml_src, "uml_type": utype})
 
     # ── 04 性能设计（结构性事实）──
     perf = []
@@ -725,14 +1001,16 @@ def _build_feature_doc(G, flow: dict, root: Path, spans: dict, scores) -> dict |
         limits.append({"text": "未发现引用本特性符号的测试文件。", "anchor": ""})
     sec6_blocks = [{"type": "bullets", "items": limits[:5]}]
 
-    sections = [
-        {"no": "01", "title": "特性概览", "blocks": sec1_blocks},
-        {"no": "02", "title": "关键技术点", "blocks": sec2_blocks},
-        {"no": "03", "title": "核心实现", "blocks": sec3_blocks},
-        {"no": "04", "title": "性能设计", "blocks": sec4_blocks},
-        {"no": "05", "title": "可靠性设计", "blocks": sec5_blocks},
-        {"no": "06", "title": "已知限制与验证", "blocks": sec6_blocks},
+    # 按难度组装实际节列表
+    section_defs = [
+        ("01", "特性概览", sec1_blocks),
+        ("02", "关键技术点", sec2_blocks),
+        ("03", "核心实现", sec3_blocks),
+        ("04", "性能设计", sec4_blocks),
+        ("05", "可靠性设计", sec5_blocks),
+        ("06", "已知限制与验证", sec6_blocks),
     ]
+    sections = [{"no": no, "title": title, "blocks": blocks} for no, title, blocks in section_defs if no in build_set]
 
     feature = {
         "id": "feat_" + flow["id"].removeprefix("flow_"),
@@ -742,6 +1020,8 @@ def _build_feature_doc(G, flow: dict, root: Path, spans: dict, scores) -> dict |
         "outline": [{"no": s["no"], "title": s["title"]} for s in sections],
         "anchors": anchors[:14],
         "involved_files": involved_files,
+        "difficulty": difficulty,
+        "uml_needed": uml_list,
     }
     feature["doc_md"] = _assemble_doc_md(feature)
     fps = sorted(_file_sha(_resolve_source(root, sf)) for sf in involved_files) 
@@ -768,6 +1048,8 @@ def _assemble_doc_md(feature: dict) -> str:
                 for it in b["items"]:
                     out.append(f"- **{it['name']}** — {it['why']}" + (f" `{'、'.join(it.get('anchors', []))}`" if it.get("anchors") else ""))
             elif b["type"] == "mermaid":
+                if b.get("uml_type"):
+                    out.append(f"_{b['uml_type']} 图_：")
                 out.append("```mermaid")
                 out.append(b["src"])
                 out.append("```")
@@ -782,10 +1064,14 @@ def _assemble_doc_md(feature: dict) -> str:
     return "\n".join(out).rstrip() + "\n"
 
 
-def _build_features(G, flows, root: Path, spans, scores) -> list[dict]:
+def _build_features(G, flows, root: Path, spans, scores, *, difficulty_map: dict | None = None) -> list[dict]:
     feats = []
+    dmap = difficulty_map or {}
     for flow in flows:
-        f = _build_feature_doc(G, flow, root, spans, scores)
+        diff_info = dmap.get(flow["id"], {})
+        f = _build_feature_doc(G, flow, root, spans, scores,
+                               difficulty=diff_info.get("difficulty"),
+                               uml_needed=diff_info.get("uml_needed"))
         if f:
             feats.append(f)
     return feats
@@ -948,15 +1234,545 @@ def _enhance_feature_llm(feature: dict, *, backend: str, model: str | None, usag
 
 
 # ---------------------------------------------------------------------------
+# v3 LLM 增强：难度判定 + 节点注解
+# ---------------------------------------------------------------------------
+
+_DIFFICULTY_SYSTEM = """你在评估一个代码业务流的难度，并选择需要的 UML 图类型。
+
+可选 UML 类型：
+- sequence（时序图）：跨模块调用时序
+- class（类图）：类继承与组合关系
+- module_dep（模块依赖图）：文件/模块间依赖
+- state（状态转移图）：状态机或异常流转
+- flowchart（流程图）：控制流分支
+
+只输出 JSON（无 markdown 代码块）：
+{"difficulty": "simple"|"standard"|"complex", "uml_needed": ["sequence", ...], "reason": "..."}"""
+
+_NODE_NOTES_SYSTEM = """你在为代码库的高分节点写教学注解。下面是若干节点（label/source_file/desc/代码片段）。
+为每个节点返回一句话中文教学注解（1-2 句），点出语言特性或设计模式，不复述函数名。
+
+只输出 JSON（无 markdown 代码块）：
+{"notes": {"node_id_1": "注解...", "node_id_2": "注解..."}}"""
+
+_VALID_UML_TYPES = frozenset({"sequence", "class", "module_dep", "state", "flowchart"})
+
+
+def _difficulty_fallback(signals: dict) -> dict:
+    """零 LLM / LLM 失败时的固定权重退化判定。"""
+    score = signals.get("score", 0.0)
+    sig = signals.get("signals", {})
+    if score >= 66:
+        difficulty = "complex"
+    elif score >= 33:
+        difficulty = "standard"
+    else:
+        difficulty = "simple"
+    uml: list[str] = []
+    cross = sig.get("cross_modules", 0)
+    if cross >= 2:
+        uml.append("sequence")
+    if cross >= 3:
+        uml.append("module_dep")
+    if sig.get("exception_density", 0) > 0.05 or sig.get("focal_line_count", 0) > 8:
+        uml.append("state")
+    if sig.get("control_flow_density", 0) > 0.3:
+        uml.append("flowchart")
+    return {"difficulty": difficulty, "uml_needed": uml, "reason": "结构化启发式判定"}
+
+
+def _difficulty_prompt(flow: dict, signals: dict) -> str:
+    sig = signals.get("signals", {})
+    lines = [_DIFFICULTY_SYSTEM, "", f"特性：{flow.get('name', '')}（入口 {flow.get('entry', '')}）", ""]
+    lines.append(f"难度分数：{signals.get('score', 0)}/100")
+    lines.append(f"  call_depth={sig.get('call_depth', 0)}")
+    lines.append(f"  cross_modules={sig.get('cross_modules', 0)}")
+    lines.append(f"  control_flow_density={sig.get('control_flow_density', 0)}")
+    lines.append(f"  exception_density={sig.get('exception_density', 0)}")
+    lines.append(f"  code_lines={sig.get('code_lines', 0)}")
+    lines.append(f"  focal_line_count={sig.get('focal_line_count', 0)}")
+    lines.append(f"  entry_type={sig.get('entry_type', 'manual')}")
+    return "\n".join(lines)
+
+
+def _judge_difficulty_ai(flow: dict, signals: dict, backend=None, model=None, usage_out=None) -> dict:
+    """LLM 难度判断 + UML 选型。零 LLM 时用固定权重退化。"""
+    llm_backend = None if backend in (None, "", "none") else backend
+    if not llm_backend:
+        return _difficulty_fallback(signals)
+    try:
+        raw = _llm_call(_difficulty_prompt(flow, signals), backend=llm_backend, model=model,
+                        max_tokens=512, usage_out=usage_out)
+        parsed = _parse_learn_json(raw)
+        difficulty = str(parsed.get("difficulty") or "").strip().lower()
+        if difficulty not in ("simple", "standard", "complex"):
+            difficulty = "standard"
+        uml_raw = parsed.get("uml_needed")
+        uml: list[str] = []
+        if isinstance(uml_raw, list):
+            uml = [str(u).strip() for u in uml_raw if str(u).strip() in _VALID_UML_TYPES]
+        reason = _clean_str(parsed.get("reason"), 400) or "LLM 判定"
+        return {"difficulty": difficulty, "uml_needed": uml, "reason": reason}
+    except Exception as exc:  # noqa: BLE001
+        print(f"[graphify learn] 难度判定失败，退化为结构化: {exc}", file=sys.stderr)
+        result = _difficulty_fallback(signals)
+        result["reason"] = f"LLM 失败，结构化退化: {exc}"
+        return result
+
+
+def _build_node_notes(G, scores: dict, *, backend=None, model=None, usage_out=None, top_n=20) -> dict[str, str]:
+    """LLM 为 top-N 高分节点附语言/模式教学注解。backend 为 None 时返回 {}。"""
+    llm_backend = None if backend in (None, "", "none") else backend
+    if not llm_backend:
+        return {}
+    sorted_nodes = sorted(scores.items(), key=lambda x: -x[1])[:top_n]
+    if not sorted_nodes:
+        return {}
+    lines = [_NODE_NOTES_SYSTEM, ""]
+    for nid, _score in sorted_nodes:
+        data = G.nodes.get(nid, {})
+        if not isinstance(data, dict):
+            continue
+        label = str(data.get("label") or nid)
+        sf = str(data.get("source_file") or "")
+        desc = str(data.get("desc") or "")[:200]
+        ln = _line_of(data)
+        lines.append(f"节点 {nid}:")
+        lines.append(f"  label: {label}")
+        lines.append(f"  source_file: {sf}")
+        if ln:
+            lines.append(f"  line: L{ln}")
+        if desc:
+            lines.append(f"  desc: {desc}")
+        lines.append("")
+    prompt = "\n".join(lines)
+    try:
+        raw = _llm_call(prompt, backend=llm_backend, model=model, max_tokens=2048, usage_out=usage_out)
+        parsed = _parse_learn_json(raw)
+        notes = parsed.get("notes")
+        if not isinstance(notes, dict):
+            return {}
+        result: dict[str, str] = {}
+        for nid, _ in sorted_nodes:
+            note = _clean_str(notes.get(nid), 300)
+            if note:
+                result[nid] = note
+        return result
+    except Exception as exc:  # noqa: BLE001
+        print(f"[graphify learn] 节点注解生成失败: {exc}", file=sys.stderr)
+        return {}
+
+
+# ---------------------------------------------------------------------------
 # 组装
 # ---------------------------------------------------------------------------
 
-def _project_summary_structural(G, flows, communities) -> str:
+# ---------------------------------------------------------------------------
+# v3 视角：项目导览 / 社区导览 / 领域视角
+# ---------------------------------------------------------------------------
+
+_DEP_FILES = {
+    "requirements.txt": "Python",
+    "pyproject.toml": "Python",
+    "package.json": "Node.js",
+    "go.mod": "Go",
+    "Cargo.toml": "Rust",
+}
+_EXT_TO_LANG = {
+    ".py": "Python", ".ts": "TypeScript", ".tsx": "TypeScript",
+    ".js": "JavaScript", ".jsx": "JavaScript", ".go": "Go",
+    ".rs": "Rust", ".java": "Java", ".c": "C", ".cpp": "C++",
+    ".rb": "Ruby", ".cs": "C#", ".kt": "Kotlin", ".swift": "Swift",
+    ".php": "PHP", ".scala": "Scala", ".lua": "Lua", ".sh": "Shell",
+    ".zig": "Zig", ".dart": "Dart",
+}
+_FRAMEWORK_PATTERNS = [
+    (re.compile(r"\bfastapi\b"), "FastAPI"),
+    (re.compile(r"\bflask\b"), "Flask"),
+    (re.compile(r"\bdjango\b"), "Django"),
+    (re.compile(r"\bexpress\b"), "Express"),
+    (re.compile(r"\bgin-gonic\b|\"gin/"), "Gin"),
+    (re.compile(r"\bactix\b"), "Actix"),
+    (re.compile(r"\baxum\b"), "Axum"),
+]
+
+
+def _build_project_overview(G, communities: dict, community_labels: dict | None, flows: list, root: Path) -> dict:
+    """返回 ``{"dir_structure", "feature_intro", "entry_points", "tech_stack"}``。"""
+    n_nodes = G.number_of_nodes()
+    n_edges = G.number_of_edges()
+    n_comm = len(communities)
     n_flows = len(flows)
-    return (
-        f"共 {G.number_of_nodes()} 个节点、{G.number_of_edges()} 条关系、{len(communities or {})} 个社区。"
-        f"识别出 {n_flows} 条业务流，可从「业务流视角」开始阅读，再进入「特性下钻」看深度分析。"
+
+    callers, callees = _dep_maps(G)
+    scores = _node_scores(G, callers, callees)
+    tree = _build_tree(G, scores)[:15]
+
+    entry_hints = [f.get("entry", "") for f in flows[:3]]
+    entry_str = "、".join(e for e in entry_hints if e) or "（未识别）"
+    feature_intro = (
+        f"共 {n_nodes} 节点 {n_edges} 边 {n_comm} 社区。"
+        f"识别 {n_flows} 条业务流，核心入口：{entry_str}。"
+        f"建议从「项目导览」开始。"
     )
+
+    entry_points: list[dict] = []
+    for nid, data in G.nodes(data=True):
+        if not isinstance(data, dict):
+            continue
+        label = str(data.get("label") or "")
+        node_kind = str(data.get("node_kind") or data.get("node_type") or "").lower()
+        is_ep = node_kind in ("endpoint", "rest_endpoint") or bool(re.match(r"^(GET|POST|PUT|DELETE|PATCH):", label))
+        is_handler = bool(_ENTRY_FUNC_RE.match(label))
+        if not (is_ep or is_handler):
+            continue
+        if is_ep or re.match(r"^(GET|POST|PUT|DELETE|PATCH):", label):
+            ep_type = "http"
+        elif re.search(r"\b(cli|command|cmd)\b", label, re.I):
+            ep_type = "cli"
+        elif re.search(r"\b(event|listen|on_)\b", label, re.I):
+            ep_type = "event"
+        elif re.search(r"\b(cron|schedule|job)\b", label, re.I):
+            ep_type = "cron"
+        else:
+            ep_type = "manual"
+        sf = str(data.get("source_file") or "")
+        ln = _line_of(data)
+        entry_points.append({
+            "type": ep_type,
+            "path": f"{sf} L{ln}" if sf and ln else sf,
+            "handler": label,
+        })
+
+    # tech_stack: 从文件扩展名 + 依赖配置文件推导
+    tech_stack: list[str] = []
+    ext_counts: dict[str, int] = {}
+    for nid, data in G.nodes(data=True):
+        if not isinstance(data, dict):
+            continue
+        sf = str(data.get("source_file") or "")
+        if not sf:
+            continue
+        sf_lower = sf.lower()
+        for ext in _CODE_EXTS:
+            if sf_lower.endswith(ext):
+                ext_counts[ext] = ext_counts.get(ext, 0) + 1
+                break
+    # 只取 top-5 主语言（按文件数），避免大图列出十几种语言
+    for ext, _count in sorted(ext_counts.items(), key=lambda x: -x[1])[:5]:
+        lang = _EXT_TO_LANG.get(ext)
+        if lang and lang not in tech_stack:
+            tech_stack.append(lang)
+    for dep_file, lang in _DEP_FILES.items():
+        if (root / dep_file).is_file() and lang not in tech_stack:
+            tech_stack.append(lang)
+    # 框架检测
+    for dep_file in _DEP_FILES:
+        p = root / dep_file
+        if not p.is_file():
+            continue
+        try:
+            content = p.read_text(encoding="utf-8", errors="replace").lower()
+        except OSError:
+            continue
+        for pat, name in _FRAMEWORK_PATTERNS:
+            if pat.search(content) and name not in tech_stack:
+                tech_stack.append(name)
+
+    return {
+        "dir_structure": tree,
+        "feature_intro": feature_intro,
+        "entry_points": entry_points[:20],
+        "tech_stack": tech_stack,
+    }
+
+
+def _build_tour(G, communities: dict, community_labels: dict | None, scores: dict) -> list[dict]:
+    """Kahn 拓扑排序社区，生成项目级导览。"""
+    if not communities:
+        return []
+
+    node_to_comm: dict[str, int] = {}
+    for cid, nodes in communities.items():
+        for nid in nodes:
+            node_to_comm[str(nid)] = cid
+
+    # 社区依赖 DAG：A 的节点调用 B 的节点 → A→B
+    comm_adj: dict[int, set[int]] = {cid: set() for cid in communities}
+    comm_indeg: dict[int, int] = {cid: 0 for cid in communities}
+    for u, v, data in G.edges(data=True):
+        if not isinstance(data, dict) or data.get("relation") not in _DEP_RELATIONS:
+            continue
+        src = str(data.get("_src", u))
+        tgt = str(data.get("_tgt", v))
+        src_comm = node_to_comm.get(src)
+        tgt_comm = node_to_comm.get(tgt)
+        if src_comm is None or tgt_comm is None or src_comm == tgt_comm:
+            continue
+        if tgt_comm not in comm_adj[src_comm]:
+            comm_adj[src_comm].add(tgt_comm)
+            comm_indeg[tgt_comm] += 1
+
+    # Kahn 拓扑排序
+    queue = sorted(cid for cid in communities if comm_indeg[cid] == 0)
+    order: list[int] = []
+    queued: set[int] = set(queue)
+    while queue:
+        cid = queue.pop(0)
+        order.append(cid)
+        for nb in sorted(comm_adj[cid]):
+            comm_indeg[nb] -= 1
+            if comm_indeg[nb] == 0 and nb not in queued:
+                queue.append(nb)
+                queued.add(nb)
+        queue.sort()
+
+    # 环检测：剩余节点按最低分数断边继续
+    remaining = [cid for cid in communities if cid not in set(order)]
+    if remaining:
+        remaining.sort(key=lambda c: sum(scores.get(n, 0.0) for n in communities.get(c, [])))
+        order.extend(remaining)
+
+    # 大图社区数可能成百上千，tour 限制为 top-N 最重要社区（5-15 步）。
+    _MAX_TOUR_STEPS = 15
+    _MIN_TOUR_STEPS = 5
+    if len(order) > _MAX_TOUR_STEPS:
+        # 按社区总分数排序取 top-N，再恢复拓扑序
+        cid_score = {cid: sum(scores.get(n, 0.0) for n in communities.get(cid, [])) for cid in order}
+        top = set(sorted(cid_score, key=lambda c: -cid_score[c])[:_MAX_TOUR_STEPS])
+        order = [cid for cid in order if cid in top]
+    elif len(order) < _MIN_TOUR_STEPS:
+        # 不足 5 步时补齐（按分数取后续社区）
+        cid_score = {cid: sum(scores.get(n, 0.0) for n in communities.get(cid, [])) for cid in communities}
+        extra = [cid for cid in sorted(cid_score, key=lambda c: -cid_score[c]) if cid not in set(order)]
+        order.extend(extra[:_MIN_TOUR_STEPS - len(order)])
+
+    tour: list[dict] = []
+    for i, cid in enumerate(order):
+        nodes = communities.get(cid, [])
+        top_nodes = sorted(nodes, key=lambda n: -scores.get(n, 0.0))[:12]
+        labels = []
+        for nid in top_nodes[:5]:
+            nd = G.nodes.get(nid, {})
+            if isinstance(nd, dict):
+                label = str(nd.get("label") or nid)
+                if label:
+                    labels.append(label)
+        label_str = "、".join(labels) if labels else "（无）"
+        title = (community_labels or {}).get(cid) or f"Domain {cid}"
+        tour.append({
+            "order": i + 1,
+            "title": title,
+            "desc": f"本模块包含 {len(nodes)} 个节点，核心符号：{label_str}。",
+            "nodeIds": top_nodes,
+            "community_id": cid,
+        })
+    return tour
+
+
+def _build_domains(G, communities: dict, community_labels: dict | None, scores: dict, root: Path, *, backend=None, model=None, usage_out=None) -> list[dict]:
+    """三层降级领域视角：DDD doc-anchor > 社区聚类 > LLM 增强。"""
+    llm_backend = None if backend in (None, "", "none") else backend
+
+    node_to_comm: dict[str, int] = {}
+    for cid, nodes in communities.items():
+        for nid in nodes:
+            node_to_comm[str(nid)] = cid
+
+    # Tier 1: DDD doc-anchor 节点
+    ddd_bc_nodes: list[tuple[str, dict]] = []
+    for nid, data in G.nodes(data=True):
+        if not isinstance(data, dict):
+            continue
+        tags = data.get("tags")
+        if not isinstance(tags, list):
+            continue
+        if "ddd" not in tags:
+            continue
+        if "bounded_context" in tags:
+            ddd_bc_nodes.append((nid, data))
+
+    if ddd_bc_nodes:
+        domains = _build_domains_ddd(G, ddd_bc_nodes, node_to_comm, communities, community_labels, scores)
+    else:
+        domains = _build_domains_cluster(G, communities, community_labels, scores, node_to_comm)
+
+    # Tier 3: LLM 增强（可选）—— 在 build_learn_data 中带缓存执行
+    if llm_backend and domains:
+        _enhance_domains_llm(G, domains, backend=llm_backend, model=model, usage_out=usage_out)
+    return domains
+
+
+def _domains_cache_hit(current: list[dict], prev: list[dict]) -> bool:
+    """检查领域结构是否与上次一致（id + community_id + node_count 匹配）。"""
+    if not prev or len(current) != len(prev):
+        return False
+    prev_by_id = {d.get("id"): d for d in prev if isinstance(d, dict)}
+    for dom in current:
+        pd = prev_by_id.get(dom.get("id"))
+        if not pd:
+            return False
+        if pd.get("community_id") != dom.get("community_id"):
+            return False
+        if pd.get("node_count") != dom.get("node_count"):
+            return False
+    return True
+
+
+_DDD_TYPES = frozenset({
+    "bounded_context", "aggregate_root", "domain_event", "invariant",
+    "value_object", "domain_service", "contract", "business_flow_step",
+    "glossary_term", "tech_constraint", "concept",
+})
+
+
+def _build_domains_ddd(G, bc_nodes: list, node_to_comm: dict, communities: dict, community_labels: dict | None, scores: dict) -> list[dict]:
+    """Tier 1: 从 DDD doc-anchor bounded_context 节点构建领域。"""
+    domains: list[dict] = []
+    for i, (bc_id, bc_data) in enumerate(bc_nodes):
+        cid = node_to_comm.get(bc_id, i)
+        name = str(bc_data.get("label") or f"Domain {i}")
+
+        key_files: set[str] = set()
+        key_symbols: set[str] = set()
+        cross_domain_map: dict[tuple, dict] = {}
+
+        for u, v, edata in G.edges(bc_id, data=True):
+            if not isinstance(edata, dict):
+                continue
+            rel = edata.get("relation")
+            # 确定边方向：bc_id 出边
+            if str(edata.get("_src", u)) == bc_id:
+                target = str(edata.get("_tgt", v))
+            else:
+                target = str(edata.get("_src", u))
+            if target not in G:
+                continue
+            tgt_data = G.nodes[target]
+            if not isinstance(tgt_data, dict):
+                continue
+            tgt_kind = _kind_of(tgt_data)
+
+            if rel == "references":
+                # describes → key_files/key_symbols
+                sf = str(tgt_data.get("source_file") or "")
+                if sf:
+                    key_files.add(sf)
+                if tgt_kind in ("function", "class"):
+                    key_symbols.add(str(tgt_data.get("label") or target))
+            elif rel in ("conceptually_related_to", "cites"):
+                # cross_domain
+                tgt_comm = node_to_comm.get(target, -1)
+                if tgt_comm >= 0 and tgt_comm != cid:
+                    key = (tgt_comm, rel)
+                    if key in cross_domain_map:
+                        cross_domain_map[key]["count"] += 1
+                    else:
+                        cross_domain_map[key] = {"target": f"domain_{tgt_comm}", "via": rel, "count": 1}
+
+        comm_nodes = communities.get(cid, [])
+        domains.append({
+            "id": f"domain_{i}",
+            "name": name,
+            "community_id": cid,
+            "node_count": len(comm_nodes) or len(key_files) + len(key_symbols),
+            "key_files": sorted(key_files)[:10],
+            "key_symbols": sorted(key_symbols)[:10],
+            "flows": [],
+            "cross_domain": list(cross_domain_map.values()),
+            "desc": _clean_str(bc_data.get("desc"), 400),
+            "source": "ddd",
+        })
+    return domains
+
+
+def _build_domains_cluster(G, communities: dict, community_labels: dict | None, scores: dict, node_to_comm: dict) -> list[dict]:
+    """Tier 2: 社区聚类 = domain 骨架。"""
+    domains: list[dict] = []
+    for i, (cid, nodes) in enumerate(sorted(communities.items())):
+        name = (community_labels or {}).get(cid) or f"Domain {cid}"
+        sorted_nodes = sorted(nodes, key=lambda n: -scores.get(n, 0.0))
+        key_files: set[str] = set()
+        key_symbols: set[str] = set()
+        for nid in sorted_nodes[:20]:
+            data = G.nodes.get(nid, {})
+            if not isinstance(data, dict):
+                continue
+            kind = _kind_of(data)
+            sf = str(data.get("source_file") or "")
+            if kind == "file" and sf:
+                key_files.add(sf)
+            elif kind in ("function", "class"):
+                key_symbols.add(str(data.get("label") or nid))
+
+        cross_domain_map: dict[tuple, dict] = {}
+        for nid in nodes:
+            for u, v, edata in G.edges(nid, data=True):
+                if not isinstance(edata, dict) or edata.get("relation") not in _DEP_RELATIONS:
+                    continue
+                tgt = str(edata.get("_tgt", v)) if str(edata.get("_src", u)) == nid else str(edata.get("_src", u))
+                tgt_comm = node_to_comm.get(tgt, -1)
+                if tgt_comm < 0 or tgt_comm == cid:
+                    continue
+                key = (tgt_comm, edata.get("relation"))
+                if key in cross_domain_map:
+                    cross_domain_map[key]["count"] += 1
+                else:
+                    cross_domain_map[key] = {"target": f"domain_{tgt_comm}", "via": edata.get("relation"), "count": 1}
+
+        domains.append({
+            "id": f"domain_{i}",
+            "name": name,
+            "community_id": cid,
+            "node_count": len(nodes),
+            "key_files": sorted(key_files)[:10],
+            "key_symbols": sorted(key_symbols)[:10],
+            "flows": [],
+            "cross_domain": list(cross_domain_map.values()),
+            "desc": "",
+            "source": "cluster",
+        })
+    return domains
+
+
+_DOMAIN_LLM_SYSTEM = """你在为代码库的领域视角命名并写描述。下面是若干领域（名称/节点数/关键文件/关键符号）。
+为每个领域返回一个更贴切的中文名称和 1-2 句描述。
+
+只输出 JSON（无 markdown 代码块）：
+{"domains": [{"id": "domain_0", "name": "...", "desc": "..."}, ...]}"""
+
+
+def _enhance_domains_llm(G, domains: list[dict], *, backend: str, model: str | None, usage_out: dict | None) -> None:
+    """Tier 3: LLM 为每 domain 命名 + 写描述。"""
+    lines = [_DOMAIN_LLM_SYSTEM, ""]
+    for d in domains:
+        lines.append(f"领域 {d['id']}（当前名：{d['name']}）:")
+        lines.append(f"  node_count: {d['node_count']}")
+        lines.append(f"  key_files: {', '.join(d.get('key_files', [])[:5])}")
+        lines.append(f"  key_symbols: {', '.join(d.get('key_symbols', [])[:5])}")
+        lines.append("")
+    prompt = "\n".join(lines)
+    try:
+        raw = _llm_call(prompt, backend=backend, model=model, max_tokens=2048, usage_out=usage_out)
+        parsed = _parse_learn_json(raw)
+        llm_domains = parsed.get("domains")
+        if not isinstance(llm_domains, list):
+            return
+        by_id = {d.get("id"): d for d in llm_domains if isinstance(d, dict)}
+        for dom in domains:
+            llm = by_id.get(dom["id"])
+            if not llm:
+                continue
+            name = _clean_str(llm.get("name"), 80)
+            if name:
+                dom["name"] = name
+            desc = _clean_str(llm.get("desc"), 400)
+            if desc:
+                dom["desc"] = desc
+            if dom.get("source") == "cluster":
+                dom["source"] = "llm"
+    except Exception as exc:  # noqa: BLE001
+        print(f"[graphify learn] 领域 LLM 增强失败: {exc}", file=sys.stderr)
 
 
 def build_learn_data(
@@ -971,21 +1787,72 @@ def build_learn_data(
     previous: dict | None = None,
     usage_out: dict | None = None,
 ) -> dict:
-    """生成 learn.json v2 数据。backend 为 None/""/"none" 时纯结构化（零 LLM）。"""
+    """生成 learn.json v3 数据。backend 为 None/""/"none" 时纯结构化（零 LLM）。"""
     root = Path(root)
     callers, callees = _dep_maps(G)
     scores = _node_scores(G, callers, callees)
-    spans = _symbol_span_map(G)
+    spans = _symbol_span_map(G, root)
 
     llm_backend = None if backend in (None, "", "none") else backend
     prev = previous if isinstance(previous, dict) and previous.get("version") == LEARN_VERSION else {}
     prev_flows = {f.get("id"): f for f in prev.get("flows", []) if isinstance(f, dict)}
     prev_feats = {f.get("id"): f for f in prev.get("features", []) if isinstance(f, dict)}
+    prev_difficulty = {k: v for k, v in (prev.get("difficulty", {}) or {}).items() if isinstance(v, dict)} if isinstance(prev.get("difficulty"), dict) else {}
+    prev_node_notes = prev.get("node_notes") if isinstance(prev.get("node_notes"), dict) else {}
+    regenerated = False
 
     flows = _build_flows(G, callers, callees, scores, root)
+
+    # v3: 难度判定（先于特性文档生成）
+    difficulty_map: dict[str, dict] = {}
+    for flow in flows:
+        signals = _collect_difficulty_signals(G, flow, spans, scores, root)
+        fp = flow.get("fp", "")
+        cached = prev_difficulty.get(flow["id"])
+        if cached and cached.get("fp") == fp and cached.get("difficulty"):
+            diff_info = cached
+        else:
+            diff_info = _judge_difficulty_ai(flow, signals, backend=llm_backend, model=model, usage_out=usage_out)
+            diff_info["fp"] = fp
+            regenerated = True
+        difficulty_map[flow["id"]] = diff_info
+
     architecture = _build_architecture(G, communities, community_labels, scores, flows)
-    features = _build_features(G, flows, root, spans, scores)
-    summary = _project_summary_structural(G, flows, communities)
+    features = _build_features(G, flows, root, spans, scores, difficulty_map=difficulty_map)
+
+    # v3: 项目导览 / 社区导览 / 领域视角
+    project_overview = _build_project_overview(G, communities, community_labels, flows, root)
+    summary = project_overview["feature_intro"]
+    tour = _build_tour(G, communities, community_labels, scores)
+    # 领域视角：先结构化构建（Tier 1/2），LLM 增强（Tier 3）在下方带缓存执行
+    domains = _build_domains(G, communities, community_labels, scores, root)
+
+    # v3: 领域 LLM 增强（带缓存）
+    prev_domains_list = prev.get("domains", []) if isinstance(prev.get("domains"), list) else []
+    if llm_backend and domains:
+        if _domains_cache_hit(domains, prev_domains_list):
+            prev_by_id = {d.get("id"): d for d in prev_domains_list if isinstance(d, dict)}
+            for dom in domains:
+                pd = prev_by_id.get(dom["id"])
+                if pd and pd.get("source") in ("llm", "ddd"):
+                    dom["name"] = pd.get("name", dom["name"])
+                    dom["desc"] = pd.get("desc", dom["desc"])
+                    if pd.get("source") == "llm":
+                        dom["source"] = "llm"
+        else:
+            _enhance_domains_llm(G, domains, backend=llm_backend, model=model, usage_out=usage_out)
+            regenerated = True
+
+    # v3: 节点注解（有 backend 时）—— 指纹按分数 top-20 节点计算（与 _build_node_notes 的选取逻辑一致）
+    node_notes_fp = hashlib.sha256("|".join(sorted(scores, key=lambda n: -scores[n])[:20]).encode()).hexdigest()[:16] if scores else ""
+    if llm_backend:
+        if prev_node_notes and prev_node_notes.get("fp") == node_notes_fp and "notes" in prev_node_notes:
+            node_notes = prev_node_notes.get("notes", {})
+        else:
+            node_notes = _build_node_notes(G, scores, backend=llm_backend, model=model, usage_out=usage_out)
+            regenerated = True
+    else:
+        node_notes = {}
 
     if llm_backend:
         for flow in flows:
@@ -1000,6 +1867,7 @@ def build_learn_data(
                         s["desc"] = old_steps[i]["desc"]
             else:
                 _enhance_flow_llm(flow, backend=llm_backend, model=model, usage_out=usage_out)
+                regenerated = True
         # 架构特性卡名称跟随 LLM 化的流程名。
         by_id = {f["id"]: f for f in flows}
         for card in architecture["features"]:
@@ -1013,30 +1881,42 @@ def build_learn_data(
                 feat["doc_md"] = pf.get("doc_md") or _assemble_doc_md(feat)
             else:
                 _enhance_feature_llm(feat, backend=llm_backend, model=model, usage_out=usage_out)
-        try:
-            raw = _llm_call(_SUMMARY_SYSTEM, backend=llm_backend, model=model,
-                            max_tokens=512, usage_out=usage_out)
-            parsed = _parse_learn_json(raw)
-            s = _clean_str(parsed.get("summary"), 800)
-            if s:
-                summary = s
-        except Exception as exc:  # noqa: BLE001
-            print(f"[graphify learn] 概览增强失败，保留结构化描述: {exc}", file=sys.stderr)
+                regenerated = True
+        if regenerated or not prev.get("project_summary"):
+            try:
+                raw = _llm_call(_SUMMARY_SYSTEM, backend=llm_backend, model=model,
+                                max_tokens=512, usage_out=usage_out)
+                parsed = _parse_learn_json(raw)
+                s = _clean_str(parsed.get("summary"), 800)
+                if s:
+                    summary = s
+            except Exception as exc:  # noqa: BLE001
+                print(f"[graphify learn] 概览增强失败，保留结构化描述: {exc}", file=sys.stderr)
+        else:
+            summary = str(prev["project_summary"])
 
     data = {
         "version": LEARN_VERSION,
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "backend": llm_backend or "none",
         "project_summary": summary,
+        "project_overview": project_overview,
+        "tour": tour,
+        "domains": domains,
         "flows": flows,
         "architecture": architecture,
         "features": features,
+        "difficulty": difficulty_map,
+        "node_notes": {"fp": node_notes_fp, "notes": node_notes} if llm_backend else {},
     }
     # 内部字段（path/involved_files/fp）不进 sidecar。
     for flow in data["flows"]:
         flow.pop("path", None)
     for feat in data["features"]:
         feat.pop("involved_files", None)
+    # difficulty 内部字段（signals）不进 sidecar，但保留 fp 用于缓存
+    for diff_info in data["difficulty"].values():
+        diff_info.pop("signals", None)
     return data
 
 
@@ -1106,6 +1986,14 @@ def run_learn(argv: list[str]) -> None:
     raw = json.loads(graph_path.read_text(encoding="utf-8"))
     if "links" not in raw and "edges" in raw:
         raw = dict(raw, links=raw["edges"])
+    # 无向图的 source/target 方向会被 NetworkX 规范化吞掉（build.py 在主
+    # 管线里补 _src/_tgt 正是这个原因）。直接加载 graph.json 时在这里
+    # 注入，保证 calls/uses 边方向正确 —— 业务流走链依赖它。
+    if not raw.get("directed", False):
+        for _l in raw.get("links", []):
+            if "_src" not in _l and _l.get("source") and _l.get("target"):
+                _l["_src"] = _l["source"]
+                _l["_tgt"] = _l["target"]
     try:
         G = nx.node_link_graph(raw, edges="links")
     except TypeError:
@@ -1181,7 +2069,9 @@ def run_learn(argv: list[str]) -> None:
         f"learn.json 写入完成：{len(data['flows'])} 条业务流、"
         f"{len(data['architecture']['tree'])} 行目录树、"
         f"{len(data['architecture']['features'])} 张特性卡、"
-        f"{len(data['features'])} 篇特性文档（.graph/features/*.md），后端 {data['backend']}。"
+        f"{len(data['features'])} 篇特性文档（.graph/features/*.md）、"
+        f"{len(data.get('tour', []))} 步导览、"
+        f"{len(data.get('domains', []))} 个领域，后端 {data['backend']}。"
     )
     if usage:
         print(f"LLM 用量：输入 {usage.get('input', 0)} tokens，输出 {usage.get('output', 0)} tokens。")

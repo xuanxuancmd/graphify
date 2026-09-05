@@ -40,7 +40,7 @@ Turn any folder of files into a navigable knowledge graph with community detecti
 /graphify query "<question>" --budget 1500            # cap answer at N tokens
 /graphify path "AuthModule" "Database"                # shortest path between two concepts
 /graphify explain "SwinTransformer"                   # plain-language explanation of a node
-/graphify learn                                        # generate human-oriented learning cards + guided tour (.graph/learn.json)
+/graphify learn                                        # generate multi-perspective learning content (flows / architecture / feature docs)
 ```
 
 ## What graphify is for
